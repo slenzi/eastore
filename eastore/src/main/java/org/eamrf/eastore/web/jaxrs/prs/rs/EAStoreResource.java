@@ -3,8 +3,11 @@
  */
 package org.eamrf.eastore.web.jaxrs.prs.rs;
 
+import java.util.List;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -12,9 +15,14 @@ import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
+import org.eamrf.core.util.StringUtil;
+import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.service.StoreService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMapping;
 import org.eamrf.web.rs.exception.WebServiceException;
+import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,7 +40,10 @@ public class EAStoreResource extends BaseResourceHandler {
     private Logger logger;
     
     @Autowired
-    private ManagedProperties appProps; 
+    private ManagedProperties appProps;
+    
+    @Autowired
+    private StoreService storeService;
 
 	public EAStoreResource() {
 
@@ -68,7 +79,27 @@ public class EAStoreResource extends BaseResourceHandler {
     	buf.append("}");
     	
     	return Response.ok(buf.toString(), MediaType.APPLICATION_JSON).build();
-    }	
+    }
+    
+    @GET
+    @Path("/mappings/{nodeId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<ParentChildMapping> getParentChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	List<ParentChildMapping> mappings = null;
+    	try {
+			mappings = storeService.getParentChildMappings(nodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return mappings;
+    	
+    }
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.eastore.web.jaxrs.BaseResourceHandler#getLogger()
