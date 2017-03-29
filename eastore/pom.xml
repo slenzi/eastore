@@ -1,0 +1,281 @@
+<project
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.eamrf</groupId>
+	<artifactId>eastore</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>EA Store</name>
+	<description>ECOG-ACRIN Hierarchical File Store</description>
+  
+  	<properties>
+  	
+  		<version.jdk>1.8</version.jdk>
+  		
+  		<version.junit>4.12</version.junit>
+		<version.spring.boot.web>1.5.2.RELEASE</version.spring.boot.web>
+		<version.spring>4.3.7.RELEASE</version.spring>  		
+  		<version.apache.cxf>3.1.10</version.apache.cxf>
+  		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
+		<version.gson>2.8.0</version.gson>
+		<version.jodatime>2.9.7</version.jodatime>
+		<version.javax.mail>1.5.6</version.javax.mail>
+		<version.javax.mail.api>1.5.6</version.javax.mail.api>  		
+  		
+		<!-- artifactory dependencies -->
+		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
+  		
+  	</properties>
+  	
+	<profiles>
+	
+		<!-- deployment on lenzi's EAMRF desktop -->
+		<profile>
+			<id>eamrf.lenzi</id>
+			<properties>
+				<property.file>eamrf.lenzi.properties</property.file>
+			</properties>
+		</profile>	
+	
+	</profiles>  	
+  	
+	<dependencies>
+	
+		<!-- https://mvnrepository.com/artifact/junit/junit -->
+		<dependency>
+		    <groupId>junit</groupId>
+		    <artifactId>junit</artifactId>
+		    <version>${version.junit}</version>
+		    <scope>test</scope>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+		<dependency>
+		    <groupId>com.google.code.gson</groupId>
+		    <artifactId>gson</artifactId>
+		    <version>${version.gson}</version>
+		</dependency>
+			
+		<!-- https://mvnrepository.com/artifact/joda-time/joda-time -->
+		<dependency>
+		    <groupId>joda-time</groupId>
+		    <artifactId>joda-time</artifactId>
+		    <version>${version.jodatime}</version>
+		</dependency>
+	
+		<!-- https://mvnrepository.com/artifact/com.sun.mail/javax.mail -->
+		<dependency>
+		    <groupId>com.sun.mail</groupId>
+		    <artifactId>javax.mail</artifactId>
+		    <version>${version.javax.mail}</version>
+		</dependency>	
+		<!-- https://mvnrepository.com/artifact/javax.mail/javax.mail-api -->
+		<dependency>
+		    <groupId>javax.mail</groupId>
+		    <artifactId>javax.mail-api</artifactId>
+		    <version>${version.javax.mail.api}</version>
+		</dependency>	
+	
+		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-web</artifactId>
+		    <version>${version.spring.boot.web}</version>
+		</dependency>
+					
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-jdbc -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-jdbc</artifactId>
+		    <version>${version.spring}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-orm -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-orm</artifactId>
+		    <version>${version.spring}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-test -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-test</artifactId>
+		    <version>${version.spring}</version>
+		    <scope>test</scope>
+		</dependency>
+			
+		<!-- https://mvnrepository.com/artifact/org.apache.cxf/cxf-rt-frontend-jaxrs -->
+		<dependency>
+		    <groupId>org.apache.cxf</groupId>
+		    <artifactId>cxf-rt-frontend-jaxrs</artifactId>
+		    <version>${version.apache.cxf}</version>
+		</dependency>		
+				
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider -->
+		<dependency>
+		    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+		    <artifactId>jackson-jaxrs-json-provider</artifactId>
+		    <version>${version.jackson.json.provider}</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>com.oracle</groupId>
+		    <artifactId>ojdbc6</artifactId>
+		    <version>${version.oracle.jdbc}</version>
+		</dependency>		
+	
+	</dependencies>
+	
+	<!-- for upload to artifactory -->
+	<distributionManagement>
+	    <repository>
+	        <id>ea-artifactory-central</id>
+	        <name>ecog2.dfci.harvard.edu-releases</name>
+	        <url>https://dev.webapps.ecog.org/artifactory/libs-release-local</url>
+	    </repository>
+	</distributionManagement>	
+	
+	<repositories>
+		
+		<!-- ecog-acrin artifactory -->
+		<repository>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<id>ea-artifactory-central</id>
+			<name>libs-release</name>
+			<url>https://dev.webapps.ecog.org/artifactory/libs-release</url>
+		</repository>
+		<repository>
+			<snapshots />
+			<id>ea-artifactory-snapshots</id>
+			<name>libs-snapshot</name>
+			<url>https://dev.webapps.ecog.org/artifactory/libs-snapshot</url>
+		</repository>
+				
+	</repositories>
+	
+	<pluginRepositories>
+		
+		<!-- ecog-acrin artifactory -->
+		<pluginRepository>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<id>ea-artifactory-central</id>
+			<name>plugins-release</name>
+			<url>https://dev.webapps.ecog.org/artifactory/plugins-release</url>
+		</pluginRepository>
+		<pluginRepository>
+			<snapshots />
+			<id>ea-artifactory-snapshots</id>
+			<name>plugins-snapshot</name>
+			<url>https://dev.webapps.ecog.org/artifactory/plugins-snapshot</url>
+		</pluginRepository>			
+		
+		<!-- other -->
+		<pluginRepository>
+			<id>maven-annotation-plugin</id>
+			<url>http://maven-annotation-plugin.googlecode.com/svn/trunk/mavenrepo</url>
+			<releases>
+			</releases>
+			<snapshots>
+			</snapshots>
+		</pluginRepository>
+		
+	</pluginRepositories>	
+	
+	<build>
+	
+		<!-- property file used for filtering during build process -->
+		<filters>
+			<filter>${property.file}</filter>
+		</filters>
+		
+		<!-- define src/main/resources to filter  -->
+		<resources>
+		
+			<!-- filter java, xml, and properties files from main source folder -->
+			<resource>
+				<directory>${basedir}/src/main/java</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.java</include>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+			
+			<!-- filter xml and property files from resources folder -->
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+			
+			<!-- make sure we get other resource from resources folder, but don't filter them (breaks binary files) -->
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+					<exclude>**/*.properties</exclude>
+				</excludes>
+			</resource>
+				
+		</resources>
+		
+		<!-- define src/test/resources to filter  -->
+		<testResources>
+		
+			<testResource>
+				<directory>${basedir}/src/test/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>			
+			</testResource>
+		
+		</testResources>	
+	
+		<plugins>
+		
+			<!-- Set a compiler level -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.6.1</version>
+				<configuration>
+					<source>${version.jdk}</source>
+					<target>${version.jdk}</target>
+			        <!-- need this line for maven processor plugin to correctly generate metamodels without complaining of duplicate classes -->
+			        <compilerArgument>-proc:none</compilerArgument>					
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${version.spring.boot.web}</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>				
+			</plugin>									
+			
+		</plugins>
+	
+	</build>		
+  
+</project>
