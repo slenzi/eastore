@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Import;
 	@Import({
 		PropertyConfig.class
 		,TomcatConfig.class
-		,DataSourceConfig.class
+		,CxfConfig.class
 	})
 public class AppConfig {
 

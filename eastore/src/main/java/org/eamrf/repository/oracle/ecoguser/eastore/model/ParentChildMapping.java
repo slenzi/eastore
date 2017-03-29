@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.repository.oracle.model;
+package org.eamrf.repository.oracle.ecoguser.eastore.model;
 
 import java.io.Serializable;
 

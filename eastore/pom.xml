@@ -16,14 +16,15 @@
   		<version.jdk>1.8</version.jdk>
   		
   		<version.junit>4.12</version.junit>
-		<version.spring.boot.web>1.5.2.RELEASE</version.spring.boot.web>
+		<version.spring.boot.starter>1.5.2.RELEASE</version.spring.boot.starter>
 		<version.spring>4.3.7.RELEASE</version.spring>  		
   		<version.apache.cxf>3.1.10</version.apache.cxf>
   		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
 		<version.gson>2.8.0</version.gson>
 		<version.jodatime>2.9.7</version.jodatime>
 		<version.javax.mail>1.5.6</version.javax.mail>
-		<version.javax.mail.api>1.5.6</version.javax.mail.api>  		
+		<version.javax.mail.api>1.5.6</version.javax.mail.api>  
+		<version.hikaricp>2.6.1</version.hikaricp>		
   		
 		<!-- artifactory dependencies -->
 		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
@@ -83,7 +84,7 @@
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-web</artifactId>
-		    <version>${version.spring.boot.web}</version>
+		    <version>${version.spring.boot.starter}</version>
 		</dependency>
 					
 		<!-- https://mvnrepository.com/artifact/org.springframework/spring-jdbc -->
@@ -94,11 +95,13 @@
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework/spring-orm -->
+		<!--
 		<dependency>
 		    <groupId>org.springframework</groupId>
 		    <artifactId>spring-orm</artifactId>
 		    <version>${version.spring}</version>
 		</dependency>
+		-->
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework/spring-test -->
 		<dependency>
@@ -121,6 +124,13 @@
 		    <artifactId>jackson-jaxrs-json-provider</artifactId>
 		    <version>${version.jackson.json.provider}</version>
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.zaxxer/HikariCP -->
+		<dependency>
+		    <groupId>com.zaxxer</groupId>
+		    <artifactId>HikariCP</artifactId>
+		    <version>${version.hikaricp}</version>
+		</dependency>		
 		
 		<dependency>
 		    <groupId>com.oracle</groupId>
@@ -264,7 +274,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>${version.spring.boot.web}</version>
+				<version>${version.spring.boot.starter}</version>
 				<executions>
 					<execution>
 						<goals>

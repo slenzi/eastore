@@ -16,8 +16,9 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
  * Configure JDBC datasources
  * 
  * @author slenzi
+ * @deprecated - spring boot will automatically create a data source for us.
  */
-@Configuration
+//@Configuration
 public class DataSourceConfig {
 
 	@InjectLogger
