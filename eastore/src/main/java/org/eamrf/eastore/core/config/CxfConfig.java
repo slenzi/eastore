@@ -14,6 +14,8 @@ import org.apache.cxf.transport.servlet.CXFServlet;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.web.jaxrs.prs.rs.EAStoreApplication;
 import org.eamrf.eastore.web.jaxrs.prs.rs.EAStoreResource;
+import org.eamrf.eastore.web.jaxrs.prs.rs.EATestResource;
+import org.eamrf.eastore.web.jaxrs.prs.rs.EATreeResource;
 import org.slf4j.Logger;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -76,7 +78,11 @@ public class CxfConfig {
 				
 			// Add service beans
 			factory.setServiceBeans(
-					Arrays.<Object> asList( getEAStoreResource() )
+					Arrays.<Object> asList( 
+							getEATestResource(), 
+							getEATreeResource(), 
+							getEAStoreResource() 
+							)
 					);
 			
 			factory.setAddress( factory.getAddress() );
@@ -96,9 +102,19 @@ public class CxfConfig {
 		}
 		
 		@Bean
+		public EATestResource getEATestResource(){
+			return new EATestResource();
+		}
+		
+		@Bean
 		public EAStoreResource getEAStoreResource(){
 			return new EAStoreResource();
 		}
+		
+		@Bean
+		public EATreeResource getEATreeResource(){
+			return new EATreeResource();
+		}		
 		
 		// marshalling json for our jax-rs services
 		@Bean

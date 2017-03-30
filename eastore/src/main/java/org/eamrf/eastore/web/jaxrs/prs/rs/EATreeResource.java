@@ -3,18 +3,17 @@
  */
 package org.eamrf.eastore.web.jaxrs.prs.rs;
 
-import java.util.List;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.properties.ManagedProperties;
-import org.eamrf.eastore.core.service.StoreService;
+import org.eamrf.eastore.core.service.TreeService;
+import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMapping;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -24,52 +23,58 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
+ * jax-rs resource for fetching tree data. Useful for debugging purposes.
+ * 
  * @author slenzi
  */
-@Path("/store")
-@Service("eaStoreResource")
-public class EAStoreResource extends BaseResourceHandler {
+@Path("/tree")
+@Service("eaTreeResource")
+public class EATreeResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
     
     @Autowired
-    private ManagedProperties appProps;
+    private TreeService treeService;  
     
-    @Autowired
-    private StoreService storeService;
-    
-	public EAStoreResource() {
+	public EATreeResource() {
 
 	}
-    
-    /**
-     * Get parent-child mappings
-     * 
-     * @param nodeId
-     * @return
-     * @throws WebServiceException
-     */
+	
+	/**
+	 * Fetch tree in HTML representation
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws WebServiceException
+	 */
     @GET
-    @Path("/mappings/{nodeId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMapping> getParentChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    @Path("/html/{nodeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	List<ParentChildMapping> mappings = null;
+    	Tree<ParentChildMapping> tree = null;
     	try {
-			mappings = storeService.getParentChildMappings(nodeId);
+    		tree = treeService.buildTree(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return mappings;
+    	if(tree == null){
+    		handleError("Tree object was null for node => " + nodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
     	
-    }
-    
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }	
+
 	/* (non-Javadoc)
 	 * @see org.eamrf.eastore.web.jaxrs.BaseResourceHandler#getLogger()
 	 */

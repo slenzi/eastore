@@ -51,4 +51,9 @@ public class ParentChildMapping implements Serializable {
 		this.name = name;
 	}
 
+	@Override
+	public String toString() {
+		return "ParentChildMapping [parentId=" + parentId + ", childId=" + childId + ", name=" + name + "]";
+	}
+
 }

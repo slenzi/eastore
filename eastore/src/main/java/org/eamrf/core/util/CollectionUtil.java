@@ -30,6 +30,18 @@ public abstract class CollectionUtil {
 	 */
 	public static <T> Iterable<T> emptyIfNull(Iterable<T> iterable) {
 	    return iterable == null ? Collections.<T>emptyList() : iterable;
+	}
+	
+	/**
+	 * If c is null return empty list, otherwise return list.
+	 * 
+	 * @param c
+	 * @return
+	 */
+	public static <T> List<T> emptyListIfNull(List<T> c) {
+		
+		return c == null ? Collections.<T>emptyList() : c;
+		
 	}	
 
 	/**
