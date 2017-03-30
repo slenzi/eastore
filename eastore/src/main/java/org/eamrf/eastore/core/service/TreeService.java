@@ -101,7 +101,7 @@ public class TreeService {
 		TreeNode<ParentChildMapping> childTreeNode = null;
 		
 		Long childNodeId = parentNode.getData().getChildId();
-		logger.info("Getting children for node => " + childNodeId);
+		//logger.info("Getting children for node => " + childNodeId);
 		
 		for( ParentChildMapping pcm : CollectionUtil.emptyIfNull( map.get(childNodeId) ) ){
 			
