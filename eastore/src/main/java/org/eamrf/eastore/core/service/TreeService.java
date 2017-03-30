@@ -27,7 +27,7 @@ public class TreeService {
     private Logger logger;
     
     @Autowired
-    private StoreService storeService;
+    private ClosureService closureService;
 	
 	public TreeService() {
 		
@@ -44,7 +44,7 @@ public class TreeService {
 		
 		//logger.info("Building parent-child mapping tree for node => " + nodeId);
 		
-		List<ParentChildMapping> mappings = storeService.getParentChildMappings(nodeId);
+		List<ParentChildMapping> mappings = closureService.getParentChildMappings(nodeId);
 		
 		if(mappings == null || mappings.size() == 0){
 			throw new ServiceException("No parent-child mappings for node " + nodeId + 

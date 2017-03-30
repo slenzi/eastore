@@ -30,9 +30,20 @@ where
   p.child_node_id = 10
 order by
   p.depth desc
+  
+/*
+ * Insert a new node.  First ? is the parent and second ? is the child.
+ */
+insert into eas_closure (link_id, parent_node_id, child_node_id, depth)
+select
+	eas_link_id_sequence.nextval, p.parent_node_id, c.child_node_id, (p.depth + c.depth + 1) as depth
+from
+	eas_closure p, eas_closure c
+where
+	p.child_node_id = ? and c.parent_node_id = ?
 
 /*
- * 
+ * select all rows to be deleted during a delete operation, see next query
  */  
 select
 	distinct l.link_id, l.parent_node_id, l.child_node_id, l.depth

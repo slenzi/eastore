@@ -14,7 +14,7 @@ import javax.ws.rs.core.MediaType;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
-import org.eamrf.eastore.core.service.StoreService;
+import org.eamrf.eastore.core.service.ClosureService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMapping;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -26,9 +26,9 @@ import org.springframework.stereotype.Service;
 /**
  * @author slenzi
  */
-@Path("/store")
-@Service("eaStoreResource")
-public class EAStoreResource extends BaseResourceHandler {
+@Path("/closure")
+@Service("eaClosureResource")
+public class EAClosureResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
@@ -37,9 +37,9 @@ public class EAStoreResource extends BaseResourceHandler {
     private ManagedProperties appProps;
     
     @Autowired
-    private StoreService storeService;
+    private ClosureService closureService;
     
-	public EAStoreResource() {
+	public EAClosureResource() {
 
 	}
     
@@ -61,7 +61,7 @@ public class EAStoreResource extends BaseResourceHandler {
     	
     	List<ParentChildMapping> mappings = null;
     	try {
-			mappings = storeService.getParentChildMappings(nodeId);
+			mappings = closureService.getParentChildMappings(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

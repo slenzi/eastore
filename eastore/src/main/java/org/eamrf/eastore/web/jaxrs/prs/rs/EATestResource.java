@@ -46,7 +46,7 @@ public class EATestResource extends BaseResourceHandler {
     public Response echo(@QueryParam("message") String message) throws WebServiceException {
     	
     	String reply = "";
-    	String prefix = "Hello from " + EAStoreResource.class.getName() + 
+    	String prefix = "Hello from " + EAClosureResource.class.getName() + 
     			", the time is " + DateUtil.defaultFormat(DateUtil.getCurrentTime());
     	
     	if(message == null || message.trim().equals("")){
