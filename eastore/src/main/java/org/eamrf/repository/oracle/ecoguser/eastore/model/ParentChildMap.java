@@ -8,23 +8,25 @@ import java.io.Serializable;
 /**
  * @author slenzi
  */
-public class ParentChildMapping implements Serializable {
+public class ParentChildMap implements Serializable {
 
 	private static final long serialVersionUID = 1671623745174252908L;
 
 	private Long parentId = 0L;
 	private Long childId = 0L;
 	private String name = null;
+	private String type = null;
 	
-	public ParentChildMapping(){
+	public ParentChildMap(){
 		super();
 	}
 	
-	public ParentChildMapping(Long parentId, Long childId, String name) {
+	public ParentChildMap(Long parentId, Long childId, String name, String type) {
 		super();
 		this.parentId = parentId;
 		this.childId = childId;
 		this.name = name;
+		this.type = type;
 	}
 
 	public Long getParentId() {
@@ -51,9 +53,19 @@ public class ParentChildMapping implements Serializable {
 		this.name = name;
 	}
 
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	@Override
 	public String toString() {
-		return "ParentChildMapping [parentId=" + parentId + ", childId=" + childId + ", name=" + name + "]";
+		return "ParentChildMap [parentId=" + parentId + ", childId=" + childId + ", name=" + name + ", type=" + type
+				+ "]";
 	}
+
 
 }

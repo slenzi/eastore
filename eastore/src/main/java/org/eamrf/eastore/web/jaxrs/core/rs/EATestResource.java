@@ -1,4 +1,4 @@
-package org.eamrf.eastore.web.jaxrs.prs.rs;
+package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;

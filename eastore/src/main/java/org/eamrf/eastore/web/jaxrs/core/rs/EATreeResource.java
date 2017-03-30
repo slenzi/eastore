@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.eastore.web.jaxrs.prs.rs;
+package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -15,7 +15,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.TreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMapping;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class EATreeResource extends BaseResourceHandler {
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	Tree<ParentChildMapping> tree = null;
+    	Tree<ParentChildMap> tree = null;
     	try {
     		tree = treeService.buildTree(nodeId);
 		} catch (ServiceException e) {
@@ -73,7 +73,45 @@ public class EATreeResource extends BaseResourceHandler {
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
-    }	
+    }
+    
+    /**
+     * Fetch tree in HTML representation, but only include nodes up to a specified depth.
+     * 
+     * @param nodeId
+     * @param depth
+     * @return
+     * @throws WebServiceException
+     */
+    @GET
+    @Path("/html/{nodeId}/depth/{depth}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getTree(@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	if(depth < 0){
+    		handleError("Depth param must be positive.", WebExceptionType.CODE_IO_ERROR);
+    	}    	
+    	
+    	Tree<ParentChildMap> tree = null;
+    	try {
+    		tree = treeService.buildTree(nodeId, depth);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for node => " + nodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }    
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.eastore.web.jaxrs.BaseResourceHandler#getLogger()

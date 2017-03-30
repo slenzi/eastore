@@ -121,3 +121,29 @@ where link_id in (
 	order by
 		l.parent_node_id, l.child_node_id, l.depth
 )
+
+/*
+ * when deleting a node, this will insert the id of the node, plus all child nodes under it, into the prune table
+ */
+insert into eas_prune
+select eas_prune_id_sequence.currval as prune_id, child_to_delete from (
+  select distinct c.child_node_id as child_to_delete
+  from eas_closure c
+  inner join eas_node n
+  on c.child_node_id = n.node_id 
+  where c.parent_node_id = ?
+)
+
+/*
+ * when deleting children of a node, this will add IDs of ALL children under the node, to the prune table.
+ * this does not add the ID of the node itself because this query is onyl used when deleting children
+ */
+insert into eas_prune
+select eas_prune_id_sequence.currval as prune_id, child_to_delete from (
+  select distinct c.child_node_id as child_to_delete
+  from eas_closure c
+  inner join eas_node n
+  on c.child_node_id = n.node_id 
+  where c.parent_node_id = ?
+  and c.depth > 0
+)
