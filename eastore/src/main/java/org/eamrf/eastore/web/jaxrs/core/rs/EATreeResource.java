@@ -70,6 +70,8 @@ public class EATreeResource extends BaseResourceHandler {
     	
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -109,6 +111,8 @@ public class EATreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
 
+    	treeService.logTree(tree);
+    	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }    
