@@ -12,10 +12,11 @@ import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.transport.servlet.CXFServlet;
 import org.eamrf.core.logging.stereotype.InjectLogger;
-import org.eamrf.eastore.web.jaxrs.core.rs.EAClosureResource;
-import org.eamrf.eastore.web.jaxrs.core.rs.EAStoreApplication;
-import org.eamrf.eastore.web.jaxrs.core.rs.EATestResource;
-import org.eamrf.eastore.web.jaxrs.core.rs.EATreeResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.ClosureResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.StoreApplication;
+import org.eamrf.eastore.web.jaxrs.core.rs.TestResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.TreeResource;
 import org.slf4j.Logger;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -74,14 +75,15 @@ public class CxfConfig {
 			RuntimeDelegate delegate = RuntimeDelegate.getInstance();
 			
 			JAXRSServerFactoryBean factory = delegate.createEndpoint( 
-					getEAStoreApplication(), JAXRSServerFactoryBean.class );
+					getStoreApplication(), JAXRSServerFactoryBean.class );
 				
 			// Add service beans
 			factory.setServiceBeans(
 					Arrays.<Object> asList( 
-							getEATestResource(), 
-							getEATreeResource(), 
-							getEAClosureResource() 
+							getTestResource(), 
+							getTreeResource(), 
+							getClosureResource(),
+							getFileSystemResource()
 							)
 					);
 			
@@ -97,24 +99,29 @@ public class CxfConfig {
 		}
 		
 		@Bean
-		public EAStoreApplication getEAStoreApplication(){
-			return new EAStoreApplication();
+		public StoreApplication getStoreApplication(){
+			return new StoreApplication();
 		}
 		
 		@Bean
-		public EATestResource getEATestResource(){
-			return new EATestResource();
+		public TestResource getTestResource(){
+			return new TestResource();
 		}
 		
 		@Bean
-		public EAClosureResource getEAClosureResource(){
-			return new EAClosureResource();
+		public ClosureResource getClosureResource(){
+			return new ClosureResource();
 		}
 		
 		@Bean
-		public EATreeResource getEATreeResource(){
-			return new EATreeResource();
-		}		
+		public TreeResource getTreeResource(){
+			return new TreeResource();
+		}
+		
+		@Bean
+		public FileSystemResource getFileSystemResource(){
+			return new FileSystemResource();
+		}
 		
 		// marshalling json for our jax-rs services
 		@Bean

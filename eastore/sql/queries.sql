@@ -3,7 +3,7 @@
  * This example selects node A, and all the required child data
  */
 select
-  n.parent_node_id, c.child_node_id, n.name
+  n.parent_node_id, c.child_node_id, n.node_name, n.node_type
 from
   eas_closure c
 inner join
@@ -13,13 +13,13 @@ on
 where
   c.parent_node_id = 1
 order by
-  c.depth, n.name
+  c.depth, n.node_name
 
 /*
  * Select tree path, from leaf node (J) to root node (A), i.e. J->A
  */
 select
-  p.parent_node_id, n.name, p.depth
+  p.parent_node_id, n.node_name, n.node_type, p.depth
 from
   eas_closure p
 join

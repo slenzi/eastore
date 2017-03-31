@@ -24,12 +24,12 @@ import com.google.gson.Gson;
  */
 @Path("/test")
 @Service("eaTestResource")
-public class EATestResource extends BaseResourceHandler {
+public class TestResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;	
 	
-	public EATestResource() {
+	public TestResource() {
 
 	}
 	
@@ -46,7 +46,7 @@ public class EATestResource extends BaseResourceHandler {
     public Response echo(@QueryParam("message") String message) throws WebServiceException {
     	
     	String reply = "";
-    	String prefix = "Hello from " + EAClosureResource.class.getName() + 
+    	String prefix = "Hello from " + ClosureResource.class.getName() + 
     			", the time is " + DateUtil.defaultFormat(DateUtil.getCurrentTime());
     	
     	if(message == null || message.trim().equals("")){

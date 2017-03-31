@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.repository.oracle.ecoguser.eastore.EAClosureRepository;
+import org.eamrf.repository.oracle.ecoguser.eastore.ClosureRepository;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +22,12 @@ public class ClosureService {
     private Logger logger;
     
     @Autowired
-    private EAClosureRepository closureRepository;
+    private ClosureRepository closureRepository;
 
     /**
-     * Fetch parent-child mappings. This data can be used to build an in-memory tree representation.
+     * Fetch top-down parent-child mappings (root node to all child nodes)
+     * 
+     * This data can be used to build an in-memory tree representation.
      * 
      * @param nodeId
      * @return
@@ -45,8 +47,10 @@ public class ClosureService {
     }
     
     /**
-     * fetch first-level mappings for a node. This is the node and it's immediate 
-     * children (not children's children, etc)
+	 * Get top-down parent-child (root node to all child nodes), up to a specified depth.
+	 * e.g., depth 1 will get a node node and it's first level children.
+	 * 
+	 * This data can be used to build an in-memory tree representation.
      * 
      * @param nodeId
      * @return
@@ -66,6 +70,27 @@ public class ClosureService {
     }
     
     /**
+	 * Fetch bottom-up (leaf node to root node), parent-child mappings. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.. 
+     * 
+     * @param nodeId
+     * @return
+     * @throws ServiceException
+     */
+    public List<ParentChildMap> getParentMappings(Long nodeId) throws ServiceException {
+    	
+    	List<ParentChildMap> mappings = null;
+    	try {
+			mappings = closureRepository.getParentMappings(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException(
+					"Error getting parent mappings for node " + nodeId + ". " + e.getMessage(), e);
+		}
+    	return mappings;
+    	
+    }    
+    
+    /**
      * Add a new child node
      * 
      * @param parentNodeId - The parent node under which the new child node will be added
@@ -74,8 +99,6 @@ public class ClosureService {
      * @throws ServiceException
      */
     public Long addNode(Long parentNodeId, String name, String type) throws ServiceException {
-    	
-    	// TODO - make sure parent node doesn't already have a child with the same name
     	
     	Long newNodeId = -1L;
     	try {

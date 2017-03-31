@@ -8,6 +8,8 @@ import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.google.gson.Gson;
+
 /**
  * All PRS RS Service Jax-RS resources should extends this handler to gain basic email error handling.
  * 
@@ -25,6 +27,23 @@ public abstract class BaseResourceHandler {
 	}
 	
 	public abstract Logger getLogger();
+	
+    /**
+     * Builds a simply OK response message in JSON.
+     * 
+     * @return
+     */
+    public String buildJsonOK(){
+    	
+    	Gson gson = new Gson();
+    	StringBuffer buf = new StringBuffer();
+    	buf.append("{");
+    	buf.append(gson.toJson("reply") + " : " + gson.toJson("ok"));
+    	buf.append("}");
+    	
+    	return buf.toString();
+    	
+    }	
 	
 	public void handleError(String message, WebExceptionType type) throws WebServiceException {
 		handleError(message, type, null);

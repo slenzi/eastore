@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
  */
 @Path("/tree")
 @Service("eaTreeResource")
-public class EATreeResource extends BaseResourceHandler {
+public class TreeResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
@@ -37,12 +37,12 @@ public class EATreeResource extends BaseResourceHandler {
     @Autowired
     private TreeService treeService;  
     
-	public EATreeResource() {
+	public TreeResource() {
 
 	}
 	
 	/**
-	 * Fetch tree in HTML representation
+	 * Fetch top-down (root to all leafs) tree in HTML representation
 	 * 
 	 * @param nodeId
 	 * @return
@@ -78,7 +78,7 @@ public class EATreeResource extends BaseResourceHandler {
     }
     
     /**
-     * Fetch tree in HTML representation, but only include nodes up to a specified depth.
+     * Fetch top-down (root to all leafs) tree in HTML representation, but only include nodes up to a specified depth.
      * 
      * @param nodeId
      * @param depth
@@ -113,6 +113,42 @@ public class EATreeResource extends BaseResourceHandler {
 
     	treeService.logTree(tree);
     	
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }
+    
+	/**
+	 * Fetch bottom-up tree (leaf to root) in HTML representation
+	 * 
+	 * @param nodeId - some leaf node
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/parent/html/{nodeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getParentTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	Tree<ParentChildMap> tree = null;
+    	try {
+    		tree = treeService.buildParentTree(nodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for node => " + nodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logTree(tree);
+
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }    

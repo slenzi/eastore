@@ -11,6 +11,6 @@ import javax.ws.rs.core.Application;
  *
  */
 @ApplicationPath( "easapi/v1" )
-public class EAStoreApplication extends Application {
+public class StoreApplication extends Application {
 
 }

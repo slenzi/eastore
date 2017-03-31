@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -23,8 +24,8 @@ import com.zaxxer.hikari.HikariDataSource;
  * @author slenzi
  */
 @Repository
-@Transactional
-public class EAClosureRepository {
+@Transactional(propagation=Propagation.REQUIRED)
+public class ClosureRepository {
 
     @InjectLogger
     private Logger logger;	
@@ -37,7 +38,7 @@ public class EAClosureRepository {
     @Autowired
     DataSource dataSource;
 	
-	public EAClosureRepository() {
+	public ClosureRepository() {
 		
 	}
 	
@@ -59,7 +60,8 @@ public class EAClosureRepository {
 	}
 	
 	/**
-	 * Fetch parent-child mappings. This data can be used to build an in-memory tree representation.
+	 * Fetch top-down parent-child mappings (root node to all child nodes).
+	 * This data can be used to build an in-memory tree representation.
 	 * 
 	 * @param nodeId
 	 * @return
@@ -91,7 +93,8 @@ public class EAClosureRepository {
 	}
 	
 	/**
-	 * Get mappings up to a specified depth. e.g., depth 1 will get a node node and it's first level children.
+	 * Get top-down parent-child (root node to all child nodes), up to a specified depth.
+	 * e.g., depth 1 will get a node node and it's first level children.
 	 * 
 	 * @param nodeId
 	 * @param depth
@@ -121,6 +124,40 @@ public class EAClosureRepository {
 		return mappings;		
 		
 	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node), parent-child mappings. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * @param nodeId - 
+	 * @return
+	 * @throws Exception
+	 */
+	public List<ParentChildMap> getParentMappings(Long nodeId) throws Exception {
+		
+		String sql = 
+			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.node_type " +
+			"from " +
+			"  eas_node n2, " +
+			"  ( " +
+			"    select c.parent_node_id, c.depth " +
+			"    from eas_closure c " +
+			"    join eas_node n " +
+			"    on c.child_node_id = n.node_id " +
+			"    where c.child_node_id = ? " +
+			"  ) nlist " +
+			"where " +
+			"  n2.node_id = nlist.parent_node_id " +
+			"order by " +
+			"  nlist.depth desc";
+
+		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId },
+				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
+						rs.getString("node_name"), rs.getString("node_type")));
+
+		return mappings;		
+		
+	}
 
 	/**
 	 * Add a new node
@@ -131,11 +168,6 @@ public class EAClosureRepository {
 	 * @return the id of the new node
 	 */
 	public Long addNode(Long parentNodeId, String name, String type) throws Exception {
-		
-		// TODO - make sure parent node doesn't already have a child node with the same name
-		
-		// TODO - if we are going to use 'type' value to mean directory or file, then we want
-		// to make sure we don't add a directory under a file node since that doesn't make any sense.
 		
 		Timestamp dtNow = DateUtil.getCurrentTime();
 		

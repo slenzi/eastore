@@ -37,7 +37,7 @@ public class TreeService {
 	}
 	
 	/**
-	 * Build a tree of parent-child mappings
+	 * Build a top-down (from root node to leaf nodes) tree of parent-child mappings
 	 * 
 	 * @param nodeId - Id of the root node.
 	 * @return
@@ -50,7 +50,8 @@ public class TreeService {
 	}
 	
 	/**
-	 * Build a tree of parent-child mappings, but only include nodes up to a specified depth.
+	 * Build a top-down (from root node to leaf nodes) tree of parent-child mappings,
+	 * but only include nodes up to a specified depth.
 	 * 
 	 * @param nodeId
 	 * @param depth
@@ -59,19 +60,16 @@ public class TreeService {
 	 */
 	public Tree<ParentChildMap> buildTree(Long nodeId, int depth) throws ServiceException {
 		
-		//logger.info("Building parent-child mapping tree for node => " + nodeId);
-		
 		List<ParentChildMap> mappings = closureService.getMappings(nodeId, depth);
 		
 		if(mappings == null || mappings.size() == 0){
-			throw new ServiceException("No parent-child mappings for node " + nodeId + 
+			throw new ServiceException("No top-down parent-child mappings for node " + nodeId + 
 					". Returned list was null or empty.");
 		}
 		
 		ParentChildMap rootMapping = null;
 		Map<Long,List<ParentChildMap>> map = new HashMap<Long,List<ParentChildMap>>();
 		for(ParentChildMap pcm : mappings){
-			//logger.info(pcm.toString());
 			if(pcm.getChildId().equals(nodeId)){
 				rootMapping = pcm;
 			}
@@ -84,14 +82,6 @@ public class TreeService {
 			}
 		}
 		
-		//logger.info("Root mapping = > " + ((rootMapping != null) ? rootMapping.toString() : "null"));
-		//for(Long mapId : map.keySet()){
-		//	logger.info("Map Node Id = > " + mapId);
-		//	for(ParentChildMapping pcm : CollectionUtil.emptyIfNull( map.get(mapId)) ){
-		//		logger.info("  " + pcm);
-		//	}
-		//}
-		
 		TreeNode<ParentChildMap> rootNode = new TreeNode<ParentChildMap>();
 		rootNode.setData(rootMapping);
 		
@@ -100,7 +90,48 @@ public class TreeService {
 		Tree<ParentChildMap> tree = new Tree<ParentChildMap>();
 		tree.setRootNode(rootNode);
 		
-		//logger.info("\n" + tree.printTree());
+		return tree;		
+		
+	}
+	
+	/**
+	 * Build a bottom-up (leaf node to root node) tree of parent-child mappings
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Tree<ParentChildMap> buildParentTree(Long nodeId) throws ServiceException {
+		
+		List<ParentChildMap> mappings = closureService.getParentMappings(nodeId);
+		
+		if(mappings == null || mappings.size() == 0){
+			throw new ServiceException("No bottom-up parent-child mappings for node " + nodeId + 
+					". Returned list was null or empty.");
+		}		
+		
+		ParentChildMap rootMapping = null;
+		Map<Long,List<ParentChildMap>> map = new HashMap<Long,List<ParentChildMap>>();
+		for(ParentChildMap pcm : mappings){
+			if(pcm.getParentId().equals(new Long(0L))){
+				rootMapping = pcm;
+			}
+			if(map.containsKey(pcm.getParentId())){
+				map.get(pcm.getParentId()).add(pcm);
+			}else{
+				List<ParentChildMap> children = new ArrayList<ParentChildMap>();
+				children.add(pcm);
+				map.put(pcm.getParentId(), children);
+			}
+		}
+		
+		TreeNode<ParentChildMap> rootNode = new TreeNode<ParentChildMap>();
+		rootNode.setData(rootMapping);
+		
+		addChildrenFromMap(rootNode, map);
+		
+		Tree<ParentChildMap> tree = new Tree<ParentChildMap>();
+		tree.setRootNode(rootNode);
 		
 		return tree;		
 		
@@ -118,7 +149,6 @@ public class TreeService {
 		TreeNode<ParentChildMap> childTreeNode = null;
 		
 		Long childNodeId = parentNode.getData().getChildId();
-		//logger.info("Getting children for node => " + childNodeId);
 		
 		for( ParentChildMap pcm : CollectionUtil.emptyIfNull( map.get(childNodeId) ) ){
 			
@@ -142,7 +172,7 @@ public class TreeService {
 		
     	logger.info("Tree:\n" + tree.printTree());
     	
-    	logger.info("Pre-Order Traversal (top-down):\n");
+    	logger.info("Pre-Order Traversal (top-down):");
     	try {
 			Trees.walkTree(tree,
 					(treeNode) -> {
@@ -153,8 +183,8 @@ public class TreeService {
 		} catch (TreeNodeVisitException e) {
 			logger.error("Error walking tree in pre-order (top-down) traversal", e);
 		}
-    	
-    	logger.info("Post-Order Traversal (bottom-up):\n");
+    	logger.info("");
+    	logger.info("Post-Order Traversal (bottom-up):");
     	try {
 			Trees.walkTree(tree,
 					(treeNode) -> {

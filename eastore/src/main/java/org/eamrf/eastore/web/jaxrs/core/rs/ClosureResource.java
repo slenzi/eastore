@@ -33,7 +33,7 @@ import com.google.gson.Gson;
  */
 @Path("/closure")
 @Service("eaClosureResource")
-public class EAClosureResource extends BaseResourceHandler {
+public class ClosureResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
@@ -44,7 +44,7 @@ public class EAClosureResource extends BaseResourceHandler {
     @Autowired
     private ClosureService closureService;
     
-	public EAClosureResource() {
+	public ClosureResource() {
 
 	}
     
@@ -192,23 +192,6 @@ public class EAClosureResource extends BaseResourceHandler {
 		}
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();    	
-    	
-    }
-    
-    /**
-     * Builds a simply OK response message in JSON.
-     * 
-     * @return
-     */
-    private String buildJsonOK(){
-    	
-    	Gson gson = new Gson();
-    	StringBuffer buf = new StringBuffer();
-    	buf.append("{");
-    	buf.append(gson.toJson("reply") + " : " + gson.toJson("ok"));
-    	buf.append("}");
-    	
-    	return buf.toString();
     	
     }
     
