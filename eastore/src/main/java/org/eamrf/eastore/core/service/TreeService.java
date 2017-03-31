@@ -60,7 +60,7 @@ public class TreeService {
 	 */
 	public Tree<ParentChildMap> buildTree(Long nodeId, int depth) throws ServiceException {
 		
-		List<ParentChildMap> mappings = closureService.getMappings(nodeId, depth);
+		List<ParentChildMap> mappings = closureService.getChildMappings(nodeId, depth);
 		
 		if(mappings == null || mappings.size() == 0){
 			throw new ServiceException("No top-down parent-child mappings for node " + nodeId + 
@@ -98,12 +98,27 @@ public class TreeService {
 	 * Build a bottom-up (leaf node to root node) tree of parent-child mappings
 	 * 
 	 * @param nodeId
+	 * @param levels
 	 * @return
 	 * @throws ServiceException
 	 */
 	public Tree<ParentChildMap> buildParentTree(Long nodeId) throws ServiceException {
 		
-		List<ParentChildMap> mappings = closureService.getParentMappings(nodeId);
+		return buildParentTree(nodeId, Integer.MAX_VALUE);
+		
+	}
+	
+	/**
+	 * Build a bottom-up (leaf node to root node) tree of parent-child mappings
+	 * 
+	 * @param nodeId
+	 * @param levels
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Tree<ParentChildMap> buildParentTree(Long nodeId, int levels) throws ServiceException {
+		
+		List<ParentChildMap> mappings = closureService.getParentMappings(nodeId, levels);
 		
 		if(mappings == null || mappings.size() == 0){
 			throw new ServiceException("No bottom-up parent-child mappings for node " + nodeId + 
@@ -113,7 +128,8 @@ public class TreeService {
 		ParentChildMap rootMapping = null;
 		Map<Long,List<ParentChildMap>> map = new HashMap<Long,List<ParentChildMap>>();
 		for(ParentChildMap pcm : mappings){
-			if(pcm.getParentId().equals(new Long(0L))){
+			if(rootMapping == null){
+				// will always be the first one
 				rootMapping = pcm;
 			}
 			if(map.containsKey(pcm.getParentId())){

@@ -49,16 +49,16 @@ public class ClosureResource extends BaseResourceHandler {
 	}
     
     /**
-     * Get parent-child mappings
+     * Get parent-child top-down mappings (from root to leaf)
      * 
      * @param nodeId
      * @return
      * @throws WebServiceException
      */
     @GET
-    @Path("/mappings/{nodeId}")
+    @Path("/mappings/child/{nodeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getParentChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<ParentChildMap> getChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -66,7 +66,7 @@ public class ClosureResource extends BaseResourceHandler {
     	
     	List<ParentChildMap> mappings = null;
     	try {
-			mappings = closureService.getMappings(nodeId);
+			mappings = closureService.getChildMappings(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -76,16 +76,17 @@ public class ClosureResource extends BaseResourceHandler {
     }
     
     /**
-     * Get parent-child mappings
+     * Get parent-child top-down mappings (from root to leaf)
      * 
      * @param nodeId
+     * @param depth
      * @return
      * @throws WebServiceException
      */
     @GET
-    @Path("/mappings/{nodeId}/depth/{depth}")
+    @Path("/mappings/child/{nodeId}/depth/{depth}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getParentChildMappings(
+    public List<ParentChildMap> getChildMappings(
     		@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
     	
     	if(nodeId == null){
@@ -97,7 +98,7 @@ public class ClosureResource extends BaseResourceHandler {
     	
     	List<ParentChildMap> mappings = null;
     	try {
-			mappings = closureService.getMappings(nodeId, depth);
+			mappings = closureService.getChildMappings(nodeId, depth);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -105,6 +106,65 @@ public class ClosureResource extends BaseResourceHandler {
     	return mappings;
     	
     }
+    
+    /**
+     * Get parent-child, bottom-up mappings (from leaf to root)
+     * 
+     * @param nodeId
+     * @return
+     * @throws WebServiceException
+     */
+    @GET
+    @Path("/mappings/parent/{nodeId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<ParentChildMap> getParentMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	List<ParentChildMap> mappings = null;
+    	try {
+			mappings = closureService.getParentMappings(nodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return mappings;
+    	
+    }
+    
+    /**
+     * Get parent-child, bottom-up mappings (from leaf to root)
+     * 
+     * @param nodeId
+     * @param depth
+     * @return
+     * @throws WebServiceException
+     */
+    @GET
+    @Path("/mappings/parent/{nodeId}/levels/{levels}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<ParentChildMap> getParentMappings(
+    		@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	if(levels < 0){
+    		handleError("Levels param must be positive.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	List<ParentChildMap> mappings = null;
+    	try {
+			mappings = closureService.getParentMappings(nodeId, levels);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return mappings;
+    	
+    }    
     
     /**
      * Add a new node. Currently does not check if the parent node already has a child node with

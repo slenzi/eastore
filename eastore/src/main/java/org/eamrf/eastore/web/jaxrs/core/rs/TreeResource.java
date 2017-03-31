@@ -151,6 +151,45 @@ public class TreeResource extends BaseResourceHandler {
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
+    }
+    
+	/**
+	 * Fetch bottom-up tree (leaf to root) in HTML representation, but only include so many levels up (towards the root node)
+	 * 
+	 * @param nodeId - some leaf node
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/parent/html/{nodeId}/levels/{levels}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getParentTree(@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	if(levels < 0){
+    		handleError("Levels param must be positive.", WebExceptionType.CODE_IO_ERROR);
+    	}    	
+    	
+    	Tree<ParentChildMap> tree = null;
+    	try {
+    		tree = treeService.buildParentTree(nodeId, levels);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for node => " + nodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logTree(tree);
+
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
     }    
 
 	/* (non-Javadoc)

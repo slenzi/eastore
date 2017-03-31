@@ -66,7 +66,7 @@ public class ClosureRepository {
 	 * @param nodeId
 	 * @return
 	 */
-	public List<ParentChildMap> getMappings(Long nodeId) throws Exception {
+	public List<ParentChildMap> getChildMappings(Long nodeId) throws Exception {
 		
 		debugDatasource();
 		
@@ -97,10 +97,10 @@ public class ClosureRepository {
 	 * e.g., depth 1 will get a node node and it's first level children.
 	 * 
 	 * @param nodeId
-	 * @param depth
+	 * @param depth - number of levels down the tree, from the node, to include.
 	 * @return
 	 */
-	public List<ParentChildMap> getMappings(Long nodeId, int depth) throws Exception {
+	public List<ParentChildMap> getChildMappings(Long nodeId, int depth) throws Exception {
 		
 		String sql = 
 			"select " +
@@ -158,6 +158,42 @@ public class ClosureRepository {
 		return mappings;		
 		
 	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node), parent-child mappings, up to a specified levels up.
+	 * This can be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * @param nodeId - 
+	 * @param levels - number of levels up (towards root node), from the leaf node, to include.
+	 * @return
+	 * @throws Exception
+	 */
+	public List<ParentChildMap> getParentMappings(Long nodeId, int levels) throws Exception {
+		
+		String sql = 
+			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.node_type " +
+			"from " +
+			"  eas_node n2, " +
+			"  ( " +
+			"    select c.parent_node_id, c.depth " +
+			"    from eas_closure c " +
+			"    join eas_node n " +
+			"    on c.child_node_id = n.node_id " +
+			"    where c.child_node_id = ? " +
+			"    and c.depth <= ? " +
+			"  ) nlist " +
+			"where " +
+			"  n2.node_id = nlist.parent_node_id " +
+			"order by " +
+			"  nlist.depth desc";
+
+		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId, new Integer(levels) },
+				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
+						rs.getString("node_name"), rs.getString("node_type")));
+
+		return mappings;		
+		
+	}	
 
 	/**
 	 * Add a new node

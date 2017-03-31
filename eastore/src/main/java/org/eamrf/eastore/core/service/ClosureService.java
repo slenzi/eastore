@@ -33,11 +33,11 @@ public class ClosureService {
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getMappings(Long nodeId) throws ServiceException {
+    public List<ParentChildMap> getChildMappings(Long nodeId) throws ServiceException {
     	
     	List<ParentChildMap> mappings = null;
     	try {
-			mappings = closureRepository.getMappings(nodeId);
+			mappings = closureRepository.getChildMappings(nodeId);
 		} catch (Exception e) {
 			throw new ServiceException(
 					"Error getting mappings for node " + nodeId + ". " + e.getMessage(),e);
@@ -53,14 +53,15 @@ public class ClosureService {
 	 * This data can be used to build an in-memory tree representation.
      * 
      * @param nodeId
+     * @param depth - number of levels down the tree, from the node, to include.
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getMappings(Long nodeId, int depth) throws ServiceException {
+    public List<ParentChildMap> getChildMappings(Long nodeId, int depth) throws ServiceException {
     	
     	List<ParentChildMap> mappings = null;
     	try {
-			mappings = closureRepository.getMappings(nodeId, depth);
+			mappings = closureRepository.getChildMappings(nodeId, depth);
 		} catch (Exception e) {
 			throw new ServiceException(
 					"Error getting mappings for node " + nodeId + ", to depth " + depth + ". " + e.getMessage(), e);
@@ -88,7 +89,29 @@ public class ClosureService {
 		}
     	return mappings;
     	
-    }    
+    }
+    
+    /**
+	 * Fetch bottom-up (leaf node to root node), parent-child mappings, up to a specified levels up.
+	 * This can be used to build a tree (or more of a single path) from root to leaf. 
+     * 
+     * @param nodeId - 
+     * @param levels - number of levels up (towards root node), from the leaf node, to include.
+     * @return
+     * @throws ServiceException
+     */
+    public List<ParentChildMap> getParentMappings(Long nodeId, int levels) throws ServiceException {
+    	
+    	List<ParentChildMap> mappings = null;
+    	try {
+			mappings = closureRepository.getParentMappings(nodeId, levels);
+		} catch (Exception e) {
+			throw new ServiceException(
+					"Error getting parent mappings for node " + nodeId + ". " + e.getMessage(), e);
+		}
+    	return mappings;
+    	
+    }     
     
     /**
      * Add a new child node
