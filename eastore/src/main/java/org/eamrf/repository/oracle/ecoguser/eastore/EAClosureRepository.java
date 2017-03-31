@@ -41,6 +41,9 @@ public class EAClosureRepository {
 		
 	}
 	
+	/**
+	 * Print some debug info about our datasource, specifically make sure that we are using HikariCP.
+	 */
 	private void debugDatasource(){
 		
 		logger.info("DataSource => " + dataSource);
@@ -61,7 +64,7 @@ public class EAClosureRepository {
 	 * @param nodeId
 	 * @return
 	 */
-	public List<ParentChildMap> getMappings(Long nodeId){
+	public List<ParentChildMap> getMappings(Long nodeId) throws Exception {
 		
 		debugDatasource();
 		
@@ -94,7 +97,7 @@ public class EAClosureRepository {
 	 * @param depth
 	 * @return
 	 */
-	public List<ParentChildMap> getMappings(Long nodeId, int depth){
+	public List<ParentChildMap> getMappings(Long nodeId, int depth) throws Exception {
 		
 		String sql = 
 			"select " +
@@ -127,7 +130,7 @@ public class EAClosureRepository {
 	 * @param type - type of the node
 	 * @return the id of the new node
 	 */
-	public Long addNode(Long parentNodeId, String name, String type) {
+	public Long addNode(Long parentNodeId, String name, String type) throws Exception {
 		
 		// TODO - make sure parent node doesn't already have a child node with the same name
 		
@@ -137,17 +140,15 @@ public class EAClosureRepository {
 		Timestamp dtNow = DateUtil.getCurrentTime();
 		
 		// get next id from eas_node_id_sequence
-		Long newNodeId = jdbcTemplate.queryForObject(
-				"select eas_node_id_sequence.nextval from dual", Long.class);
+		Long newNodeId = getNextNodeId();
 		
     	// add node to eas_node
 		jdbcTemplate.update(
 				"insert into eas_node (node_id, parent_node_id, node_name, node_type, creation_date, updated_date) " +
-				"values (?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, type, dtNow, dtNow);
+				"values (?, ?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, type, dtNow, dtNow);
     	
 		// get next id from eas_link_id_sequence
-		Long nextLinkId = jdbcTemplate.queryForObject(
-				"select eas_link_id_sequence.nextval from dual", Long.class);		
+		Long nextLinkId = getNextLinkId();		
 		
     	// add depth-0 entry to eas_closure table
 		jdbcTemplate.update(
@@ -179,8 +180,7 @@ public class EAClosureRepository {
 	public void deleteNode(Long nodeId) throws Exception {
 		
 		// get next value from prune ID sequence
-		Long newPruneId = jdbcTemplate.queryForObject(
-				"select eas_prune_id_sequence.nextval from dual", Long.class);		
+		Long newPruneId = getNextPruneId();
 		
 		// add IDs of all nodes to be deleted to the prune table
 		// this includes the ID of the node itself, plus the IDs of ALL child nodes (the entire tree)
@@ -195,14 +195,55 @@ public class EAClosureRepository {
 			")";
 		jdbcTemplate.update(addToPruneQuery, nodeId);
 		
+		prune(newPruneId);
+		
+	}
+	
+	/**
+	 * Delete all children under a node
+	 * 
+	 * @param nodeId
+	 * @throws Exception
+	 */
+	public void deleteChildren(Long nodeId) throws Exception {
+		
+		// get next value from prune ID sequence
+		Long newPruneId = getNextPruneId();
+		
+		// add IDs of all nodes to be deleted to the prune table
+		// this does not include the ID of the node itself, just the IDs of all the child nodes
+		String addToPruneQuery =
+			"insert into eas_prune " +
+			"select eas_prune_id_sequence.currval as prune_id, child_to_delete from ( " +
+			"  select distinct c.child_node_id as child_to_delete " +
+			"  from eas_closure c " +
+			"  inner join eas_node n " +
+			"  on c.child_node_id = n.node_id " + 
+			"  where c.parent_node_id = ? " +
+			"  and c.depth > 0 " +
+			")";
+		jdbcTemplate.update(addToPruneQuery, nodeId);
+		
+		prune(newPruneId);
+		
+	}
+	
+	/**
+	 * Delete data from eas_node and eas_clusure linked to the prune_id
+	 * 
+	 * @param pruneId
+	 * @throws Exception
+	 */
+	private void prune(Long pruneId) throws Exception {
+		
 		// delete nodes from node table
 		String deleteNodeQuery =
 			"delete from eas_node n where n.node_id in ( " +
 			"	select p.node_id from eas_prune p where p.prune_id = ? " +
 			")";
-		jdbcTemplate.update(deleteNodeQuery, newPruneId);
+		jdbcTemplate.update(deleteNodeQuery, pruneId);
 		
-		// TODO - delete rows from closure table (using our prune table for help)
+		// delete rows from closure table
 		String deleteClosureQuery =
 			"delete from " +
 			"  eas_closure " +
@@ -240,8 +281,53 @@ public class EAClosureRepository {
 			"	  to_delete.child_node_id = pruneTable.child_to_delete " +
 			"	) " +
 			")";
-		jdbcTemplate.update(deleteClosureQuery, newPruneId);
+		jdbcTemplate.update(deleteClosureQuery, pruneId);		
 		
 	}
+	
+	/**
+	 * Get next id from eas_node_id_sequence
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	private Long getNextNodeId() throws Exception {
+		
+		Long id = jdbcTemplate.queryForObject(
+				"select eas_node_id_sequence.nextval from dual", Long.class);
+		
+		return id;
+		
+	}
+	
+	/**
+	 * Get next id from eas_link_id_sequence
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	private Long getNextLinkId() throws Exception {
+		
+		Long id = jdbcTemplate.queryForObject(
+				"select eas_link_id_sequence.nextval from dual", Long.class);
+		
+		return id;
+		
+	}
+	
+	/**
+	 * Get next id from eas_prune_id_sequence
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	private Long getNextPruneId() throws Exception {
+		
+		Long id = jdbcTemplate.queryForObject(
+				"select eas_prune_id_sequence.nextval from dual", Long.class);
+		
+		return id;
+		
+	}	
 
 }

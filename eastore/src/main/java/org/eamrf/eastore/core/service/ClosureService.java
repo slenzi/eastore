@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Main service class for interacting with our closure table.
+ * Main service class for interacting with our closure repository.
  * 
  * @author slenzi
  */
@@ -37,7 +37,8 @@ public class ClosureService {
     	try {
 			mappings = closureRepository.getMappings(nodeId);
 		} catch (Exception e) {
-			throw new ServiceException(e.getMessage(),e);
+			throw new ServiceException(
+					"Error getting mappings for node " + nodeId + ". " + e.getMessage(),e);
 		}
     	return mappings;
     	
@@ -57,7 +58,8 @@ public class ClosureService {
     	try {
 			mappings = closureRepository.getMappings(nodeId, depth);
 		} catch (Exception e) {
-			throw new ServiceException(e.getMessage(),e);
+			throw new ServiceException(
+					"Error getting mappings for node " + nodeId + ", to depth " + depth + ". " + e.getMessage(), e);
 		}
     	return mappings;
     	
@@ -75,8 +77,48 @@ public class ClosureService {
     	
     	// TODO - make sure parent node doesn't already have a child with the same name
     	
-    	return closureRepository.addNode(parentNodeId, name, type);
+    	Long newNodeId = -1L;
+    	try {
+			newNodeId = closureRepository.addNode(parentNodeId, name, type);
+		} catch (Exception e) {
+			throw new ServiceException(
+					"Error adding new node under parent node " + parentNodeId + ". " + e.getMessage(), e);
+		}
+    	return newNodeId;
+    }
+    
+    /**
+     * Delete a node, and all children underneath 
+     * 
+     * @param nodeId
+     * @throws ServiceException
+     */
+    public void deleteNode(Long nodeId) throws ServiceException {
+    	
+    	try {
+			closureRepository.deleteNode(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException(
+					"Error deleting node " + nodeId + ". " + e.getMessage(), e);
+		}    	
     	
     }
+    
+    /**
+     * Delete all children under the node, but not the node itself
+     * 
+     * @param nodeId
+     * @throws ServiceException
+     */
+    public void deleteChildren(Long nodeId) throws ServiceException {
+    	
+    	try {
+			closureRepository.deleteChildren(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException(
+					"Error deleting children for node " + nodeId + ". " + e.getMessage(), e);
+		}    	
+    	
+    }    
     
 }
