@@ -338,7 +338,22 @@ public class FileSystemRepository {
 					+ "Cannot add sub directory to a non-directory node.");
 		}
 		
-		// TODO - make sure directory doesn't already contain a sub-directory with the same name
+		//
+		// make sure directory doesn't already contain a sub-directory with the same name
+		//
+		List<PathResource> childResources = getPathResourceTree(parentDirNodeId, 1);
+		if(childResources != null && childResources.size() > 0){
+			for(PathResource pr : childResources){
+				if(pr.getParentNodeId().equals(parentDirNodeId)
+						&& pr.getResourceType() == ResourceType.DIRECTORY
+						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+					
+					throw new Exception("Directory with dirNodeId " + parentDirNodeId + 
+							" already contains a sub-directory with the name '" + name + "'");
+					
+				}
+			}
+		}
 		
 		//
 		// get store
