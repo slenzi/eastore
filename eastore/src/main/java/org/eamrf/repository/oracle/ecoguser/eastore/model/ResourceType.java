@@ -5,7 +5,6 @@ package org.eamrf.repository.oracle.ecoguser.eastore.model;
 
 /**
  * @author slenzi
- *
  */
 public enum ResourceType {
 
@@ -20,6 +19,16 @@ public enum ResourceType {
 	
 	public String getTypeString(){
 		return type;
+	}
+	
+	public static ResourceType getFromString(String type){
+		if(type.equals(FILE.getTypeString())){
+			return ResourceType.FILE;
+		}else if(type.equals(DIRECTORY.getTypeString())){
+			return ResourceType.DIRECTORY;
+		}else{
+			return null;
+		}
 	}
 
 	@Override

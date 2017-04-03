@@ -16,6 +16,7 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -62,16 +63,13 @@ public class FileSystemResource extends BaseResourceHandler {
     		@PathParam("dirNodeId") Long dirNodeId,
     		@PathParam("name") String name) throws WebServiceException {
     	
-    	if(dirNodeId == null || StringUtil.isNullEmpty(name)){
-    		handleError("Missing dirNodeId, and/or name params.", WebExceptionType.CODE_IO_ERROR);
-    	}
+    	// See -> http://stackoverflow.com/questions/25797650/fileupload-with-jax-rs
     	
-    	Long newFileNodeId = -1L;
-    	try {
-			newFileNodeId = fileSystemService.addFile(dirNodeId, name);
-		} catch (ServiceException e) {
-			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
-		}
+    	/*
+		@Consumes(MediaType.MULTIPART_FORM_DATA)
+		public Response uploadFile(@Multipart(value = "vendor") String vendor,
+        @Multipart(value = "uploadedFile") Attachment attr) {    	 
+    	 */
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build(); 
     	
@@ -87,7 +85,7 @@ public class FileSystemResource extends BaseResourceHandler {
     @POST
     @Path("/addDirectory/{dirNodeId}/name/{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response addDirectory(
+    public DirectoryResource addDirectory(
     		@PathParam("dirNodeId") Long dirNodeId,
     		@PathParam("name") String name) throws WebServiceException {
     	
@@ -95,14 +93,15 @@ public class FileSystemResource extends BaseResourceHandler {
     		handleError("Missing dirNodeId, and/or name params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	Long newDirNodeId = -1L;
+    	DirectoryResource dirResource = null;
     	try {
-			newDirNodeId = fileSystemService.addDirectory(dirNodeId, name);
+    		dirResource = fileSystemService.addDirectory(dirNodeId, name);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build(); 
+    	//return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build(); 
+    	return dirResource;
     	
     }    
 

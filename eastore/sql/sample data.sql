@@ -1,14 +1,41 @@
+/* sample store */
+Insert into EAS_STORE (STORE_ID, STORE_NAME, STORE_DESCRIPTION, STORE_PATH, NODE_ID, MAX_FILE_SIZE_IN_DB, CREATION_DATE, UPDATED_DATE) values (1, 'Sample Store 1', 'Sample store for testing', 'C:/temp/eastore/sample1', 1, 52428800, to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'), to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+
+/* sample path resources */
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (1,  1, 'test', 'Directory', '/test');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (2,  1, 'more', 'Directory', '/test/more');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (3,  1, 'other', 'Directory', '/test/other');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (4,  1, 'foo', 'Directory', '/test/other/foo');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (5,  1, 'things', 'Directory', '/test/other/things');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (6,  1, 'cats', 'Directory', '/test/other/foo/cats');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (7,  1, 'dogs', 'Directory', '/test/other/foo/dogs');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (8,  1, 'big', 'Directory', '/test/other/foo/dogs/big');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (9,  1, 'small', 'Directory', '/test/other/foo/dogs/small');
+Insert into EAS_PATH_RESOURCE (NODE_ID, STORE_ID, PATH_NAME, PATH_TYPE, RELATIVE_PATH) values (10, 1, 'pics', 'Directory', '/test/other/foo/dogs/small/pics');
+
+/* sample directory resources */
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 1  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 2  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 3  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 4  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 5  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 6  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 7  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 8  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 9  );
+Insert into EAS_DIRECTORY_RESOURCE (NODE_ID) values ( 10 );
+
 /* sample nodes */
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 1,  0, 'A', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 2,  1, 'B', 'F', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 3,  1, 'C', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 4,  3, 'D', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 5,  3, 'E', 'F', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 6,  4, 'F', 'F', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 7,  4, 'G', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 8,  7, 'H', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 9,  7, 'I', 'D', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
-Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, NODE_TYPE, CREATION_DATE, UPDATED_DATE) values ( 10, 9, 'J', 'F', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 1,  0, 'test', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 2,  1, 'more', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 3,  1, 'other', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 4,  3, 'foo', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 5,  3, 'things', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 6,  4, 'cats', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 7,  4, 'dogs', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 8,  7, 'big', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 9,  7, 'small', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
+Insert into EAS_NODE (NODE_ID, PARENT_NODE_ID, NODE_NAME, CREATION_DATE, UPDATED_DATE) values ( 10, 9, 'pics', to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS'),  to_date('20-JUN-14 18:55:09','DD-MON-RR HH24:MI:SS') );
 
 /* every node is parent/child of itself at depth-0 */
 Insert into EAS_CLOSURE (PARENT_NODE_ID, CHILD_NODE_ID, DEPTH, LINK_ID) values (1,  1,  0,  1  );

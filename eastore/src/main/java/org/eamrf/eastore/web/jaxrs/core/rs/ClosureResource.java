@@ -19,14 +19,13 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.ClosureService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.google.gson.Gson;
 
 /**
  * @author slenzi
@@ -167,8 +166,7 @@ public class ClosureResource extends BaseResourceHandler {
     }    
     
     /**
-     * Add a new node. Currently does not check if the parent node already has a child node with
-     * the same names...
+     * Add a new node.
      * 
      * @param parentNodeId
      * @param name
@@ -177,9 +175,9 @@ public class ClosureResource extends BaseResourceHandler {
      */
     @GET
     @POST
-    @Path("/add/{parentNodeId}/name/{name}/type/{type}")
+    @Path("/add/{parentNodeId}/name/{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Long addNode(
+    public Node addNode(
     		@PathParam("parentNodeId") Long parentNodeId,
     		@PathParam("name") String name,
     		@PathParam("type") String type) throws WebServiceException {
@@ -188,16 +186,14 @@ public class ClosureResource extends BaseResourceHandler {
     		handleError("Missing parentNodeId, name, and/or type params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	// TODO - make sure parent node doesn't already have a child with the same name
-    	
-    	Long newNodeId = null;
+    	Node newNode = null;
     	try {
-			newNodeId = closureService.addNode(parentNodeId, name, type);
+    		newNode = closureService.addNode(parentNodeId, name);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return newNodeId;
+    	return newNode;
     	
     }
     

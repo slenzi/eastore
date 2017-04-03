@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,7 +73,7 @@ public class ClosureRepository {
 		
 		String sql = 
 			"select " +
-			"  n.parent_node_id, c.child_node_id, n.node_name, n.node_type " +
+			"  n.parent_node_id, c.child_node_id, n.node_name " +
 			"from " +
 			"  eas_closure c " +
 			"inner join " +
@@ -86,7 +87,7 @@ public class ClosureRepository {
 
 		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId },
 				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name"), rs.getString("node_type")));
+						rs.getString("node_name")));
 
 		return mappings;
 		
@@ -104,7 +105,7 @@ public class ClosureRepository {
 		
 		String sql = 
 			"select " +
-			"  n.parent_node_id, c.child_node_id, n.node_name, n.node_type  " +
+			"  n.parent_node_id, c.child_node_id, n.node_name " +
 			"from " +
 			"  eas_closure c " +
 			"inner join " +
@@ -119,7 +120,7 @@ public class ClosureRepository {
 
 		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId, new Integer(depth) },
 				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name"), rs.getString("node_type")));
+						rs.getString("node_name")));
 
 		return mappings;		
 		
@@ -136,7 +137,7 @@ public class ClosureRepository {
 	public List<ParentChildMap> getParentMappings(Long nodeId) throws Exception {
 		
 		String sql = 
-			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.node_type " +
+			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name " +
 			"from " +
 			"  eas_node n2, " +
 			"  ( " +
@@ -153,7 +154,7 @@ public class ClosureRepository {
 
 		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId },
 				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name"), rs.getString("node_type")));
+						rs.getString("node_name")));
 
 		return mappings;		
 		
@@ -171,7 +172,7 @@ public class ClosureRepository {
 	public List<ParentChildMap> getParentMappings(Long nodeId, int levels) throws Exception {
 		
 		String sql = 
-			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.node_type " +
+			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name " +
 			"from " +
 			"  eas_node n2, " +
 			"  ( " +
@@ -189,7 +190,7 @@ public class ClosureRepository {
 
 		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId, new Integer(levels) },
 				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name"), rs.getString("node_type")));
+						rs.getString("node_name")));
 
 		return mappings;		
 		
@@ -203,7 +204,7 @@ public class ClosureRepository {
 	 * @param type - type of the node
 	 * @return the id of the new node
 	 */
-	public Long addNode(Long parentNodeId, String name, String type) throws Exception {
+	public Node addNode(Long parentNodeId, String name) throws Exception {
 		
 		Timestamp dtNow = DateUtil.getCurrentTime();
 		
@@ -212,8 +213,8 @@ public class ClosureRepository {
 		
     	// add node to eas_node
 		jdbcTemplate.update(
-				"insert into eas_node (node_id, parent_node_id, node_name, node_type, creation_date, updated_date) " +
-				"values (?, ?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, type, dtNow, dtNow);
+				"insert into eas_node (node_id, parent_node_id, node_name, creation_date, updated_date) " +
+				"values (?, ?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, dtNow, dtNow);
     	
 		// get next id from eas_link_id_sequence
 		Long nextLinkId = getNextLinkId();		
@@ -235,7 +236,14 @@ public class ClosureRepository {
 			"	p.child_node_id = ? and c.parent_node_id = ?";
 		jdbcTemplate.update(makeParentQuery, parentNodeId, newNodeId);
 		
-		return newNodeId;
+		Node n = new Node();
+		n.setNodeId(newNodeId);
+		n.setNodeName(name);
+		n.setParentNodeId(parentNodeId);
+		n.setDateCreated(dtNow);
+		n.setDateUpdated(dtNow);
+		
+		return n;
 		
 	}
 	

@@ -5,6 +5,7 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.repository.oracle.ecoguser.eastore.ClosureRepository;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,19 +119,18 @@ public class ClosureService {
      * 
      * @param parentNodeId - The parent node under which the new child node will be added
      * @param name - node name
-     * @param type - node type
      * @throws ServiceException
      */
-    public Long addNode(Long parentNodeId, String name, String type) throws ServiceException {
+    public Node addNode(Long parentNodeId, String name) throws ServiceException {
     	
-    	Long newNodeId = -1L;
+    	Node newNode = null;
     	try {
-			newNodeId = closureRepository.addNode(parentNodeId, name, type);
+    		newNode = closureRepository.addNode(parentNodeId, name);
 		} catch (Exception e) {
 			throw new ServiceException(
 					"Error adding new node under parent node " + parentNodeId + ". " + e.getMessage(), e);
 		}
-    	return newNodeId;
+    	return newNode;
     }
     
     /**
