@@ -153,7 +153,7 @@ public class FileSystemRepository {
 	 */
 	public List<PathResource> getPathResourceTree(Long dirNodeId) throws Exception {
 		
-		// functionally equivalent to getChildMappings(Long nodeId)
+		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
 		
 		String sql =
 			"select " +
@@ -186,7 +186,7 @@ public class FileSystemRepository {
 	 */
 	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws Exception {
 		
-		// functionally equivalent to getChildMappings(Long nodeId, int depth)
+		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
 		
 		String sql =
 			"select " +
@@ -204,6 +204,87 @@ public class FileSystemRepository {
 				sql, new Object[] { dirNodeId, new Integer(depth) }, resourcePathRowMapper);		
 		
 		return resources;
+		
+	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node), PathResource list. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws Exception {
+		
+		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)
+		
+		String sql =
+			"select " +
+			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"from " +
+			"  eas_node n2 inner join " + 
+			"  ( " +
+			"    select c.parent_node_id, c.depth " +
+			"    from eas_closure c " +
+			"    join eas_node n " +
+			"    on c.child_node_id = n.node_id " +
+			"    where c.child_node_id = ? " +
+			"  ) nlist on (n2.node_id = nlist.parent_node_id) " +
+			"inner join eas_path_resource r on n2.node_id = r.node_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			"order by " +
+			"  nlist.depth desc";
+		
+		List<PathResource> resources = jdbcTemplate.query(
+				sql, new Object[] { dirNodeId }, resourcePathRowMapper);		
+		
+		return resources;		
+		
+	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node) PathResource list, up to a specified levels up. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)
+	 * 
+	 * @param dirNodeId
+	 * @param levels
+	 * @return
+	 * @throws Exception
+	 */
+	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws Exception {
+		
+		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)
+		
+		String sql =
+			"select " +
+			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"from " +
+			"  eas_node n2 inner join " + 
+			"  ( " +
+			"    select c.parent_node_id, c.depth " +
+			"    from eas_closure c " +
+			"    join eas_node n " +
+			"    on c.child_node_id = n.node_id " +
+			"    where c.child_node_id = ? and c.depth <= ? " +
+			"  ) nlist on (n2.node_id = nlist.parent_node_id) " +
+			"inner join eas_path_resource r on n2.node_id = r.node_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			"order by " +
+			"  nlist.depth desc";
+		
+		List<PathResource> resources = jdbcTemplate.query(
+				sql, new Object[] { dirNodeId, new Integer(levels) }, resourcePathRowMapper);		
+		
+		return resources;		
 		
 	}	
 	

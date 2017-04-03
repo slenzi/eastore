@@ -77,6 +77,53 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Fetch bottom-up (leaf node to root node), PathResource list. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId)
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws ServiceException {
+		
+		List<PathResource> resources = null;
+		try {
+			resources = fileSystemRepository.getParentPathResourceTree(dirNodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Error getting PathResource tree for directory node node " + 
+					dirNodeId + ". " + e.getMessage(), e);
+		}
+		return resources;
+		
+	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node) PathResource list, up to a specified levels up. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId, int depth)
+	 * 
+	 * @param dirNodeId
+	 * @param levels
+	 * @return
+	 * @throws ServiceException
+	 */
+	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws ServiceException {
+		
+		List<PathResource> resources = null;
+		try {
+			resources = fileSystemRepository.getParentPathResourceTree(dirNodeId, levels);
+		} catch (Exception e) {
+			throw new ServiceException("Error getting PathResource tree for directory node node " + 
+					dirNodeId + ". " + e.getMessage(), e);
+		}
+		return resources;		
+		
+	}	
+	
+	/**
 	 * Add new file
 	 * 
 	 * @param dirNodeId

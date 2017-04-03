@@ -113,7 +113,8 @@ public class TreeService {
 	}
 	
 	/**
-	 * Build a bottom-up (leaf node to root node) tree of parent-child mappings
+	 * Build a bottom-up (leaf node to root node) tree of parent-child mappings, but only up
+	 * to a specified number of levels.
 	 * 
 	 * @param nodeId
 	 * @param levels
@@ -192,6 +193,64 @@ public class TreeService {
 		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
 		for(PathResource res : resources){
 			if(res.getChildNodeId().equals(dirNodeId)){
+				rootResource = res;
+			}
+			if(map.containsKey(res.getParentNodeId())){
+				map.get(res.getParentNodeId()).add(res);
+			}else{
+				List<PathResource> children = new ArrayList<PathResource>();
+				children.add(res);
+				map.put(res.getParentNodeId(), children);
+			}
+		}
+		
+		TreeNode<PathResource> rootNode = new TreeNode<PathResource>();
+		rootNode.setData(rootResource);
+		
+		addChildrenFromPathResourceMap(rootNode, map);
+		
+		Tree<PathResource> tree = new Tree<PathResource>();
+		tree.setRootNode(rootNode);
+		
+		return tree;		
+		
+	}
+	
+	/**
+	 * Build a bottom-up (leaf node to root node) tree of PathResource objects.
+	 * 
+	 * @param dirNodeId - Id of the dir node
+	 * @throws ServiceException
+	 */
+	public Tree<PathResource> buildParentPathResourceTree(Long dirNodeId) throws ServiceException {
+		
+		return buildParentPathResourceTree(dirNodeId, Integer.MAX_VALUE);
+		
+	}	
+	
+	/**
+	 * Build a bottom-up (leaf node to root node) tree of PathResource objects, but only up
+	 * to a specified number of levels.
+	 * 
+	 * @param nodeId
+	 * @param levels
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Tree<PathResource> buildParentPathResourceTree(Long dirNodeId, int levels) throws ServiceException {
+		
+		List<PathResource> resources = fileSystemService.getParentPathResourceTree(dirNodeId, levels);
+		
+		if(resources == null || resources.size() == 0){
+			throw new ServiceException("No bottom-up PathResource tree for dirNodeId " + dirNodeId + 
+					". Returned list was null or empty.");
+		}		
+		
+		PathResource rootResource = null;
+		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
+		for(PathResource res : resources){
+			if(rootResource == null){
+				// will always be the first one
 				rootResource = res;
 			}
 			if(map.containsKey(res.getParentNodeId())){

@@ -162,7 +162,7 @@ public class TreeResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
     @GET
-    @Path("/parent/html/{nodeId}/levels/{levels}")
+    @Path("/pcm/parent/html/{nodeId}/levels/{levels}")
     @Produces(MediaType.TEXT_HTML)
     public Response getPCMParentTree(@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
     	
@@ -265,6 +265,81 @@ public class TreeResource extends BaseResourceHandler {
 
     	treeService.logPathResourceTree(tree);
     	
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }
+    
+	/**
+	 * Fetch PathResource bottom-up tree (leaf to root) in HTML representation
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/pathresource/parent/html/{dirNodeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPathResourceParentTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = treeService.buildParentPathResourceTree(dirNodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logPathResourceTree(tree);
+
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }
+    
+	/**
+	 * Fetch bottom-up tree (leaf to root) in HTML representation, but only include so many levels up (towards the root node)
+	 * 
+	 * @param nodeId - some leaf node
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/pathresource/parent/html/{dirNodeId}/levels/{levels}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPathResourceParentTree(@PathParam("dirNodeId") Long dirNodeId, @PathParam("levels") int levels) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	if(levels < 0){
+    		handleError("Levels param must be positive.", WebExceptionType.CODE_IO_ERROR);
+    	}    	
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = treeService.buildParentPathResourceTree(dirNodeId, levels);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for node => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logPathResourceTree(tree);
+
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }    
