@@ -19,12 +19,13 @@
 		<version.spring.boot.starter>1.5.2.RELEASE</version.spring.boot.starter>
 		<version.spring>4.3.7.RELEASE</version.spring>  		
   		<version.apache.cxf>3.1.10</version.apache.cxf>
+  		<version.apache.tika>1.14</version.apache.tika>
   		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
 		<version.gson>2.8.0</version.gson>
 		<version.jodatime>2.9.7</version.jodatime>
 		<version.javax.mail>1.5.6</version.javax.mail>
 		<version.javax.mail.api>1.5.6</version.javax.mail.api>  
-		<version.hikaricp>2.6.1</version.hikaricp>		
+		<version.hikaricp>2.6.1</version.hikaricp>	
   		
 		<!-- artifactory dependencies -->
 		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
@@ -139,7 +140,14 @@
 		    <groupId>com.zaxxer</groupId>
 		    <artifactId>HikariCP</artifactId>
 		    <version>${version.hikaricp}</version>
-		</dependency>		
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.tika/tika-core -->
+		<dependency>
+		    <groupId>org.apache.tika</groupId>
+		    <artifactId>tika-core</artifactId>
+		    <version>${version.apache.tika}</version>
+		</dependency>				
 		
 		<dependency>
 		    <groupId>com.oracle</groupId>

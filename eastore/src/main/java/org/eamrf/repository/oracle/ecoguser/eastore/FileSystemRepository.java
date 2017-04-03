@@ -1,10 +1,12 @@
 package org.eamrf.repository.oracle.ecoguser.eastore;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.FileUtil;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
@@ -25,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * @author slenzi
  */
 @Repository
-@Transactional(propagation=Propagation.REQUIRED)
+@Transactional(propagation=Propagation.REQUIRED, rollbackFor=Exception.class)
 public class FileSystemRepository {
 
     @InjectLogger
@@ -296,7 +298,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	public Long addFileNode(Long parentDirNodeId, String name) throws Exception {
+	public Long addFile(Long parentDirNodeId, String name) throws Exception {
 		
 		//
 		// make sure parentDirNodeId is actually of a directory
@@ -327,7 +329,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	public DirectoryResource addDirectoryNode(Long parentDirNodeId, String name) throws Exception {
+	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
 		
 		//
 		// make sure parentDirNodeId is actually of a directory path resource type
@@ -394,6 +396,18 @@ public class FileSystemRepository {
 		//
 		jdbcTemplate.update(
 				"insert into eas_directory_resource (node_id) values (?)", dirResource.getNodeId());		
+		
+		//
+		// create directory on local file system. If there is any error throw a RuntimeException,
+		// or update the @Transactional annotation to rollback for any exception type, i.e.,
+		// @Transactional(rollbackFor=Exception.class)
+		//
+		Path newDirectoryPath = Paths.get(store.getPath() + File.separator + dirResource.getRelativePath());
+		try {
+			FileUtil.createDirectory(newDirectoryPath, true);
+		} catch (Exception e) {
+			throw new Exception("Failed to create directory => " + newDirectoryPath.toString() + ". " + e.getMessage(), e);
+		}
 		
 		return (DirectoryResource)dirResource;
 		

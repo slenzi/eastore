@@ -135,7 +135,7 @@ public class FileSystemService {
 		
 		Long fileNodeId = -1L;
 		try {
-			fileNodeId = fileSystemRepository.addFileNode(dirNodeId, name);
+			fileNodeId = fileSystemRepository.addFile(dirNodeId, name);
 		} catch (Exception e) {
 			throw new ServiceException("Error adding file to directory " + dirNodeId, e);
 		}
@@ -155,7 +155,7 @@ public class FileSystemService {
 		
 		DirectoryResource dirResource = null;
 		try {
-			dirResource = fileSystemRepository.addDirectoryNode(dirNodeId, name);
+			dirResource = fileSystemRepository.addDirectory(dirNodeId, name);
 		} catch (Exception e) {
 			throw new ServiceException("Error adding new subdirectory to directory " + dirNodeId, e);
 		}
