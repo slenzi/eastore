@@ -331,6 +331,8 @@ public class FileSystemRepository {
 	 */
 	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
 		
+		// TODO - need code for adding a root directory!
+		
 		//
 		// make sure parentDirNodeId is actually of a directory path resource type
 		//
