@@ -16,6 +16,7 @@ import org.eamrf.eastore.core.service.TreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -42,16 +43,16 @@ public class TreeResource extends BaseResourceHandler {
 	}
 	
 	/**
-	 * Fetch top-down (root to all leafs) tree in HTML representation
+	 * Fetch ParentChildMap (PCM) top-down (root to all leafs) tree in HTML representation
 	 * 
 	 * @param nodeId
 	 * @return
 	 * @throws WebServiceException
 	 */
     @GET
-    @Path("/html/{nodeId}")
+    @Path("/pcm/html/{nodeId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public Response getPCMTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -59,7 +60,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildTree(nodeId);
+    		tree = treeService.buildPCMTree(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -71,14 +72,14 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logTree(tree);
+    	treeService.logPCMTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }
     
     /**
-     * Fetch top-down (root to all leafs) tree in HTML representation, but only include nodes up to a specified depth.
+     * Fetch ParentChildMap (PCM) top-down (root to all leafs) tree in HTML representation, but only include nodes up to a specified depth.
      * 
      * @param nodeId
      * @param depth
@@ -86,9 +87,9 @@ public class TreeResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @Path("/html/{nodeId}/depth/{depth}")
+    @Path("/pcm/html/{nodeId}/depth/{depth}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTree(@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
+    public Response getPCMTree(@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -99,7 +100,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildTree(nodeId, depth);
+    		tree = treeService.buildPCMTree(nodeId, depth);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -111,23 +112,23 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
 
-    	treeService.logTree(tree);
+    	treeService.logPCMTree(tree);
     	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }
     
 	/**
-	 * Fetch bottom-up tree (leaf to root) in HTML representation
+	 * Fetch ParentChildMap (PCM) bottom-up tree (leaf to root) in HTML representation
 	 * 
 	 * @param nodeId - some leaf node
 	 * @return
 	 * @throws WebServiceException
 	 */
     @GET
-    @Path("/parent/html/{nodeId}")
+    @Path("/pcm/parent/html/{nodeId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getParentTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public Response getPCMParentTree(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -135,7 +136,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildParentTree(nodeId);
+    		tree = treeService.buildParentPCMTree(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -147,7 +148,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logTree(tree);
+    	treeService.logPCMTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -163,7 +164,7 @@ public class TreeResource extends BaseResourceHandler {
     @GET
     @Path("/parent/html/{nodeId}/levels/{levels}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getParentTree(@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
+    public Response getPCMParentTree(@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -174,7 +175,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildParentTree(nodeId, levels);
+    		tree = treeService.buildParentPCMTree(nodeId, levels);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -186,8 +187,84 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logTree(tree);
+    	treeService.logPCMTree(tree);
 
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }
+    
+	/**
+	 * Fetch PathResource top-down (root to all leafs) tree in HTML representation
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/pathresource/html/{dirNodeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPathResourceTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = treeService.buildPathResourceTree(dirNodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+    	
+    	treeService.logPathResourceTree(tree);
+
+    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	
+    }
+    
+    /**
+     * Fetch PathResource top-down (root to all leafs) tree in HTML representation, but only include nodes up to a specified depth.
+     * 
+     * @param dirNodeId
+     * @param depth
+     * @return
+     * @throws WebServiceException
+     */
+    @GET
+    @Path("/pathresource/html/{dirNodeId}/depth/{depth}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPathResourceTree(@PathParam("dirNodeId") Long dirNodeId, @PathParam("depth") int depth) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	if(depth < 0){
+    		handleError("Depth param must be positive.", WebExceptionType.CODE_IO_ERROR);
+    	}    	
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = treeService.buildPathResourceTree(dirNodeId, depth);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append( tree.printHtmlTree() );
+
+    	treeService.logPathResourceTree(tree);
+    	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
     }    

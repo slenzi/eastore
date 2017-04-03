@@ -2,9 +2,11 @@ package org.eamrf.repository.oracle.ecoguser.eastore;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
@@ -12,6 +14,7 @@ import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,37 @@ public class FileSystemRepository {
     @Autowired
     private ClosureRepository closureRepository;    
 	
+    /**
+     * Maps results from query to PathResource objects
+     */
+	private final RowMapper<PathResource> resourcePathRowMapper = (rs, rowNum) -> {
+		PathResource r = null;
+		ResourceType type = ResourceType.getFromString(rs.getString("path_type"));
+		if(type == ResourceType.DIRECTORY){
+			r = new DirectoryResource();
+		}else if(type == ResourceType.FILE){
+			r = new FileMetaResource();
+			((FileMetaResource)r).setMimeType(rs.getString("mime_type"));
+			((FileMetaResource)r).setFileSize(rs.getLong("file_size"));
+			String yn = rs.getString("is_file_data_in_db");
+			if(yn.toLowerCase().equals("y")){
+				((FileMetaResource)r).setIsBinaryInDatabase(true);
+			}else{
+				((FileMetaResource)r).setIsBinaryInDatabase(false);
+			}
+		}
+		r.setNodeId(rs.getLong("node_id"));
+		r.setParentNodeId(rs.getLong("parent_node_id"));
+		r.setChildNodeId(rs.getLong("child_node_id"));
+		r.setDateCreated(rs.getTimestamp("creation_date"));
+		r.setDateUpdated(rs.getTimestamp("updated_date"));
+		r.setPathName(rs.getString("path_name"));
+		r.setRelativePath(rs.getString("relative_path"));
+		r.setResourceType( type );
+		r.setStoreId(rs.getLong("store_id"));
+		return r;
+	};    
+    
 	public FileSystemRepository() {
 		
 	}
@@ -106,6 +140,72 @@ public class FileSystemRepository {
 				});			
 		
 	}
+	
+	/**
+	 * Get a list of PathResource starting at the specified dirNodeId. With this information
+	 * you can build a tree. This will not contain the binary data for files.
+	 * 
+	 * This is functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public List<PathResource> getPathResourceTree(Long dirNodeId) throws Exception {
+		
+		// functionally equivalent to getChildMappings(Long nodeId)
+		
+		String sql =
+			"select " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"from eas_closure c " +
+			"inner join eas_node n on c.child_node_id = n.node_id " +
+			"inner join eas_path_resource r on n.node_id = r.node_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			"where c.parent_node_id = ? " +
+			"order by c.depth, n.node_name";
+		
+		List<PathResource> resources = jdbcTemplate.query(
+				sql, new Object[] { dirNodeId }, resourcePathRowMapper);		
+		
+		return resources;
+		
+	}
+	
+	/**
+	 * Get a list of PathResource starting at the specified dirNodeId, but only up to a specified depth.
+	 * With this information you can build a tree. This will not contain the binary data for files.
+	 * 
+	 * This is functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws Exception {
+		
+		// functionally equivalent to getChildMappings(Long nodeId, int depth)
+		
+		String sql =
+			"select " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"from eas_closure c " +
+			"inner join eas_node n on c.child_node_id = n.node_id " +
+			"inner join eas_path_resource r on n.node_id = r.node_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			"where c.parent_node_id = ? and c.depth <= ? " +
+			"order by c.depth, n.node_name";
+		
+		List<PathResource> resources = jdbcTemplate.query(
+				sql, new Object[] { dirNodeId, new Integer(depth) }, resourcePathRowMapper);		
+		
+		return resources;
+		
+	}	
 	
 	/**
 	 * Add a directory node.

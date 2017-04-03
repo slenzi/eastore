@@ -19,5 +19,13 @@ public class DirectoryResource extends PathResource {
 	// For now all elements needed for a directory are in the parent
 	// PathResource class.
 	//
+	
+	@Override
+	public String toString() {
+		return "DirectoryResource [nodeId=" + getNodeId() + ", parentNodeId=" + getParentNodeId() + ", childNodeId=" + getChildNodeId()
+				+ ", nodeName=" + getNodeName() + ", dateCreated=" + getDateCreated() + ", dateUpdated=" + getDateUpdated()
+				+ ", pathName=" + getPathName() + ", relativePath=" + getRelativePath() + ", resourceType=" + getResourceType().getTypeString()
+				+ ", storeId=" + getStoreId() + "]";
+	}	
 
 }

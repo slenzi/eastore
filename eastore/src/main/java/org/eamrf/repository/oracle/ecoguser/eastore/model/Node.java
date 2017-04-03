@@ -9,6 +9,7 @@ public class Node implements Serializable {
 	
 	private Long nodeId = -1L;
 	private Long parentNodeId = -1L;
+	private Long childNodeId = -1L;
 	private String nodeName = null;
 	private Timestamp dateCreated = null;
 	private Timestamp dateUpdated = null;
@@ -57,6 +58,14 @@ public class Node implements Serializable {
 		this.dateUpdated = dateUpdated;
 	}
 
+	public Long getChildNodeId() {
+		return childNodeId;
+	}
+
+	public void setChildNodeId(Long childNodeId) {
+		this.childNodeId = childNodeId;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -80,6 +89,12 @@ public class Node implements Serializable {
 		} else if (!nodeId.equals(other.nodeId))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "Node [nodeId=" + nodeId + ", parentNodeId=" + parentNodeId + ", childNodeId=" + childNodeId
+				+ ", nodeName=" + nodeName + ", dateCreated=" + dateCreated + ", dateUpdated=" + dateUpdated + "]";
 	}
 
 }

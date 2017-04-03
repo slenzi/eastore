@@ -14,6 +14,7 @@ import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ public class TreeService {
     
     @Autowired
     private ClosureService closureService;
+    
+    @Autowired
+    private FileSystemService fileSystemService;    
 	
 	public TreeService() {
 		
@@ -43,9 +47,9 @@ public class TreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<ParentChildMap> buildTree(Long nodeId) throws ServiceException {
+	public Tree<ParentChildMap> buildPCMTree(Long nodeId) throws ServiceException {
 		
-		return buildTree(nodeId, Integer.MAX_VALUE);
+		return buildPCMTree(nodeId, Integer.MAX_VALUE);
 		
 	}
 	
@@ -58,7 +62,7 @@ public class TreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<ParentChildMap> buildTree(Long nodeId, int depth) throws ServiceException {
+	public Tree<ParentChildMap> buildPCMTree(Long nodeId, int depth) throws ServiceException {
 		
 		List<ParentChildMap> mappings = closureService.getChildMappings(nodeId, depth);
 		
@@ -85,7 +89,7 @@ public class TreeService {
 		TreeNode<ParentChildMap> rootNode = new TreeNode<ParentChildMap>();
 		rootNode.setData(rootMapping);
 		
-		addChildrenFromMap(rootNode, map);
+		addChildrenFromParentChildMap(rootNode, map);
 		
 		Tree<ParentChildMap> tree = new Tree<ParentChildMap>();
 		tree.setRootNode(rootNode);
@@ -102,9 +106,9 @@ public class TreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<ParentChildMap> buildParentTree(Long nodeId) throws ServiceException {
+	public Tree<ParentChildMap> buildParentPCMTree(Long nodeId) throws ServiceException {
 		
-		return buildParentTree(nodeId, Integer.MAX_VALUE);
+		return buildParentPCMTree(nodeId, Integer.MAX_VALUE);
 		
 	}
 	
@@ -116,7 +120,7 @@ public class TreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<ParentChildMap> buildParentTree(Long nodeId, int levels) throws ServiceException {
+	public Tree<ParentChildMap> buildParentPCMTree(Long nodeId, int levels) throws ServiceException {
 		
 		List<ParentChildMap> mappings = closureService.getParentMappings(nodeId, levels);
 		
@@ -144,7 +148,7 @@ public class TreeService {
 		TreeNode<ParentChildMap> rootNode = new TreeNode<ParentChildMap>();
 		rootNode.setData(rootMapping);
 		
-		addChildrenFromMap(rootNode, map);
+		addChildrenFromParentChildMap(rootNode, map);
 		
 		Tree<ParentChildMap> tree = new Tree<ParentChildMap>();
 		tree.setRootNode(rootNode);
@@ -152,6 +156,64 @@ public class TreeService {
 		return tree;		
 		
 	}
+	
+	/**
+	 * Build a top-down (from root node to leaf nodes) tree of PathResource objects.
+	 * 
+	 * @param nodeId - Id of the root node.
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Tree<PathResource> buildPathResourceTree(Long nodeId) throws ServiceException {
+		
+		return buildPathResourceTree(nodeId, Integer.MAX_VALUE);
+		
+	}	
+	
+	/**
+	 * Build a top-down (from root node to leaf nodes) tree of PathResource objects,
+	 * but only include nodes up to a specified depth.
+	 * 
+	 * @param dirNodeId
+	 * @param depth
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Tree<PathResource> buildPathResourceTree(Long dirNodeId, int depth) throws ServiceException {
+		
+		List<PathResource> resources = fileSystemService.getPathResourceTree(dirNodeId, depth);
+		
+		if(resources == null || resources.size() == 0){
+			throw new ServiceException("No top-down PathResource tree for directory node " + dirNodeId + 
+					". Returned list was null or empty.");
+		}
+		
+		PathResource rootResource = null;
+		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
+		for(PathResource res : resources){
+			if(res.getChildNodeId().equals(dirNodeId)){
+				rootResource = res;
+			}
+			if(map.containsKey(res.getParentNodeId())){
+				map.get(res.getParentNodeId()).add(res);
+			}else{
+				List<PathResource> children = new ArrayList<PathResource>();
+				children.add(res);
+				map.put(res.getParentNodeId(), children);
+			}
+		}
+		
+		TreeNode<PathResource> rootNode = new TreeNode<PathResource>();
+		rootNode.setData(rootResource);
+		
+		addChildrenFromPathResourceMap(rootNode, map);
+		
+		Tree<PathResource> tree = new Tree<PathResource>();
+		tree.setRootNode(rootNode);
+		
+		return tree;		
+		
+	}	
 
 	/**
 	 * Recursively iterate over map to all all children until there are no more
@@ -160,7 +222,7 @@ public class TreeService {
 	 * @param rootNode
 	 * @param map
 	 */
-	private void addChildrenFromMap(TreeNode<ParentChildMap> parentNode, Map<Long, List<ParentChildMap>> map) {
+	private void addChildrenFromParentChildMap(TreeNode<ParentChildMap> parentNode, Map<Long, List<ParentChildMap>> map) {
 		
 		TreeNode<ParentChildMap> childTreeNode = null;
 		
@@ -173,18 +235,44 @@ public class TreeService {
 			childTreeNode.setParent(parentNode);
 			parentNode.addChildNode(childTreeNode);
 			
-			addChildrenFromMap(childTreeNode, map);
+			addChildrenFromParentChildMap(childTreeNode, map);
 			
 		}
 		
 	}
 	
 	/**
+	 * Recursively iterate over map to all all children until there are no more
+	 * children to add.
+	 * 
+	 * @param parentNode
+	 * @param map
+	 */
+	private void addChildrenFromPathResourceMap(TreeNode<PathResource> parentNode, Map<Long, List<PathResource>> map) {
+		
+		TreeNode<PathResource> childTreeNode = null;
+		
+		Long childNodeId = parentNode.getData().getChildNodeId();
+		
+		for( PathResource res : CollectionUtil.emptyIfNull( map.get(childNodeId) ) ){
+			
+			childTreeNode = new TreeNode<PathResource>();
+			childTreeNode.setData(res);
+			childTreeNode.setParent(parentNode);
+			parentNode.addChildNode(childTreeNode);
+			
+			addChildrenFromPathResourceMap(childTreeNode, map);
+			
+		}
+		
+	}
+
+	/**
 	 * logs the tree data (prints tree, plus pre-order and post-order traversals.)
 	 * 
 	 * @param tree
 	 */
-	public void logTree(Tree<ParentChildMap> tree){
+	public void logPCMTree(Tree<ParentChildMap> tree){
 		
     	logger.info("Tree:\n" + tree.printTree());
     	
@@ -213,5 +301,40 @@ public class TreeService {
 		}    	
 		
 	}
+	
+	/**
+	 * logs the tree data (prints tree, plus pre-order and post-order traversals.)
+	 * 
+	 * @param tree
+	 */
+	public void logPathResourceTree(Tree<PathResource> tree){
+		
+    	logger.info("Tree:\n" + tree.printTree());
+    	
+    	logger.info("Pre-Order Traversal (top-down):");
+    	try {
+			Trees.walkTree(tree,
+					(treeNode) -> {
+						PathResource res = treeNode.getData();
+						logger.info(res.toString());
+					},
+					WalkOption.PRE_ORDER_TRAVERSAL);
+		} catch (TreeNodeVisitException e) {
+			logger.error("Error walking tree in pre-order (top-down) traversal", e);
+		}
+    	logger.info("");
+    	logger.info("Post-Order Traversal (bottom-up):");
+    	try {
+			Trees.walkTree(tree,
+					(treeNode) -> {
+						PathResource res = treeNode.getData();
+						logger.info(res.toString());
+					},
+					WalkOption.POST_ORDER_TRAVERSAL);
+		} catch (TreeNodeVisitException e) {
+			logger.error("Error walking tree in post-order (bottom-up) traversal", e);
+		}    	
+		
+	}	
 
 }

@@ -50,4 +50,14 @@ public class FileMetaResource extends PathResource {
 		this.binaryResource = binaryResource;
 	}
 
+	@Override
+	public String toString() {
+		return "DirectoryResource [nodeId=" + getNodeId() + ", parentNodeId=" + getParentNodeId()
+				+ ", childNodeId=" + getChildNodeId() + ", nodeName=" + getNodeName() + ", dateCreated="
+				+ getDateCreated() + ", dateUpdated=" + getDateUpdated() + ", pathName=" + getPathName()
+				+ ", relativePath=" + getRelativePath() + ", resourceType=" + getResourceType().getTypeString()
+				+ ", storeId=" + getStoreId() + ", fileSize=" + getFileSize() + ", mimeType=" + getMimeType() 
+				+ ", isBinaryInDb=" + isBinaryInDatabase + "]";
+	}	
+	
 }
