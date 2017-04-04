@@ -35,6 +35,14 @@
   	
 	<profiles>
 	
+		<!-- deployment on lenzi's personal mac -->
+		<profile>
+			<id>lenzi.mac</id>
+			<properties>
+				<property.file>lenzi.mac.properties</property.file>
+			</properties>
+		</profile>
+	
 		<!-- deployment on lenzi's EAMRF desktop -->
 		<profile>
 			<id>eamrf.lenzi</id>
