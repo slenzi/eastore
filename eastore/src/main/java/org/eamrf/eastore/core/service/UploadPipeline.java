@@ -47,9 +47,11 @@ public class UploadPipeline {
 	 * @param dirNodeId - directory where file will be added
 	 * @param fileName - name of file
 	 * @param dataHandler - interface to the binary data for the file
+	 * @param replaceExisting - pass true to replace exiting file, or pass false. If you pass false and
+	 * and file with the same name already exists, then a service exception will be thrown.
 	 * @throws ServiceException
 	 */
-	public void processUpload(Long dirNodeId, String fileName, DataHandler dataHandler) throws ServiceException {
+	public void processUpload(Long dirNodeId, String fileName, DataHandler dataHandler, boolean replaceExisting) throws ServiceException {
 		
 		Path tempDir = createTempDir();
 		
@@ -76,6 +78,14 @@ public class UploadPipeline {
 			throw new ServiceException("Upload pipeline error, failed to get InputStream from DataHandler, " + e.getMessage(), e);
 		}
 		*/
+		
+	}
+	
+	private void processToDirectory(Long dirNodeId, Path tempDir, boolean replaceExisting) throws ServiceException {
+		
+		// TODO - Eventually we'll want the ID of the user who uploaded. The JAX-RS service will have to use (possibly)
+		// the AuthWorld session key to identify users logged into the portal. That would give us access to the CTEP ID.
+		// We'll also need to add a field to eas_path_resource to store the user's ID.
 		
 	}
 	

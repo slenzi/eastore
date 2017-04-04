@@ -163,7 +163,7 @@ public class FileSystemResource extends BaseResourceHandler {
     	DataHandler dataHandler = fileAttachment.getDataHandler();
     	
     	try {
-			uploadPipeline.processUpload(longDirId, fileName, dataHandler);
+			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true);
 		} catch (ServiceException e) {
 			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
 		}
