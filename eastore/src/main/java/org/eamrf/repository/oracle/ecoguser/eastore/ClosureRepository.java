@@ -201,20 +201,34 @@ public class ClosureRepository {
 	 * 
 	 * @param parentNodeId - id of parent node under which new node will be added.
 	 * @param name - name of the new node
-	 * @param type - type of the node
 	 * @return the id of the new node
 	 */
 	public Node addNode(Long parentNodeId, String name) throws Exception {
 		
-		Timestamp dtNow = DateUtil.getCurrentTime();
-		
 		// get next id from eas_node_id_sequence
 		Long newNodeId = getNextNodeId();
+
+		return addNode(newNodeId, parentNodeId, name);
+				
+	}
+	
+	/**
+	 * Add a new node
+	 * 
+	 * @param newNodeId - id of the new node
+	 * @param parentNodeId - id of the parent node
+	 * @param name - node name
+	 * @return
+	 * @throws Exception
+	 */
+	public Node addNode(Long newNodeId, Long parentNodeId, String name) throws Exception {
+		
+		Timestamp dtNow = DateUtil.getCurrentTime();
 		
     	// add node to eas_node
 		jdbcTemplate.update(
 				"insert into eas_node (node_id, parent_node_id, node_name, creation_date, updated_date) " +
-				"values (?, ?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, dtNow, dtNow);
+				"values (?, ?, ?, ?, ?)", newNodeId, parentNodeId, name, dtNow, dtNow);
     	
 		// get next id from eas_link_id_sequence
 		Long nextLinkId = getNextLinkId();		
@@ -243,7 +257,7 @@ public class ClosureRepository {
 		n.setDateCreated(dtNow);
 		n.setDateUpdated(dtNow);
 		
-		return n;
+		return n;		
 		
 	}
 	
@@ -367,7 +381,7 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	private Long getNextNodeId() throws Exception {
+	public Long getNextNodeId() throws Exception {
 		
 		Long id = jdbcTemplate.queryForObject(
 				"select eas_node_id_sequence.nextval from dual", Long.class);
@@ -382,7 +396,7 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	private Long getNextLinkId() throws Exception {
+	public Long getNextLinkId() throws Exception {
 		
 		Long id = jdbcTemplate.queryForObject(
 				"select eas_link_id_sequence.nextval from dual", Long.class);
@@ -397,7 +411,7 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	private Long getNextPruneId() throws Exception {
+	public Long getNextPruneId() throws Exception {
 		
 		Long id = jdbcTemplate.queryForObject(
 				"select eas_prune_id_sequence.nextval from dual", Long.class);

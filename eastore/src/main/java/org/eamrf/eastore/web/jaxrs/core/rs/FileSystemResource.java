@@ -3,11 +3,14 @@
  */
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
+import java.nio.file.Paths;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -17,6 +20,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -48,6 +52,51 @@ public class FileSystemResource extends BaseResourceHandler {
 	public Logger getLogger() {
 		return logger;
 	}
+	
+	/**
+	 * Create a new store
+	 * 
+	 * @param dirNodeId
+	 * @param name
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@POST
+	@Path("/addStore")
+	@Produces(MediaType.APPLICATION_JSON)
+    public Store addStore(
+    		@QueryParam("storeName") String storeName,
+    		@QueryParam("storeDesc") String storeDesc,
+    		@QueryParam("storePath") String storePath,
+    		@QueryParam("rootDirName") String rootDirName,
+    		@QueryParam("maxFileSizeDb") Long maxFileSizeDb) throws WebServiceException {
+    	
+		if(StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc) || StringUtil.isNullEmpty(storePath) ||
+				StringUtil.isNullEmpty(rootDirName) || maxFileSizeDb == null || maxFileSizeDb < 0){
+			
+			handleError("Missing required params. Plese check values for storeName, storeDesc, "
+					+ "storePath, rootDirName, and maxFileSizeDb", WebExceptionType.CODE_IO_ERROR);
+			
+		}
+		
+		java.nio.file.Path newStorePath = null;
+		try {
+			newStorePath = Paths.get(storePath);
+		} catch (Exception e) {
+			handleError("Error converting String '" + storePath + "' to java.nio.file.Path: " + e.getMessage(), 
+					WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		Store store = null;
+    	try {
+			store = fileSystemService.addStore(storeName, storeDesc, newStorePath, rootDirName, maxFileSizeDb);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	return store;
+    	
+    }
 	
 	/**
 	 * Add a file...
@@ -103,6 +152,29 @@ public class FileSystemResource extends BaseResourceHandler {
     	//return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build(); 
     	return dirResource;
     	
-    }    
+    }
+    
+    /**
+     * Create the test store
+     * 
+     * @return
+     * @throws WebServiceException
+     */
+    @GET
+    @POST
+    @Path("/createTestStore")
+    @Produces(MediaType.APPLICATION_JSON)    
+    public Store createTestStore() throws WebServiceException {
+    	
+    	Store testStore = null;
+    	try {
+			testStore = fileSystemService.createTestStore();
+		} catch (ServiceException e) {
+			handleError("Error creating test store, " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return testStore;
+    	
+    }
 
 }

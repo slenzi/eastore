@@ -1,12 +1,16 @@
 package org.eamrf.eastore.core.service;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.repository.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,7 +24,10 @@ import org.springframework.stereotype.Service;
 public class FileSystemService {
 
     @InjectLogger
-    private Logger logger;	
+    private Logger logger;
+    
+    @Autowired
+    private ManagedProperties appProps;    
 	
     @Autowired
     private FileSystemRepository fileSystemRepository;
@@ -121,7 +128,30 @@ public class FileSystemService {
 		}
 		return resources;		
 		
-	}	
+	}
+	
+	/**
+	 * Create a new store
+	 * 
+	 * @param storeName
+	 * @param storeDesc
+	 * @param storePath
+	 * @param rootDirName
+	 * @param maxFileSizeDb
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
+		} catch (Exception e) {
+			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
+		}
+		return store;
+		
+	}
 	
 	/**
 	 * Add new file
@@ -161,6 +191,41 @@ public class FileSystemService {
 		}
 		return dirResource;
 		
-	}	
+	}
+	
+	/**
+	 * Create sample store for testing, with some sub-directories.
+	 * 
+	 * @throws ServiceException
+	 */
+	public Store createTestStore() throws ServiceException {
+		
+		String testStoreName = appProps.getProperty("store.test.name");
+		String testStoreDesc = appProps.getProperty("store.test.desc");
+		String testStorePath = appProps.getProperty("store.test.path").replace("\\", "/");
+		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
+		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
+		
+		Long maxBytes = 0L;
+		try {
+			maxBytes = Long.valueOf(testStoreMaxFileSizeBytes);
+		} catch (NumberFormatException e) {
+			throw new ServiceException("Error parsing store.test.max.file.size.bytes to long. " + e.getMessage(), e);
+		}
+		
+		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), testStoreRootDirName, maxBytes);
+		
+		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more");
+		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other");
+			DirectoryResource dirThings = addDirectory(dirOther.getNodeId(), "things");
+			DirectoryResource dirFoo = addDirectory(dirOther.getNodeId(), "foo");
+				DirectoryResource dirCats = addDirectory(dirFoo.getNodeId(), "cats");
+				DirectoryResource dirDogs = addDirectory(dirFoo.getNodeId(), "dogs");
+					DirectoryResource dirBig = addDirectory(dirDogs.getNodeId(), "big");
+					DirectoryResource dirSmall = addDirectory(dirDogs.getNodeId(), "small");
+						DirectoryResource dirPics = addDirectory(dirSmall.getNodeId(), "pics");
+		
+		return store;
+	}
 
 }

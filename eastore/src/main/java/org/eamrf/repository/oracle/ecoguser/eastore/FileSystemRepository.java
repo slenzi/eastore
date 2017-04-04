@@ -3,9 +3,11 @@ package org.eamrf.repository.oracle.ecoguser.eastore;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
@@ -16,6 +18,7 @@ import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -85,23 +88,22 @@ public class FileSystemRepository {
 	public Store getStoreById(Long storeId) throws Exception {
 		
 		String sql =
-				"select store_id, store_name, store_description, store_path, node_id, "
-				+ "max_file_size_in_db, creation_date, updated_date from eas_store "
-				+ "where store_id = 1";
+			"select store_id, store_name, store_description, store_path, node_id, "
+			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
+			+ "where store_id = ?";
 		
-		return jdbcTemplate.query(sql, new Object[] { storeId },
-				(rs) -> {
-					Store s = new Store();
-					s.setId(rs.getLong("store_id"));
-					s.setName(rs.getString("store_name"));
-					s.setDescription(rs.getString("store_description"));
-					s.setPath(Paths.get(rs.getString("store_path")));
-					s.setNodeId(rs.getLong("node_id"));
-					s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-					s.setDateCreated(rs.getTimestamp("creation_date"));
-					s.setDateUpdated(rs.getTimestamp("updated_date"));
-					return s;
-				});		
+		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+			Store s = new Store();
+			s.setId(rs.getLong("store_id"));
+			s.setName(rs.getString("store_name"));
+			s.setDescription(rs.getString("store_description"));
+			s.setPath(Paths.get(rs.getString("store_path")));
+			s.setNodeId(rs.getLong("node_id"));
+			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+			s.setDateCreated(rs.getTimestamp("creation_date"));
+			s.setDateUpdated(rs.getTimestamp("updated_date"));
+			return s;			
+		}, new Object[] { storeId });		
 		
 	}
 	
@@ -117,29 +119,28 @@ public class FileSystemRepository {
 		// left joins on eas_directory so we always pull data from eas_node & eas_path_resource
 		// in cases where 'nodeId' doesn't actually point to a directory.
 		String sql =
-				"select " +
-				"n.node_id, n.parent_node_id, n.creation_date, n.updated_date, r.store_id, " +
-				"r.path_name, r.path_type, r.relative_path " +
-				"from eas_node n " +
-				"inner join eas_path_resource r " +
-				"on n.node_id = r.node_id " +
-				"left join eas_directory_resource d " +
-				"on r.node_id = d.node_id " +
-				"where n.node_id = ?";
+			"select " +
+			"n.node_id, n.parent_node_id, n.creation_date, n.updated_date, r.store_id, " +
+			"r.path_name, r.path_type, r.relative_path " +
+			"from eas_node n " +
+			"inner join eas_path_resource r " +
+			"on n.node_id = r.node_id " +
+			"left join eas_directory_resource d " +
+			"on r.node_id = d.node_id " +
+			"where n.node_id = ?";
 		
-		return jdbcTemplate.query(sql, new Object[] { nodeId },
-				(rs) -> {
-					DirectoryResource r = new DirectoryResource();
-					r.setNodeId(rs.getLong("node_id"));
-					r.setParentNodeId(rs.getLong("parent_node_id"));
-					r.setDateCreated(rs.getTimestamp("creation_date"));
-					r.setDateUpdated(rs.getTimestamp("updated_date"));
-					r.setPathName(rs.getString("path_name"));
-					r.setRelativePath(rs.getString("relative_path"));
-					r.setResourceType( ResourceType.getFromString(rs.getString("path_type")) );
-					r.setStoreId(rs.getLong("store_id"));
-					return r;
-				});			
+		return (DirectoryResource)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+			DirectoryResource r = new DirectoryResource();
+			r.setNodeId(rs.getLong("node_id"));
+			r.setParentNodeId(rs.getLong("parent_node_id"));
+			r.setDateCreated(rs.getTimestamp("creation_date"));
+			r.setDateUpdated(rs.getTimestamp("updated_date"));
+			r.setPathName(rs.getString("path_name"));
+			r.setRelativePath(rs.getString("relative_path"));
+			r.setResourceType( ResourceType.getFromString(rs.getString("path_type")) );
+			r.setStoreId(rs.getLong("store_id"));
+			return r;			
+		}, new Object[] { nodeId });		
 		
 	}
 	
@@ -286,9 +287,65 @@ public class FileSystemRepository {
 		List<PathResource> resources = jdbcTemplate.query(
 				sql, new Object[] { dirNodeId, new Integer(levels) }, resourcePathRowMapper);		
 		
-		return resources;		
+		return resources;
 		
-	}	
+	}
+	
+	/**
+	 * Create a new store
+	 * 
+	 * @param storeName
+	 * @param storeDesc
+	 * @param storePath
+	 * @param rootDirName
+	 * @param maxFileSizeDb
+	 * @return
+	 * @throws Exception
+	 */
+	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws Exception {
+	
+		Long storeId = getNextStoreId();
+		Long rootNodeId = closureRepository.getNextNodeId();
+		
+		Timestamp dtNow = DateUtil.getCurrentTime();
+		
+		String storePathString = storePath.toString().replace("\\", "/");
+				
+		//
+		// add entry to eas_store
+		//
+		jdbcTemplate.update(
+				"insert into eas_store (store_id, store_name, store_description, store_path, "
+				+ "node_id, max_file_size_in_db, creation_date, updated_date) " +
+				"values (?, ?, ?, ?, ?, ?, ?, ?)", storeId, storeName, storeDesc,
+				storePathString, rootNodeId, maxFileSizeDb, dtNow, dtNow);
+		//
+		// create store directory on local file system
+		//
+		try {
+			FileUtil.createDirectory(storePath, true);
+		} catch (Exception e) {
+			throw new Exception("Failed to create store directory => " + storePathString + ". " + e.getMessage(), e);
+		}		
+		
+		//
+		// add root directory for store
+		//
+		addRootDirectory(storeId, storePath, rootNodeId, rootDirName);
+		
+		Store store = new Store();
+		store.setId(storeId);
+		store.setName(storeName);
+		store.setDescription(storeDesc);
+		store.setNodeId(rootNodeId);
+		store.setPath(storePath);
+		store.setDateCreated(dtNow);
+		store.setDateUpdated(dtNow);
+		store.setMaxFileSizeBytes(maxFileSizeDb);
+		
+		return store;
+		
+	}
 	
 	/**
 	 * Add a directory node.
@@ -319,7 +376,103 @@ public class FileSystemRepository {
 		}
 		return newNode.getNodeId();
 		
-	}	
+	}
+	
+	/**
+	 * Checks if the directory already contains a child resource (first level child)
+	 * of the specified type, with the same name (case insensitive.)
+	 * 
+	 * @param dirNodeId - the id of the directory node
+	 * @param name - the name of the child path resource. Will match on name.toLowerCase()
+	 * @param type - the type of child path resource to check for.
+	 * @return
+	 */
+	private boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+		
+		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
+		if(childResources != null && childResources.size() > 0){
+			for(PathResource pr : childResources){
+				if(pr.getParentNodeId().equals(dirNodeId)
+						&& pr.getResourceType() == type
+						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+					
+					return true;
+					
+				}
+			}
+		}		
+		
+		return false;
+		
+	}
+	
+	/**
+	 * Adds a root directory. This is a directory with no parent, and are the top most
+	 * directory for a store (the parent directory is the store directory.)
+	 * 
+	 * @param storeId - store id
+	 * @param storePath - path for the store
+	 * @param rootNodeId - id of store's root directory node
+	 * @param name - path name of store's root directory node
+	 * @return
+	 * @throws Exception
+	 */
+	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name) throws Exception {
+		
+		String storePathString = storePath.toString().replace("\\", "/");
+		
+		//
+		// add entry to eas_node and eas_closure
+		//
+		Node newNode = null;
+		try {
+			newNode = closureRepository.addNode(rootNodeId, 0L, name); // parent id set to 0 for all root nodes.
+		} catch (Exception e) {
+			throw new Exception("Error adding directory node", e);
+		}
+		
+		String dirRelPathString = (File.separator + name).replace("\\", "/");
+		
+		PathResource dirResource = new DirectoryResource();
+		dirResource.setNodeId(newNode.getNodeId());
+		dirResource.setResourceType(ResourceType.DIRECTORY);
+		dirResource.setDateCreated(newNode.getDateCreated());
+		dirResource.setDateUpdated(newNode.getDateUpdated());
+		dirResource.setPathName(name);
+		dirResource.setParentNodeId(newNode.getParentNodeId());
+		dirResource.setRelativePath(dirRelPathString);
+		dirResource.setStoreId(storeId);
+		
+		//
+		// add entry to eas_path_resource
+		//
+    	// add node to eas_node
+		jdbcTemplate.update(
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
+				"values (?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
+				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath());		
+		
+		//
+		// add entry to eas_directory resource
+		//
+		jdbcTemplate.update(
+				"insert into eas_directory_resource (node_id) values (?)", dirResource.getNodeId());		
+		
+		//
+		// create directory on local file system. If there is any error throw a RuntimeException,
+		// or update the @Transactional annotation to rollback for any exception type, i.e.,
+		// @Transactional(rollbackFor=Exception.class)
+		//
+		Path newDirectoryPath = Paths.get(storePath + dirResource.getRelativePath());
+		try {
+			FileUtil.createDirectory(newDirectoryPath, true);
+		} catch (Exception e) {
+			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
+		}
+		
+		return (DirectoryResource)dirResource;		
+		
+	}
 	
 	/**
 	 * Add a directory node.
@@ -330,8 +483,6 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
-		
-		// TODO - need code for adding a root directory!
 		
 		//
 		// make sure parentDirNodeId is actually of a directory path resource type
@@ -344,19 +495,10 @@ public class FileSystemRepository {
 		
 		//
 		// make sure directory doesn't already contain a sub-directory with the same name
-		//
-		List<PathResource> childResources = getPathResourceTree(parentDirNodeId, 1);
-		if(childResources != null && childResources.size() > 0){
-			for(PathResource pr : childResources){
-				if(pr.getParentNodeId().equals(parentDirNodeId)
-						&& pr.getResourceType() == ResourceType.DIRECTORY
-						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
-					
-					throw new Exception("Directory with dirNodeId " + parentDirNodeId + 
-							" already contains a sub-directory with the name '" + name + "'");
-					
-				}
-			}
+		//		
+		if(hasChildPathResource(parentDirNodeId, name, ResourceType.DIRECTORY)){
+			throw new Exception("Directory with dirNodeId " + parentDirNodeId + 
+					" already contains a sub-directory with the name '" + name + "'");			
 		}
 		
 		//
@@ -374,6 +516,8 @@ public class FileSystemRepository {
 			throw new Exception("Error adding directory node", e);
 		}
 		
+		String dirRelPathString = (parentDirectory.getRelativePath() + File.separator + name).replace("\\", "/");
+		
 		PathResource dirResource = new DirectoryResource();
 		dirResource.setNodeId(newNode.getNodeId());
 		dirResource.setResourceType(ResourceType.DIRECTORY);
@@ -381,7 +525,7 @@ public class FileSystemRepository {
 		dirResource.setDateUpdated(newNode.getDateUpdated());
 		dirResource.setPathName(name);
 		dirResource.setParentNodeId(newNode.getParentNodeId());
-		dirResource.setRelativePath(parentDirectory.getRelativePath() + File.separator + name);
+		dirResource.setRelativePath(dirRelPathString);
 		dirResource.setStoreId(store.getId());
 		
 		//
@@ -404,15 +548,30 @@ public class FileSystemRepository {
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
 		//
-		Path newDirectoryPath = Paths.get(store.getPath() + File.separator + dirResource.getRelativePath());
+		Path newDirectoryPath = Paths.get(store.getPath() + dirResource.getRelativePath());
 		try {
 			FileUtil.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
-			throw new Exception("Failed to create directory => " + newDirectoryPath.toString() + ". " + e.getMessage(), e);
+			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
 		}
 		
 		return (DirectoryResource)dirResource;
 		
 	}
+	
+	/**
+	 * Get next id from eas_store_id_sequence
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	private Long getNextStoreId() throws Exception {
+		
+		Long id = jdbcTemplate.queryForObject(
+				"select eas_store_id_sequence.nextval from dual", Long.class);
+		
+		return id;
+		
+	}	
 
 }
