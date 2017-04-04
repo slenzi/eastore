@@ -1,6 +1,7 @@
 package org.eamrf.eastore.web.jaxrs;
 
 import org.eamrf.core.util.Mailer;
+import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.constants.AppConstants;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -58,9 +59,8 @@ public abstract class BaseResourceHandler {
 			sendEmail(message + nl + nl + e.getMessage());
 			throw new WebServiceException(type, message + ", " + e.getMessage());
 		}else{
-			getLogger().error(e.getMessage(), e);
 			getLogger().error(message);
-			sendEmail(message + nl + nl + e.getMessage());
+			sendEmail(message);
 			throw new WebServiceException(type, message);
 		}
 	}

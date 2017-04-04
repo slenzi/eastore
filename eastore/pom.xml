@@ -20,6 +20,7 @@
 		<version.spring>4.3.7.RELEASE</version.spring>  		
   		<version.apache.cxf>3.1.10</version.apache.cxf>
   		<version.apache.tika>1.14</version.apache.tika>
+  		<version.apache.commons.io>2.5</version.apache.commons.io>
   		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
 		<version.gson>2.8.0</version.gson>
 		<version.jodatime>2.9.7</version.jodatime>
@@ -147,7 +148,14 @@
 		    <groupId>org.apache.tika</groupId>
 		    <artifactId>tika-core</artifactId>
 		    <version>${version.apache.tika}</version>
-		</dependency>				
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+		<dependency>
+		    <groupId>commons-io</groupId>
+		    <artifactId>commons-io</artifactId>
+		    <version>${version.apache.commons.io}</version>
+		</dependency>						
 		
 		<dependency>
 		    <groupId>com.oracle</groupId>

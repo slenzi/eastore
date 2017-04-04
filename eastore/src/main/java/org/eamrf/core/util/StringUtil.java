@@ -13,7 +13,7 @@ public abstract class StringUtil {
 	}
 	
 	/**
-	 * If s is null then return empty string"", otherwise return s
+	 * If s is null then return empty string "", otherwise return s
 	 * 
 	 * @param s
 	 * @return
@@ -21,6 +21,17 @@ public abstract class StringUtil {
 	public static String changeNull(String s){
 		return s == null ? "" : s;
 	}
+	
+	/**
+	 * If s is null then return o, otherwise return s
+	 * 
+	 * @param s
+	 * @param o
+	 * @return
+	 */
+	public static String changeNull(String s, String o){
+		return s == null ? o : s;
+	}	
 	
 	/**
 	 * Is string null, or empty string, or all white space.
