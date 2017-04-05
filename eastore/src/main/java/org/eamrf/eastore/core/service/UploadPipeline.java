@@ -245,7 +245,7 @@ public class UploadPipeline {
 				logger.info(">> Update with binary data (start): Node ID => " + 
 						fileMetaResource.getNodeId() + ", relPath => " + fileMetaResource.getRelativePath());
 				
-				fileSystemService.updateFileBinary(fileMetaResource);
+				fileSystemService.refreshBinaryDataInDatabase(fileMetaResource);
 				
 				timer.stop();
 				

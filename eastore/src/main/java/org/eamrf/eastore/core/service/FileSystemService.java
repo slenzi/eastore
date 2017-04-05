@@ -176,14 +176,21 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * 
+	 * Refreshes the binary data in the database (data from the file on disk is copied to eas_binary_resource)
 	 * 
 	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
-	public void updateFileBinary(FileMetaResource fileMetaResource) throws ServiceException {
+	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
-		// TODO - add code to update/insert the row into eas_binary_resource
+		FileMetaResource updatedfileMetaResource = null;
+		try {
+			updatedfileMetaResource = fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
+		} catch (Exception e) {
+			throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
+					+ "for file resource node => " + fileMetaResource.getNodeId(), e);
+		}
+		return updatedfileMetaResource;
 		
 	}
 	

@@ -396,6 +396,34 @@ public class FileSystemRepository {
 	}
 	
 	/**
+	 * Refreshes the data in eas_binary_resource (or adds a new entry) for the file
+	 * 
+	 * @param fileMetaResource
+	 * @return
+	 * @throws Exception
+	 */
+	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws Exception {
+		
+		// TODO - Complete
+		
+		boolean haveBinaryInDb = fileMetaResource.getIsBinaryInDatabase();
+		if(haveBinaryInDb){
+			
+			// update existing eas_binary_resource entry
+			
+		}else{
+			
+			// add new entry to eas_binary_resource
+			
+		}
+		
+		fileMetaResource.setIsBinaryInDatabase(true);
+		
+		return fileMetaResource;
+		
+	}
+	
+	/**
 	 * Internal helper method for adding new files (never to be used to replace an existing file.)
 	 * 
 	 * This method adds a new FileMetaResource, but does not add data to eas_binary_resource
