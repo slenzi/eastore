@@ -155,7 +155,7 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * Adds a new file, but does not add the binary data to eas_file_binary_resource
+	 * Adds a new file, but does not add the binary data to eas_binary_resource
 	 * 
 	 * @param dirNodeId - directory where file will be added
 	 * @param filePath - current temp path where file resides on disk
@@ -163,11 +163,11 @@ public class FileSystemService {
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
 	 */
-	public FileMetaResource addFile(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
+	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		FileMetaResource fileMetaResource = null;
 		try {
-			fileMetaResource = fileSystemRepository.addFile(dirNodeId, filePath, replaceExisting);
+			fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirNodeId, filePath, replaceExisting);
 		} catch (Exception e) {
 			throw new ServiceException("Error adding new file => " + filePath.toString() + 
 					", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
@@ -183,7 +183,7 @@ public class FileSystemService {
 	 */
 	public void updateFileBinary(FileMetaResource fileMetaResource) throws ServiceException {
 		
-		// TODO - add code to update/insert the row into eas_file_binary_resource
+		// TODO - add code to update/insert the row into eas_binary_resource
 		
 	}
 	

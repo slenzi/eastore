@@ -348,7 +348,10 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Adds a new file, but does not add the binary data to eas_file_binary_resource
+	 * Adds a new file, but does not add the binary data to eas_binary_resource.
+	 * 
+	 * If a file with the same name already exists, then the file on disk is updated, and the old binary
+	 * data in eas_binary_resource is removed.
 	 * 
 	 * @param dirNodeId
 	 * @param filePath
@@ -356,7 +359,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	public FileMetaResource addFile(Long dirNodeId, Path filePath, boolean replaceExisting) throws Exception {
+	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws Exception {
 		
 		//
 		// make sure parentDirNodeId is actually of a directory
@@ -376,7 +379,7 @@ public class FileSystemRepository {
 		
 		if(hasExisting && replaceExisting){
 			
-			return _updateFile(parentDirectory, filePath);
+			return _updateFileDiscardOldBinary(parentDirectory, filePath);
 		
 		}else if(hasExisting && !replaceExisting){
 			
@@ -385,7 +388,7 @@ public class FileSystemRepository {
 			
 		}else{
 			
-			return _addNewFile(parentDirectory, filePath);
+			return _addNewFileWithoutBinary(parentDirectory, filePath);
 			
 		}
 		
@@ -393,14 +396,16 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Internal helper method for adding new files (never to be used to replace an existin file.)
+	 * Internal helper method for adding new files (never to be used to replace an existing file.)
+	 * 
+	 * This method adds a new FileMetaResource, but does not add data to eas_binary_resource
 	 * 
 	 * @param dirResource
 	 * @param filePath
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource _addNewFile(DirectoryResource dirResource, Path filePath) throws Exception {
+	private FileMetaResource _addNewFileWithoutBinary(DirectoryResource dirResource, Path filePath) throws Exception {
 		
 		String fileName = filePath.getFileName().toString();
 		Long fileSizeBytes = FileUtil.getFileSize(filePath);
@@ -467,21 +472,93 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Updates the existing file.
+	 * Updates the physical file on disk, then removes the old binary data from the database.
 	 * 
-	 * @param dirResource
-	 * @param filePath
+	 * @param dirResource - The directory where the new file will go
+	 * @param filePath - The new file to add. The old binary data in the database will be removed.
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource _updateFile(DirectoryResource dirResource, Path filePath) throws Exception {
-		
-		// TODO - add code for replacing existing file
+	private FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path filePath) throws Exception {
 		
 		String fileName = filePath.getFileName().toString();
+		Long fileSizeBytes = FileUtil.getFileSize(filePath);
+		String fileMimeType = FileUtil.detectMimeType(filePath);
 		
-		throw new Exception("Directory with dirNodeId " + dirResource.getNodeId() + " already contains a file with the name '" + 
-				fileName + "'. The 'replaceExisting' param is set to true, but this feature is not suppored yet :(");
+		// TODO - we match file names on lowercase, but we might want to update the name in the 
+		// database (eas_node) to exactly match the case of the new file name...
+		
+		//
+		// get current (file) PathResource
+		//
+		PathResource existingResource = getChildPathResource(dirResource.getNodeId(), fileName, ResourceType.FILE);
+		if(existingResource == null){
+			throw new Exception("Cannot update file " + fileName + " in directory node => " + 
+					dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
+		}
+		
+		//
+		// check if we have existing binary data in the database, we might need to remove it.
+		//
+		FileMetaResource existingFileResource = (FileMetaResource)existingResource;
+		if(existingFileResource.getIsBinaryInDatabase()){
+		
+			//
+			// remove existing binary data in database (it's the old file)
+			//
+			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", existingResource.getNodeId());
+			
+			//
+			// set is_file_data_in_db to 'N', and update file size to match new file. We also update mime type, but that should be the same...
+			//
+			jdbcTemplate.update(
+					"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ? where node_id = ?",
+					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
+		
+		//
+		// there was no existing binary data in the database, so we just have to update the meta data
+		//
+		}else{
+			
+			//
+			// update file size to match new file. We also update mime type, but that should be the same...
+			//
+			jdbcTemplate.update(
+					"update eas_file_meta_resource set file_size = ?, mime_type = ? where node_id = ?",
+					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
+			
+		}
+		
+		//
+		// get store
+		//
+		Store store = getStoreById(dirResource.getStoreId());
+		
+		//
+		// delete old file
+		//
+		Path oldFilePath = Paths.get(store.getPath() + existingFileResource.getRelativePath());
+		try {
+			FileUtil.deletePath(oldFilePath);
+		} catch (Exception e) {
+			throw new Exception("Failed to remove old file at => " + oldFilePath.toString() + ". " + e.getMessage(), e);
+		}
+		
+		//
+		// copy new file to directory in the tree
+		//
+		try {
+			FileUtil.copyFile(filePath, oldFilePath);
+		} catch (Exception e) {
+			throw new Exception("Failed to copy file from => " + filePath.toString() + " to " + oldFilePath.toString() + ". " + e.getMessage(), e);
+		}
+		
+		existingFileResource.setIsBinaryInDatabase(false);
+		existingFileResource.setMimeType(fileMimeType);
+		existingFileResource.setFileSize(fileSizeBytes);
+		existingFileResource.setBinaryResource(null);
+		
+		return existingFileResource;
 		
 	}
 	
@@ -662,6 +739,34 @@ public class FileSystemRepository {
 		}		
 		
 		return false;
+		
+	}
+	
+	/**
+	 * Fetch the child resource for the directory (first level only) with the matching name, of the specified type.
+	 * 
+	 * @param dirNodeId
+	 * @param name
+	 * @param type
+	 * @return
+	 * @throws Exception
+	 */
+	private PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+		
+		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
+		if(childResources != null && childResources.size() > 0){
+			for(PathResource pr : childResources){
+				if(pr.getParentNodeId().equals(dirNodeId)
+						&& pr.getResourceType() == type
+						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+					
+					return pr;
+					
+				}
+			}
+		}
+		
+		return null;
 		
 	}
 	

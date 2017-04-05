@@ -143,7 +143,7 @@ public class UploadPipeline {
 		
 		// Option 1: Add data to eas_node, eas_closure, eas_path_resource, and eas_file_meta_resource, then copy physical
 		// file to tree directory on the local file system. Block until operation is complete, then add a task on a separate
-		// thread which goes back and adds the binary data to eas_file_binary_resource table, and updates the 'IS_FILE_DATA_IN_DB'
+		// thread which goes back and adds the binary data to eas_binary_resource table, and updates the 'IS_FILE_DATA_IN_DB'
 		// to 'Y'. Do it on a separate thread so control can be released back to the calling process (users who uploaded.)
 		
 		List<Path> filePaths = null;
@@ -176,7 +176,7 @@ public class UploadPipeline {
 	}
 	
 	/**
-	 * Adds the file to the directory, but does not add the binary data to eas_file_binary_resource.
+	 * Adds the file to the directory, but does not add the binary data to eas_binary_resource.
 	 * 
 	 * @param dirNodeId
 	 * @param filePath
@@ -197,7 +197,7 @@ public class UploadPipeline {
 				
 				FileMetaResource fileMetaResource = null;
 				
-				fileMetaResource = fileSystemService.addFile(dirNodeId, filePath, replaceExisting);
+				fileMetaResource = fileSystemService.addFileWithoutBinary(dirNodeId, filePath, replaceExisting);
 	
 				timer.stop();
 				
@@ -226,7 +226,7 @@ public class UploadPipeline {
 	}
 	
 	/**
-	 * Updated the FileMetaResource by adding the binary data to eas_file_binary_resource, then sets the
+	 * Updated the FileMetaResource by adding the binary data to eas_binary_resource, then sets the
 	 * EAS_FILE_META_RESOURCE.IS_FILE_DATA_IN_DB field to 'Y'
 	 * 
 	 * @param fileMetaResource
