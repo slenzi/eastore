@@ -9,6 +9,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.repository.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
@@ -154,22 +155,35 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * Add new file
+	 * Adds a new file, but does not add the binary data to eas_file_binary_resource
 	 * 
-	 * @param dirNodeId
-	 * @param name
+	 * @param dirNodeId - directory where file will be added
+	 * @param filePath - current temp path where file resides on disk
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
+	 */
+	public FileMetaResource addFile(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		FileMetaResource fileMetaResource = null;
+		try {
+			fileMetaResource = fileSystemRepository.addFile(dirNodeId, filePath, replaceExisting);
+		} catch (Exception e) {
+			throw new ServiceException("Error adding new file => " + filePath.toString() + 
+					", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
+		}
+		return fileMetaResource;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
-	public Long addFile(Long dirNodeId, String name) throws ServiceException {
+	public void updateFileBinary(FileMetaResource fileMetaResource) throws ServiceException {
 		
-		Long fileNodeId = -1L;
-		try {
-			fileNodeId = fileSystemRepository.addFile(dirNodeId, name);
-		} catch (Exception e) {
-			throw new ServiceException("Error adding file to directory " + dirNodeId, e);
-		}
-		return fileNodeId;
+		// TODO - add code to update/insert the row into eas_file_binary_resource
 		
 	}
 	
