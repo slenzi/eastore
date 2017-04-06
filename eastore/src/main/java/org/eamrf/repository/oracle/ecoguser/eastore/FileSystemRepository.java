@@ -1,8 +1,12 @@
 package org.eamrf.repository.oracle.ecoguser.eastore;
 
 import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -17,12 +21,19 @@ import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.support.AbstractLobCreatingPreparedStatementCallback;
+import org.springframework.jdbc.support.lob.DefaultLobHandler;
+import org.springframework.jdbc.support.lob.LobCreator;
+import org.springframework.jdbc.support.lob.LobHandler;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import static java.lang.Math.toIntExact;
 
 /**
  * Repository for manipulating a file system within a database, using out internal node & closure tables.
@@ -404,20 +415,72 @@ public class FileSystemRepository {
 	 */
 	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws Exception {
 		
-		// TODO - Complete
+		final Store store = getStoreById(fileMetaResource.getStoreId());
+		final Long nodeId = fileMetaResource.getNodeId();
+		final Path filePath = Paths.get(store.getPath() + fileMetaResource.getRelativePath());
+		final boolean haveBinaryInDb = fileMetaResource.getIsBinaryInDatabase();
+		long lFileSize = Files.size(filePath);
+		final int fileSize = toIntExact(lFileSize);
 		
-		boolean haveBinaryInDb = fileMetaResource.getIsBinaryInDatabase();
+		if(!Files.exists(filePath)){
+			throw new Exception("Cannot refresh binary data in DB for FileMetaResource with node id => " + 
+					fileMetaResource.getNodeId() + ". File does not exists on disk => " + filePath);
+		}
+		InputStream inStream = Files.newInputStream(filePath);
+		
+		
 		if(haveBinaryInDb){
 			
+			//
 			// update existing eas_binary_resource entry
+			//
+			LobHandler lobHandler = new DefaultLobHandler(); 
+			jdbcTemplate.execute(
+					"update eas_binary_resource r set r.file_data = ? where r.node_id = ?",
+					new AbstractLobCreatingPreparedStatementCallback(lobHandler) {
+
+						@Override
+						protected void setValues(PreparedStatement statement, LobCreator lobCreator)
+								throws SQLException, DataAccessException {
+							
+							lobCreator.setBlobAsBinaryStream(statement, 1, inStream, fileSize);
+							statement.setLong(2, nodeId);
+							
+						}
+						
+					});
 			
 		}else{
 			
+			//
 			// add new entry to eas_binary_resource
+			//
+			LobHandler lobHandler = new DefaultLobHandler(); 
+			jdbcTemplate.execute(
+					"insert into eas_binary_resource (node_id, file_data) values (?, ?)",
+					new AbstractLobCreatingPreparedStatementCallback(lobHandler) {
+
+						@Override
+						protected void setValues(PreparedStatement statement, LobCreator lobCreator)
+								throws SQLException, DataAccessException {
+							
+							statement.setLong(1, nodeId);
+							lobCreator.setBlobAsBinaryStream(statement, 2, inStream, fileSize);
+							
+						}
+						
+					});
+			
+			//
+			// Update eas_file_meta_resource.is_binary_data_in_db to 'Y'
+			//
+			jdbcTemplate.update("update eas_file_meta_resource set is_file_data_in_db = 'Y' where node_id = ?", nodeId);			
+		
+			fileMetaResource.setIsBinaryInDatabase(true);
 			
 		}
 		
-		fileMetaResource.setIsBinaryInDatabase(true);
+		inStream.close();
 		
 		return fileMetaResource;
 		
