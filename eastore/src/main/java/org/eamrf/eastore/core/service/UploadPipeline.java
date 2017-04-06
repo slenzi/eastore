@@ -66,7 +66,7 @@ public class UploadPipeline {
 		
 		if(taskManager != null){
 			
-			logger.info("Starting queued task manager...");
+			logger.info("Starting " + UploadPipeline.class.getName() + " queued task manager...");
 			
 			taskExecutorService = Executors.newSingleThreadExecutor();
 			
@@ -74,7 +74,7 @@ public class UploadPipeline {
 			
 			taskManager.startTaskManager(taskExecutorService);
 			
-			logger.info("Queued task manager startup complete.");
+			logger.info(UploadPipeline.class.getName() + " Queued task manager startup complete.");
 			
 		}else{
 			

@@ -3,8 +3,14 @@ package org.eamrf.eastore.core.service;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.annotation.PostConstruct;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.eastore.core.concurrent.task.AbstractQueuedTask;
+import org.eamrf.eastore.core.concurrent.task.QueuedTaskManager;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.tree.Tree;
@@ -24,6 +30,8 @@ import org.springframework.stereotype.Service;
 /**
  * Main service class for interacting with our file system.
  * 
+ * All operations which perform updates to the file system are added to a queue to be run one at a time.
+ * 
  * @author slenzi
  */
 @Service
@@ -39,11 +47,44 @@ public class FileSystemService {
     private FileSystemRepository fileSystemRepository;
     
     @Autowired
-    private PathResourceTreeService treeService;    
+    private PathResourceTreeService treeService;
+    
+	@Autowired
+	private QueuedTaskManager taskManager;
+	
+	// used in conjunction with the QueuedTaskManager
+	private ExecutorService taskExecutorService = null;    
     
 	public FileSystemService() {
 		
 	}
+	
+	/**
+	 * Start the QueuedTaskManager when this bean (FileSystemService) is created.
+	 */
+	@PostConstruct
+	public void init(){
+		
+		if(taskManager != null){
+			
+			logger.info("Starting " + FileSystemService.class.getName() + " queued task manager...");
+			
+			taskExecutorService = Executors.newSingleThreadExecutor();
+			
+			taskManager.setManagerName(FileSystemService.class.getName() + " Service");
+			
+			taskManager.startTaskManager(taskExecutorService);
+			
+			logger.info(FileSystemService.class.getName() + " Queued task manager startup complete.");
+			
+		}else{
+			
+			logger.error("Cannot start " + FileSystemService.class.getName() + " Service. The " + 
+					QueuedTaskManager.class.getName() + " object is null.");
+			
+		}
+		
+	}	
 	
 	/**
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
@@ -152,12 +193,38 @@ public class FileSystemService {
 	 */
 	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws ServiceException {
 		
-		Store store = null;
-		try {
-			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
-		} catch (Exception e) {
-			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
+		// TODO - this doesn't necessarily need to be queued... We just need to make sure that the
+		// store directory doesn't already exist
+		
+		class Task extends AbstractQueuedTask<Store> {
+
+			@Override
+			public Store doWork() throws ServiceException {
+		
+				Store store = null;
+				try {
+					store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
+				} catch (Exception e) {
+					throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
+				}
+				return store;				
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
 		}
+		
+		Task task = new Task();
+		task.setName("Add Store [storeName=" + storeName + ", storeDesc=" + storeDesc + 
+					", Path=" + storePath + ", rooDirName=" + rootDirName + ", maxFileSizeDb=" + maxFileSizeDb + "]");
+		taskManager.addTask(task);
+		
+		Store store = task.get(); // block until finished
+		
 		return store;
 		
 	}
@@ -173,14 +240,38 @@ public class FileSystemService {
 	 */
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		FileMetaResource fileMetaResource = null;
-		try {
-			fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirNodeId, filePath, replaceExisting);
-		} catch (Exception e) {
-			throw new ServiceException("Error adding new file => " + filePath.toString() + 
-					", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
+		class Task extends AbstractQueuedTask<FileMetaResource> {
+
+			@Override
+			public FileMetaResource doWork() throws ServiceException {
+
+				FileMetaResource fileMetaResource = null;
+				try {
+					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirNodeId, filePath, replaceExisting);
+				} catch (Exception e) {
+					throw new ServiceException("Error adding new file => " + filePath.toString() + 
+							", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
+				}
+				return fileMetaResource;				
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
 		}
-		return fileMetaResource;
+		
+		Task task = new Task();
+		task.setName("Add File Without Binary [dirNodeId=" + dirNodeId + ", filePath=" + filePath + 
+				", replaceExisting=" + replaceExisting + "]");
+		taskManager.addTask(task);
+		
+		FileMetaResource fileMetaResource = task.get(); // block until finished
+		
+		return fileMetaResource;		
+		
 	}
 	
 	/**
@@ -191,14 +282,36 @@ public class FileSystemService {
 	 */
 	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
-		FileMetaResource updatedfileMetaResource = null;
-		try {
-			updatedfileMetaResource = fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
-		} catch (Exception e) {
-			throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
-					+ "for file resource node => " + fileMetaResource.getNodeId(), e);
+		class Task extends AbstractQueuedTask<FileMetaResource> {
+
+			@Override
+			public FileMetaResource doWork() throws ServiceException {
+
+				FileMetaResource updatedfileMetaResource = null;
+				try {
+					updatedfileMetaResource = fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
+				} catch (Exception e) {
+					throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
+							+ "for file resource node => " + fileMetaResource.getNodeId(), e);
+				}
+				return updatedfileMetaResource;				
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
 		}
-		return updatedfileMetaResource;
+		
+		Task task = new Task();
+		task.setName("Refresh binary data in DB [" + fileMetaResource.toString() + "]");
+		taskManager.addTask(task);
+		
+		FileMetaResource updatedResource = task.get(); // block until finished
+		
+		return updatedResource;	
 		
 	}
 	
@@ -210,13 +323,35 @@ public class FileSystemService {
 	 */
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
-		FileMetaResource resource = getFileMetaResource(fileNodeId);
-		Store store = this.getStore(resource.getStoreId());
-		try {
-			fileSystemRepository.removeFile(store, resource);
-		} catch (Exception e) {
-			throw new ServiceException("Error removing file with node id => " + fileNodeId + ". " + e.getMessage(), e);
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+	
+				FileMetaResource resource = getFileMetaResource(fileNodeId);
+				Store store = getStore(resource.getStoreId());
+				try {
+					fileSystemRepository.removeFile(store, resource);
+				} catch (Exception e) {
+					throw new ServiceException("Error removing file with node id => " + fileNodeId + ". " + e.getMessage(), e);
+				}
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
 		}
+		
+		Task task = new Task();
+		task.setName("Remove file [fileNodeId=" + fileNodeId + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until finished
 		
 	}
 	
@@ -229,55 +364,79 @@ public class FileSystemService {
 	public void removeDirectory(Long dirNodeId) throws ServiceException {
 		
 		// this function call makes sure the dirNodeId points to an actual directory
-		DirectoryResource dirResource = getDirectoryResource(dirNodeId);
+		final DirectoryResource dirResource = getDirectoryResource(dirNodeId);
+		
+		// make sure user is not trying to delete a root directory for a store
 		if(dirResource.getParentNodeId().equals(0L)){
 			throw new ServiceException("Node id => " + dirNodeId + " points to a root directory for a store. "
 					+ "You cannot use this method to remove a root directory.");
 		}
 		
 		// build a tree that we can walk
-		Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
+		final Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
 		
 		// get store
-		final Store store = getStore(dirResource.getStoreId());
+		final Store store = getStore(dirResource.getStoreId());		
 		
-		logger.info("Deleting Tree:");
-		treeService.logPathResourceTree(tree);
-		
-		try {
-			
-			// walk tree, bottom-up, from leafs to root node.
-			Trees.walkTree(tree,
-					(treeNode) -> {
-						
-						try {
-							if(treeNode.getData().getResourceType() == ResourceType.FILE){
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+				
+				getLogger().info("Deleting Tree:");
+				
+				treeService.logPathResourceTree(tree);
+				
+				try {
+					
+					// walk tree, bottom-up, from leafs to root node.
+					Trees.walkTree(tree,
+						(treeNode) -> {
+							
+							try {
+								if(treeNode.getData().getResourceType() == ResourceType.FILE){
+									
+									fileSystemRepository.removeFile(store, (FileMetaResource)treeNode.getData());
+									
+								}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
+									
+									// we walk the tree bottom up, so by the time we remove a directory it will be empty
+									fileSystemRepository.removeDirectory(store, (DirectoryResource)treeNode.getData());
+									
+								}
+							}catch(Exception e){
 								
-								fileSystemRepository.removeFile(store, (FileMetaResource)treeNode.getData());
+								PathResource presource = treeNode.getData();
 								
-							}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
-								
-								// we walk the tree bottom up, so by the time we remove a directory it will be empty
-								fileSystemRepository.removeDirectory(store, (DirectoryResource)treeNode.getData());
+								throw new TreeNodeVisitException("Error removing path resource with node id => " + 
+										presource.getNodeId() + ", of resource type => " + 
+										presource.getResourceType().getTypeString(),e);
 								
 							}
-						}catch(Exception e){
 							
-							PathResource presource = treeNode.getData();
-							
-							throw new TreeNodeVisitException("Error removing path resource with node id => " + 
-									presource.getNodeId() + ", of resource type => " + 
-									presource.getResourceType().getTypeString(),e);
-							
-						}
-						
-					},
-					WalkOption.POST_ORDER_TRAVERSAL);
+						},
+						WalkOption.POST_ORDER_TRAVERSAL);
+				
+				}catch(TreeNodeVisitException e){
+					throw new ServiceException("Encountered error when deleting directory with node id => " + 
+							dirNodeId + ". " + e.getMessage(), e);
+				}				
+				
+				return null;
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+		}
 		
-		}catch(TreeNodeVisitException e){
-			throw new ServiceException("Encountered error when deleting directory with node id => " + 
-					dirNodeId + ". " + e.getMessage(), e);
-		}		
+		Task task = new Task();
+		task.setName("Remove directory [dirNodeId=" + dirNodeId + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until finished
 		
 	}
 	
@@ -356,9 +515,35 @@ public class FileSystemService {
 		
 	}
 	
-	public void copyFile() throws ServiceException {
+	/**
+	 * Copy file to another directory
+	 * 
+	 * @param fileNodeId - the file to copy
+	 * @param dirNodeId - the destination directory
+	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
+	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
+	 * @throws ServiceException
+	 */
+	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - implement
+		// TODO - finish
+		
+		FileMetaResource sourceFile = getFileMetaResource(fileNodeId);
+		DirectoryResource destitationDir = getDirectoryResource(dirNodeId);
+		Store soureStore = getStore(sourceFile.getStoreId());
+		Path sourceFilePath = Paths.get(soureStore.getPath() + sourceFile.getRelativePath());
+		
+		// can't copy a file to the directory it's already in
+		if(sourceFile.getParentNodeId().equals(destitationDir.getNodeId())){
+			throw new ServiceException("You cannot copy a file to the directory that it's already in. "
+					+ "fileNodeId => " + fileNodeId + ", dirNodeId => " + dirNodeId);
+		}
+		
+		addFileWithoutBinary(dirNodeId, sourceFilePath, replaceExisting);
+		
+		// TODO - do we want to block for updating binary data in the database?  Uhg!
+		// If we don't block then it's possible for one of those update tasks to fail (someone else might
+		// delete a file before the update process runs.)  We should make those tasks fail gracefully
 		
 	}
 	
