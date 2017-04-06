@@ -195,6 +195,22 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Remove the file, from database and disk. No undo.
+	 * 
+	 * @param fileNodeId - id of the FileMetaResource
+	 * @throws ServiceException
+	 */
+	public void removeFile(Long fileNodeId) throws ServiceException {
+		
+		try {
+			fileSystemRepository.removeFile(fileNodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Error removing file with node id => " + fileNodeId + ". " + e.getMessage(), e);
+		}
+		
+	}
+	
+	/**
 	 * Add new directory
 	 * 
 	 * @param dirNodeId

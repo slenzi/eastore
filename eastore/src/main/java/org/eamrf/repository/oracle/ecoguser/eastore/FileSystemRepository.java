@@ -13,6 +13,11 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.eastore.core.service.TreeService;
+import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNodeVisitException;
+import org.eamrf.eastore.core.tree.Trees;
+import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
@@ -52,7 +57,10 @@ public class FileSystemRepository {
     private JdbcTemplate jdbcTemplate;
     
     @Autowired
-    private ClosureRepository closureRepository;    
+    private ClosureRepository closureRepository;
+    
+    @Autowired
+    private TreeService treeService;
 	
     /**
      * Maps results from query to PathResource objects
@@ -124,7 +132,9 @@ public class FileSystemRepository {
 	 * @param nodeId
 	 * @return
 	 * @throws Exception
+	 * @deprecated - use getPathResource(Long nodeId) instead
 	 */
+	/*
 	public DirectoryResource getDirectoryById(Long nodeId) throws Exception {
 		
 		// left joins on eas_directory so we always pull data from eas_node & eas_path_resource
@@ -154,6 +164,7 @@ public class FileSystemRepository {
 		}, new Object[] { nodeId });		
 		
 	}
+	*/
 	
 	/**
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
@@ -375,11 +386,13 @@ public class FileSystemRepository {
 		//
 		// make sure parentDirNodeId is actually of a directory
 		//
-		DirectoryResource parentDirectory = getDirectoryById(dirNodeId);
-		if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
-			throw new Exception("Node ID " + dirNodeId + " is not a directory node. "
-					+ "Cannot add file to a non-directory node.");
-		}
+		DirectoryResource parentDirectory = getDirectory(dirNodeId);
+		
+		//DirectoryResource parentDirectory = getDirectoryById(dirNodeId);
+		//if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
+		//	throw new Exception("Node ID " + dirNodeId + " is not a directory node. "
+		//			+ "Cannot add file to a non-directory node.");
+		//}
 		
 		String fileName = filePath.getFileName().toString();
 		
@@ -666,11 +679,13 @@ public class FileSystemRepository {
 		//
 		// make sure parentDirNodeId is actually of a directory path resource type
 		//
-		DirectoryResource parentDirectory = getDirectoryById(parentDirNodeId);
-		if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
-			throw new Exception("Node ID " + parentDirNodeId + " is not a directory node. "
-					+ "Cannot add sub directory to a non-directory node.");
-		}
+		DirectoryResource parentDirectory = getDirectory(parentDirNodeId);
+		
+		//DirectoryResource parentDirectory = getDirectoryById(parentDirNodeId);
+		//if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
+		//	throw new Exception("Node ID " + parentDirNodeId + " is not a directory node. "
+		//			+ "Cannot add sub directory to a non-directory node.");
+		//}
 		
 		//
 		// make sure directory doesn't already contain a sub-directory with the same name
@@ -862,6 +877,202 @@ public class FileSystemRepository {
 	}
 	
 	/**
+	 * Fetch a path resource. Every resource has a unique node id.
+	 * 
+	 * Will not include data from eas_binary_resource for FileMetaResource objects.
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public PathResource getPathResource(Long nodeId) throws Exception {
+		
+		List<PathResource> childResources = getPathResourceTree(nodeId, 0);
+		if(childResources == null){
+			throw new Exception("No PathResource found for node id => " + nodeId);
+		}else if(childResources.size() != 1){
+			// should never get here...
+			throw new Exception("Expected 1 PathResource for node id => " + nodeId + ", but fetched " + childResources.size());
+		}
+		
+		return childResources.get(0);
+		
+	}
+	
+	/**
+	 * Fetch a FileMetaResource, does not include the binary data from eas_binary_resource
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public FileMetaResource getFileMetaResource(Long nodeId) throws Exception {
+		
+		PathResource resource = getPathResource(nodeId);
+		if(resource.getResourceType() == ResourceType.FILE){
+			return (FileMetaResource)resource;
+		}else{
+			throw new Exception("Error fetching file meta resource. Node id => " + nodeId + " is not a file meta resource.");
+		}
+		
+	}	
+	
+	/**
+	 * Fetch a DirectoryResource
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public DirectoryResource getDirectory(Long nodeId) throws Exception {
+		
+		PathResource resource = getPathResource(nodeId);
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new Exception("Error fetching directory resource. Node id => " + nodeId + " is not a directory resource.");
+		}
+		
+	}
+	
+	/**
+	 * Removes the file (no undo)
+	 * 
+	 * @param fileNodeId
+	 * @throws Exception
+	 */
+	public void removeFile(Long fileNodeId) throws Exception {
+		
+		FileMetaResource resource = getFileMetaResource(fileNodeId);
+		Store store = getStoreById(resource.getStoreId());
+		
+		_removeFile(store, resource);
+		
+	}
+	
+	/**
+	 * Helper method for removing a file
+	 * 
+	 * @param store
+	 * @param resource
+	 * @throws Exception
+	 */
+	private void _removeFile(Store store, FileMetaResource resource) throws Exception {
+		
+		Path filePath = Paths.get(store.getPath() + resource.getRelativePath());
+		
+		//
+		// delete from eas_binary_resource
+		//
+		if(resource.getIsBinaryInDatabase()){
+			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", resource.getNodeId());
+		}
+		
+		//
+		// delete from eas_file_meta_resource
+		//
+		jdbcTemplate.update("delete from eas_file_meta_resource where node_id = ?", resource.getNodeId());
+		
+		
+		//
+		// delete closure data and node
+		//
+		closureRepository.deleteNode(resource.getNodeId());
+		
+		//
+		// remove file for local file system
+		//
+		FileUtil.deletePath(filePath);		
+		
+	}
+	
+	/**
+	 * Helper method for removing a directory. THE DIRECTORY MUST BE EMPTY!
+	 * 
+	 * @param store
+	 * @param resource
+	 * @throws Exception
+	 */
+	private void _removeDirectory(Store store, DirectoryResource resource) throws Exception {
+		
+		Path dirPath = Paths.get(store.getPath() + resource.getRelativePath());
+		
+		//
+		// delete from eas_file_meta_resource
+		//
+		jdbcTemplate.update("delete from eas_resource where node_id = ?", resource.getNodeId());
+		
+		//
+		// delete closure data and node
+		//
+		closureRepository.deleteNode(resource.getNodeId());
+		
+		//
+		// remove file for local file system
+		//
+		FileUtil.deletePath(dirPath);		
+		
+	}	
+	
+	/**
+	 * Removes the directory. This method does not allow you to remove a root directory for a store,
+	 * since all stores require a root directory. If the dirNodeId is of a root directory then an
+	 * exception will be thrown.
+	 * 
+	 * @param dirNodeId
+	 */
+	public void removeDirectory(Long dirNodeId) throws Exception {
+		
+		// this function call makes sure the dirNodeId points to an actual directory
+		DirectoryResource dirResource = getDirectory(dirNodeId);
+		if(dirResource.getParentNodeId().equals(0L)){
+			throw new Exception("Node id => " + dirNodeId + " points to a root directory for a store. "
+					+ "You cannot use this method to remove a root directory.");
+		}
+		
+		// build a tree that we can walk
+		Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
+		
+		// get store
+		final Store store = this.getStoreById(dirResource.getStoreId());
+		
+		try {
+			
+			// walk tree, bottom-up, from leafs to root node.
+			Trees.walkTree(tree,
+					(treeNode) -> {
+						
+						try {
+							if(treeNode.getData().getResourceType() == ResourceType.FILE){
+								
+								_removeFile(store, (FileMetaResource)treeNode.getData());
+								
+							}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
+								
+								_removeDirectory(store, (DirectoryResource)treeNode.getData());
+								
+							}
+						}catch(Exception e){
+							
+							PathResource presource = treeNode.getData();
+							
+							throw new TreeNodeVisitException("Error removing path resource with node id => " + 
+									presource.getNodeId() + ", of resource type => " + 
+									presource.getResourceType().getTypeString(),e);
+							
+						}
+						
+					},
+					WalkOption.POST_ORDER_TRAVERSAL);
+		
+		}catch(TreeNodeVisitException e){
+			throw new Exception("Encountered error when deleting directory with node id => " + 
+					dirNodeId + ". " + e.getMessage(), e);
+		}
+		
+	}
+	
+	/**
 	 * Get next id from eas_store_id_sequence
 	 * 
 	 * @return
@@ -874,6 +1085,6 @@ public class FileSystemRepository {
 		
 		return id;
 		
-	}	
+	}
 
 }
