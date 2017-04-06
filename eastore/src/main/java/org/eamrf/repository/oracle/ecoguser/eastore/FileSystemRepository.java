@@ -35,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static java.lang.Math.toIntExact;
 
 /**
- * Repository for manipulating a file system within a database, using out internal node & closure tables.
+ * Repository for manipulating a file system within a database, using our internal node & closure tables.
  * 
  * @author slenzi
  */
@@ -116,46 +116,6 @@ public class FileSystemRepository {
 		}, new Object[] { storeId });		
 		
 	}
-	
-	/**
-	 * Fetch directory by its node id.
-	 * 
-	 * @param nodeId
-	 * @return
-	 * @throws Exception
-	 * @deprecated - use getPathResource(Long nodeId) instead
-	 */
-	/*
-	public DirectoryResource getDirectoryById(Long nodeId) throws Exception {
-		
-		// left joins on eas_directory so we always pull data from eas_node & eas_path_resource
-		// in cases where 'nodeId' doesn't actually point to a directory.
-		String sql =
-			"select " +
-			"n.node_id, n.parent_node_id, n.creation_date, n.updated_date, r.store_id, " +
-			"r.path_name, r.path_type, r.relative_path " +
-			"from eas_node n " +
-			"inner join eas_path_resource r " +
-			"on n.node_id = r.node_id " +
-			"left join eas_directory_resource d " +
-			"on r.node_id = d.node_id " +
-			"where n.node_id = ?";
-		
-		return (DirectoryResource)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-			DirectoryResource r = new DirectoryResource();
-			r.setNodeId(rs.getLong("node_id"));
-			r.setParentNodeId(rs.getLong("parent_node_id"));
-			r.setDateCreated(rs.getTimestamp("creation_date"));
-			r.setDateUpdated(rs.getTimestamp("updated_date"));
-			r.setPathName(rs.getString("path_name"));
-			r.setRelativePath(rs.getString("relative_path"));
-			r.setResourceType( ResourceType.getFromString(rs.getString("path_type")) );
-			r.setStoreId(rs.getLong("store_id"));
-			return r;			
-		}, new Object[] { nodeId });		
-		
-	}
-	*/
 	
 	/**
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
@@ -864,6 +824,9 @@ public class FileSystemRepository {
 		// delete from eas_file_meta_resource
 		jdbcTemplate.update("delete from eas_file_meta_resource where node_id = ?", resource.getNodeId());
 		
+		// delete from eas_path_resource
+		jdbcTemplate.update("delete from eas_path_resource where node_id = ?", resource.getNodeId());
+		
 		// delete closure data and node
 		closureRepository.deleteNode(resource.getNodeId());
 		
@@ -885,6 +848,9 @@ public class FileSystemRepository {
 		
 		// delete from eas_directory_resource
 		jdbcTemplate.update("delete from eas_directory_resource where node_id = ?", resource.getNodeId());
+		
+		// delete from eas_path_resource
+		jdbcTemplate.update("delete from eas_path_resource where node_id = ?", resource.getNodeId());
 		
 		// delete closure data and node
 		closureRepository.deleteNode(resource.getNodeId());

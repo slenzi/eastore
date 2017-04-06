@@ -38,7 +38,7 @@ public class FileSystemService {
     @Autowired
     private FileSystemRepository fileSystemRepository;
     
-    //@Autowired
+    @Autowired
     private PathResourceTreeService treeService;    
     
 	public FileSystemService() {
@@ -355,6 +355,30 @@ public class FileSystemService {
 		return dirResource;
 		
 	}
+	
+	public void copyFile() throws ServiceException {
+		
+		// TODO - implement
+		
+	}
+	
+	public void copyDirectoryFile() throws ServiceException {
+		
+		// TODO - implement
+		
+	}
+	
+	public void moveFile() throws ServiceException {
+		
+		// TODO - implement
+		
+	}
+	
+	public void moveDirectoryFile() throws ServiceException {
+		
+		// TODO - implement
+		
+	}	
 	
 	/**
 	 * Create sample store for testing, with some sub-directories.

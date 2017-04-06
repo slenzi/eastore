@@ -74,7 +74,6 @@ public class FileSystemResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
 	@GET
-	@POST
 	@Path("/addStore")
 	@Produces(MediaType.APPLICATION_JSON)
     public Store addStore(
@@ -219,7 +218,6 @@ public class FileSystemResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
     @GET
-    @POST
     @Path("/addDirectory/{dirNodeId}/name/{name}")
     @Produces(MediaType.APPLICATION_JSON)
     public DirectoryResource addDirectory(
@@ -241,6 +239,58 @@ public class FileSystemResource extends BaseResourceHandler {
     	return dirResource;
     	
     }
+    
+    /**
+     * Delete a file
+     * 
+     * @param fileNodeId
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/removeFile")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response removeFile(@QueryParam("fileNodeId") Long fileNodeId) throws WebServiceException {
+    	
+    	if(fileNodeId == null){
+    		handleError("Missing fileNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.removeFile(fileNodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }
+    
+    /**
+     * Delete a directory
+     * 
+     * @param dirNodeId
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/removeDirectory")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response removeDirectory(@QueryParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.removeDirectory(dirNodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }    
     
     /**
      * Create the test store
