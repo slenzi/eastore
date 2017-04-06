@@ -998,9 +998,9 @@ public class FileSystemRepository {
 		Path dirPath = Paths.get(store.getPath() + resource.getRelativePath());
 		
 		//
-		// delete from eas_file_meta_resource
+		// delete from eas_directory_resource
 		//
-		jdbcTemplate.update("delete from eas_resource where node_id = ?", resource.getNodeId());
+		jdbcTemplate.update("delete from eas_directory_resource where node_id = ?", resource.getNodeId());
 		
 		//
 		// delete closure data and node
@@ -1049,6 +1049,7 @@ public class FileSystemRepository {
 								
 							}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
 								
+								// we walk the tree bottom up, so by the time we remove a directory it will be empty
 								_removeDirectory(store, (DirectoryResource)treeNode.getData());
 								
 							}
