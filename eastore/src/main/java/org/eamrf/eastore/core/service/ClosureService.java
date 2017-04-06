@@ -24,6 +24,9 @@ public class ClosureService {
     
     @Autowired
     private ClosureRepository closureRepository;
+    
+    @Autowired
+    private PCMTreeService pcmTreeService;
 
     /**
      * Fetch top-down parent-child mappings (root node to all child nodes)

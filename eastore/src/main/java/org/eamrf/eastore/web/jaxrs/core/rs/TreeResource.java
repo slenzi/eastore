@@ -12,7 +12,8 @@ import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.TreeService;
+import org.eamrf.eastore.core.service.PCMTreeService;
+import org.eamrf.eastore.core.service.PathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
@@ -36,7 +37,10 @@ public class TreeResource extends BaseResourceHandler {
     private Logger logger;
     
     @Autowired
-    private TreeService treeService;  
+    private PCMTreeService pcmTreeService;
+    
+    @Autowired
+    private PathResourceTreeService pathResourceTreeService;  
     
 	public TreeResource() {
 
@@ -60,7 +64,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildPCMTree(nodeId);
+    		tree = pcmTreeService.buildPCMTree(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -72,7 +76,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPCMTree(tree);
+    	pathResourceTreeService.logPCMTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -100,7 +104,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildPCMTree(nodeId, depth);
+    		tree = pcmTreeService.buildPCMTree(nodeId, depth);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -112,7 +116,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
 
-    	treeService.logPCMTree(tree);
+    	pathResourceTreeService.logPCMTree(tree);
     	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -136,7 +140,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildParentPCMTree(nodeId);
+    		tree = pcmTreeService.buildParentPCMTree(nodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -148,7 +152,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPCMTree(tree);
+    	pathResourceTreeService.logPCMTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -175,7 +179,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<ParentChildMap> tree = null;
     	try {
-    		tree = treeService.buildParentPCMTree(nodeId, levels);
+    		tree = pcmTreeService.buildParentPCMTree(nodeId, levels);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -187,7 +191,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPCMTree(tree);
+    	pathResourceTreeService.logPCMTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -211,7 +215,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = treeService.buildPathResourceTree(dirNodeId);
+    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -223,7 +227,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPathResourceTree(tree);
+    	pathResourceTreeService.logPathResourceTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -251,7 +255,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = treeService.buildPathResourceTree(dirNodeId, depth);
+    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId, depth);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -263,7 +267,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
 
-    	treeService.logPathResourceTree(tree);
+    	pathResourceTreeService.logPathResourceTree(tree);
     	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -287,7 +291,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = treeService.buildParentPathResourceTree(dirNodeId);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(dirNodeId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -299,7 +303,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPathResourceTree(tree);
+    	pathResourceTreeService.logPathResourceTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -326,7 +330,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = treeService.buildParentPathResourceTree(dirNodeId, levels);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(dirNodeId, levels);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -338,7 +342,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	treeService.logPathResourceTree(tree);
+    	pathResourceTreeService.logPathResourceTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	

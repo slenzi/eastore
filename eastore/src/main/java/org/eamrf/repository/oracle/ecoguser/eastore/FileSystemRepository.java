@@ -13,11 +13,6 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
-import org.eamrf.eastore.core.service.TreeService;
-import org.eamrf.eastore.core.tree.Tree;
-import org.eamrf.eastore.core.tree.TreeNodeVisitException;
-import org.eamrf.eastore.core.tree.Trees;
-import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
@@ -28,7 +23,6 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.support.AbstractLobCreatingPreparedStatementCallback;
 import org.springframework.jdbc.support.lob.DefaultLobHandler;
@@ -58,9 +52,6 @@ public class FileSystemRepository {
     
     @Autowired
     private ClosureRepository closureRepository;
-    
-    @Autowired
-    private TreeService treeService;
 	
     /**
      * Maps results from query to PathResource objects
@@ -333,26 +324,21 @@ public class FileSystemRepository {
 		
 		String storePathString = storePath.toString().replace("\\", "/");
 				
-		//
 		// add entry to eas_store
-		//
 		jdbcTemplate.update(
 				"insert into eas_store (store_id, store_name, store_description, store_path, "
 				+ "node_id, max_file_size_in_db, creation_date, updated_date) " +
 				"values (?, ?, ?, ?, ?, ?, ?, ?)", storeId, storeName, storeDesc,
 				storePathString, rootNodeId, maxFileSizeDb, dtNow, dtNow);
-		//
+		
 		// create store directory on local file system
-		//
 		try {
 			FileUtil.createDirectory(storePath, true);
 		} catch (Exception e) {
 			throw new Exception("Failed to create store directory => " + storePathString + ". " + e.getMessage(), e);
 		}		
 		
-		//
 		// add root directory for store
-		//
 		addRootDirectory(storeId, storePath, rootNodeId, rootDirName);
 		
 		Store store = new Store();
@@ -383,22 +369,12 @@ public class FileSystemRepository {
 	 */
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws Exception {
 		
-		//
 		// make sure parentDirNodeId is actually of a directory
-		//
 		DirectoryResource parentDirectory = getDirectory(dirNodeId);
-		
-		//DirectoryResource parentDirectory = getDirectoryById(dirNodeId);
-		//if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
-		//	throw new Exception("Node ID " + dirNodeId + " is not a directory node. "
-		//			+ "Cannot add file to a non-directory node.");
-		//}
 		
 		String fileName = filePath.getFileName().toString();
 		
-		//
 		// check if directory already contains a file with the same name (case insensitive)
-		//
 		boolean hasExisting = hasChildPathResource(dirNodeId, fileName, ResourceType.FILE);
 		
 		if(hasExisting && replaceExisting){
@@ -444,9 +420,7 @@ public class FileSystemRepository {
 		
 		if(haveBinaryInDb){
 			
-			//
 			// update existing eas_binary_resource entry
-			//
 			LobHandler lobHandler = new DefaultLobHandler(); 
 			jdbcTemplate.execute(
 					"update eas_binary_resource r set r.file_data = ? where r.node_id = ?",
@@ -465,9 +439,7 @@ public class FileSystemRepository {
 			
 		}else{
 			
-			//
 			// add new entry to eas_binary_resource
-			//
 			LobHandler lobHandler = new DefaultLobHandler(); 
 			jdbcTemplate.execute(
 					"insert into eas_binary_resource (node_id, file_data) values (?, ?)",
@@ -484,9 +456,7 @@ public class FileSystemRepository {
 						
 					});
 			
-			//
 			// Update eas_file_meta_resource.is_binary_data_in_db to 'Y'
-			//
 			jdbcTemplate.update("update eas_file_meta_resource set is_file_data_in_db = 'Y' where node_id = ?", nodeId);			
 		
 			fileMetaResource.setIsBinaryInDatabase(true);
@@ -515,10 +485,8 @@ public class FileSystemRepository {
 		Long fileSizeBytes = FileUtil.getFileSize(filePath);
 		String fileMimeType = FileUtil.detectMimeType(filePath);
 		Boolean isBinaryInDb = false;
-		
-		//
+
 		// add entry to eas_node and eas_closure
-		//
 		Node newNode = null;
 		try {
 			newNode = closureRepository.addNode(dirResource.getNodeId(), fileName);
@@ -526,9 +494,6 @@ public class FileSystemRepository {
 			throw new Exception("Error adding directory node", e);
 		}
 		
-		//
-		// get store
-		//
 		Store store = getStoreById(dirResource.getStoreId());
 		
 		String fileRelPathString = (dirResource.getRelativePath() + File.separator + fileName).replace("\\", "/");
@@ -546,24 +511,18 @@ public class FileSystemRepository {
 		((FileMetaResource)resource).setMimeType(fileMimeType);
 		((FileMetaResource)resource).setIsBinaryInDatabase(isBinaryInDb);
 		
-		//
 		// add entry to eas_path_resource
-		//
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
 				"values (?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
 				resource.getResourceType().getTypeString(), resource.getRelativePath());
 		
-		//
 		// add entry to eas_file_meta_resource
-		//
 		jdbcTemplate.update(
 				"insert into eas_file_meta_resource (node_id, file_size, mime_type, is_file_data_in_db) values (?, ?, ?, ?)",
 					resource.getNodeId(), fileSizeBytes, fileMimeType, ((isBinaryInDb) ? "Y" : "N"));
 		
-		//
 		// copy file to directory in the tree
-		//
 		Path newFilePath = Paths.get(store.getPath() + resource.getRelativePath());
 		try {
 			FileUtil.copyFile(filePath, newFilePath);
@@ -592,55 +551,38 @@ public class FileSystemRepository {
 		// TODO - we match file names on lowercase, but we might want to update the name in the 
 		// database (eas_node) to exactly match the case of the new file name...
 		
-		//
 		// get current (file) PathResource
-		//
 		PathResource existingResource = getChildPathResource(dirResource.getNodeId(), fileName, ResourceType.FILE);
 		if(existingResource == null){
 			throw new Exception("Cannot update file " + fileName + " in directory node => " + 
 					dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
 		}
 		
-		//
 		// check if we have existing binary data in the database, we might need to remove it.
-		//
 		FileMetaResource existingFileResource = (FileMetaResource)existingResource;
 		if(existingFileResource.getIsBinaryInDatabase()){
 		
-			//
 			// remove existing binary data in database (it's the old file)
-			//
 			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", existingResource.getNodeId());
 			
-			//
 			// set is_file_data_in_db to 'N', and update file size to match new file. We also update mime type, but that should be the same...
-			//
 			jdbcTemplate.update(
 					"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ? where node_id = ?",
 					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
 		
-		//
 		// there was no existing binary data in the database, so we just have to update the meta data
-		//
 		}else{
 			
-			//
 			// update file size to match new file. We also update mime type, but that should be the same...
-			//
 			jdbcTemplate.update(
 					"update eas_file_meta_resource set file_size = ?, mime_type = ? where node_id = ?",
 					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
 			
 		}
 		
-		//
-		// get store
-		//
 		Store store = getStoreById(dirResource.getStoreId());
 		
-		//
 		// delete old file
-		//
 		Path oldFilePath = Paths.get(store.getPath() + existingFileResource.getRelativePath());
 		try {
 			FileUtil.deletePath(oldFilePath);
@@ -648,9 +590,7 @@ public class FileSystemRepository {
 			throw new Exception("Failed to remove old file at => " + oldFilePath.toString() + ". " + e.getMessage(), e);
 		}
 		
-		//
 		// copy new file to directory in the tree
-		//
 		try {
 			FileUtil.copyFile(filePath, oldFilePath);
 		} catch (Exception e) {
@@ -676,28 +616,16 @@ public class FileSystemRepository {
 	 */
 	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
 		
-		//
 		// make sure parentDirNodeId is actually of a directory path resource type
-		//
 		DirectoryResource parentDirectory = getDirectory(parentDirNodeId);
 		
-		//DirectoryResource parentDirectory = getDirectoryById(parentDirNodeId);
-		//if(parentDirectory.getResourceType() != ResourceType.DIRECTORY){
-		//	throw new Exception("Node ID " + parentDirNodeId + " is not a directory node. "
-		//			+ "Cannot add sub directory to a non-directory node.");
-		//}
-		
-		//
-		// make sure directory doesn't already contain a sub-directory with the same name
-		//		
+		// make sure directory doesn't already contain a sub-directory with the same name	
 		if(hasChildPathResource(parentDirNodeId, name, ResourceType.DIRECTORY)){
 			throw new Exception("Directory with dirNodeId " + parentDirNodeId + 
 					" already contains a sub-directory with the name '" + name + "'");			
 		}
 		
-		//
 		// add entry to eas_node and eas_closure
-		//
 		Node newNode = null;
 		try {
 			newNode = closureRepository.addNode(parentDirNodeId, name);
@@ -705,9 +633,6 @@ public class FileSystemRepository {
 			throw new Exception("Error adding directory node", e);
 		}
 		
-		//
-		// get store
-		//
 		Store store = getStoreById(parentDirectory.getStoreId());
 		
 		String dirRelPathString = (parentDirectory.getRelativePath() + File.separator + name).replace("\\", "/");
@@ -722,25 +647,19 @@ public class FileSystemRepository {
 		resource.setRelativePath(dirRelPathString);
 		resource.setStoreId(store.getId());
 		
-		//
 		// add entry to eas_path_resource
-		//
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
 				"values (?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
 				resource.getResourceType().getTypeString(), resource.getRelativePath());		
 		
-		//
-		// add entry to eas_directory resource
-		//
+		// add entry to eas_directory_resource
 		jdbcTemplate.update(
 				"insert into eas_directory_resource (node_id) values (?)", resource.getNodeId());		
 		
-		//
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
-		//
 		Path newDirectoryPath = Paths.get(store.getPath() + resource.getRelativePath());
 		try {
 			FileUtil.createDirectory(newDirectoryPath, true);
@@ -765,11 +684,9 @@ public class FileSystemRepository {
 	 */
 	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name) throws Exception {
 		
-		String storePathString = storePath.toString().replace("\\", "/");
+		//String storePathString = storePath.toString().replace("\\", "/");
 		
-		//
 		// add entry to eas_node and eas_closure
-		//
 		Node newNode = null;
 		try {
 			newNode = closureRepository.addNode(rootNodeId, 0L, name); // parent id set to 0 for all root nodes.
@@ -789,26 +706,19 @@ public class FileSystemRepository {
 		dirResource.setRelativePath(dirRelPathString);
 		dirResource.setStoreId(storeId);
 		
-		//
 		// add entry to eas_path_resource
-		//
-    	// add node to eas_node
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
 				"values (?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
 				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath());		
 		
-		//
-		// add entry to eas_directory resource
-		//
+		// add entry to eas_directory_resource
 		jdbcTemplate.update(
 				"insert into eas_directory_resource (node_id) values (?)", dirResource.getNodeId());		
 		
-		//
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
-		//
 		Path newDirectoryPath = Paths.get(storePath + dirResource.getRelativePath());
 		try {
 			FileUtil.createDirectory(newDirectoryPath, true);
@@ -936,140 +846,51 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Removes the file (no undo)
-	 * 
-	 * @param fileNodeId
-	 * @throws Exception
-	 */
-	public void removeFile(Long fileNodeId) throws Exception {
-		
-		FileMetaResource resource = getFileMetaResource(fileNodeId);
-		Store store = getStoreById(resource.getStoreId());
-		
-		_removeFile(store, resource);
-		
-	}
-	
-	/**
-	 * Helper method for removing a file
+	 * Remove a file
 	 * 
 	 * @param store
 	 * @param resource
 	 * @throws Exception
 	 */
-	private void _removeFile(Store store, FileMetaResource resource) throws Exception {
+	public void removeFile(Store store, FileMetaResource resource) throws Exception {
 		
 		Path filePath = Paths.get(store.getPath() + resource.getRelativePath());
 		
-		//
 		// delete from eas_binary_resource
-		//
 		if(resource.getIsBinaryInDatabase()){
 			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", resource.getNodeId());
 		}
 		
-		//
 		// delete from eas_file_meta_resource
-		//
 		jdbcTemplate.update("delete from eas_file_meta_resource where node_id = ?", resource.getNodeId());
 		
-		
-		//
 		// delete closure data and node
-		//
 		closureRepository.deleteNode(resource.getNodeId());
 		
-		//
 		// remove file for local file system
-		//
 		FileUtil.deletePath(filePath);		
 		
 	}
 	
 	/**
-	 * Helper method for removing a directory. THE DIRECTORY MUST BE EMPTY!
+	 * Removing a directory. THE DIRECTORY MUST BE EMPTY!
 	 * 
 	 * @param store
 	 * @param resource
 	 * @throws Exception
 	 */
-	private void _removeDirectory(Store store, DirectoryResource resource) throws Exception {
+	public void removeDirectory(Store store, DirectoryResource resource) throws Exception {
 		
 		Path dirPath = Paths.get(store.getPath() + resource.getRelativePath());
 		
-		//
 		// delete from eas_directory_resource
-		//
 		jdbcTemplate.update("delete from eas_directory_resource where node_id = ?", resource.getNodeId());
 		
-		//
 		// delete closure data and node
-		//
 		closureRepository.deleteNode(resource.getNodeId());
 		
-		//
 		// remove file for local file system
-		//
 		FileUtil.deletePath(dirPath);		
-		
-	}	
-	
-	/**
-	 * Removes the directory. This method does not allow you to remove a root directory for a store,
-	 * since all stores require a root directory. If the dirNodeId is of a root directory then an
-	 * exception will be thrown.
-	 * 
-	 * @param dirNodeId
-	 */
-	public void removeDirectory(Long dirNodeId) throws Exception {
-		
-		// this function call makes sure the dirNodeId points to an actual directory
-		DirectoryResource dirResource = getDirectory(dirNodeId);
-		if(dirResource.getParentNodeId().equals(0L)){
-			throw new Exception("Node id => " + dirNodeId + " points to a root directory for a store. "
-					+ "You cannot use this method to remove a root directory.");
-		}
-		
-		// build a tree that we can walk
-		Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
-		
-		// get store
-		final Store store = this.getStoreById(dirResource.getStoreId());
-		
-		try {
-			
-			// walk tree, bottom-up, from leafs to root node.
-			Trees.walkTree(tree,
-					(treeNode) -> {
-						
-						try {
-							if(treeNode.getData().getResourceType() == ResourceType.FILE){
-								
-								_removeFile(store, (FileMetaResource)treeNode.getData());
-								
-							}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
-								
-								// we walk the tree bottom up, so by the time we remove a directory it will be empty
-								_removeDirectory(store, (DirectoryResource)treeNode.getData());
-								
-							}
-						}catch(Exception e){
-							
-							PathResource presource = treeNode.getData();
-							
-							throw new TreeNodeVisitException("Error removing path resource with node id => " + 
-									presource.getNodeId() + ", of resource type => " + 
-									presource.getResourceType().getTypeString(),e);
-							
-						}
-						
-					},
-					WalkOption.POST_ORDER_TRAVERSAL);
-		
-		}catch(TreeNodeVisitException e){
-			throw new Exception("Encountered error when deleting directory with node id => " + 
-					dirNodeId + ". " + e.getMessage(), e);
-		}
 		
 	}
 	

@@ -93,7 +93,7 @@ public class Node implements Serializable {
 
 	@Override
 	public String toString() {
-		return "Node [nodeId=" + nodeId + ", parentNodeId=" + parentNodeId + ", childNodeId=" + childNodeId
+		return Node.class.getName() + " [nodeId=" + nodeId + ", parentNodeId=" + parentNodeId + ", childNodeId=" + childNodeId
 				+ ", nodeName=" + nodeName + ", dateCreated=" + dateCreated + ", dateUpdated=" + dateUpdated + "]";
 	}
 

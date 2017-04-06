@@ -7,10 +7,15 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNodeVisitException;
+import org.eamrf.eastore.core.tree.Trees;
+import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +37,9 @@ public class FileSystemService {
 	
     @Autowired
     private FileSystemRepository fileSystemRepository;
+    
+    //@Autowired
+    private PathResourceTreeService treeService;    
     
 	public FileSystemService() {
 		
@@ -202,12 +210,130 @@ public class FileSystemService {
 	 */
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
+		FileMetaResource resource = getFileMetaResource(fileNodeId);
+		Store store = this.getStore(resource.getStoreId());
 		try {
-			fileSystemRepository.removeFile(fileNodeId);
+			fileSystemRepository.removeFile(store, resource);
 		} catch (Exception e) {
 			throw new ServiceException("Error removing file with node id => " + fileNodeId + ". " + e.getMessage(), e);
 		}
 		
+	}
+	
+	/**
+	 * Remove a directory. Walks the tree in POST_ORDER_TRAVERSAL, from leafs to root node.
+	 * 
+	 * @param dirNodeId
+	 * @throws ServiceException
+	 */
+	public void removeDirectory(Long dirNodeId) throws ServiceException {
+		
+		// this function call makes sure the dirNodeId points to an actual directory
+		DirectoryResource dirResource = getDirectoryResource(dirNodeId);
+		if(dirResource.getParentNodeId().equals(0L)){
+			throw new ServiceException("Node id => " + dirNodeId + " points to a root directory for a store. "
+					+ "You cannot use this method to remove a root directory.");
+		}
+		
+		// build a tree that we can walk
+		Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
+		
+		// get store
+		final Store store = getStore(dirResource.getStoreId());
+		
+		logger.info("Deleting Tree:");
+		treeService.logPathResourceTree(tree);
+		
+		try {
+			
+			// walk tree, bottom-up, from leafs to root node.
+			Trees.walkTree(tree,
+					(treeNode) -> {
+						
+						try {
+							if(treeNode.getData().getResourceType() == ResourceType.FILE){
+								
+								fileSystemRepository.removeFile(store, (FileMetaResource)treeNode.getData());
+								
+							}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
+								
+								// we walk the tree bottom up, so by the time we remove a directory it will be empty
+								fileSystemRepository.removeDirectory(store, (DirectoryResource)treeNode.getData());
+								
+							}
+						}catch(Exception e){
+							
+							PathResource presource = treeNode.getData();
+							
+							throw new TreeNodeVisitException("Error removing path resource with node id => " + 
+									presource.getNodeId() + ", of resource type => " + 
+									presource.getResourceType().getTypeString(),e);
+							
+						}
+						
+					},
+					WalkOption.POST_ORDER_TRAVERSAL);
+		
+		}catch(TreeNodeVisitException e){
+			throw new ServiceException("Encountered error when deleting directory with node id => " + 
+					dirNodeId + ". " + e.getMessage(), e);
+		}		
+		
+	}
+	
+	/**
+	 * fetch a store
+	 * 
+	 * @param storeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Store getStore(Long storeId) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreById(storeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store id => " + storeId);
+		}
+		return store;
+		
+	}
+	
+	/**
+	 * fetch a directory
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public FileMetaResource getFileMetaResource(Long fileNodeId) throws ServiceException {
+		
+		FileMetaResource resource = null;
+		try {
+			resource = fileSystemRepository.getFileMetaResource(fileNodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get file meta resource for node id => " + fileNodeId);
+		}
+		return resource;
+	}	
+	
+	/**
+	 * fetch a directory
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public DirectoryResource getDirectoryResource(Long dirNodeId) throws ServiceException {
+		
+		DirectoryResource resource = null;
+		try {
+			resource = fileSystemRepository.getDirectory(dirNodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get directory for node id => " + dirNodeId);
+		}
+		return resource;
 	}
 	
 	/**
