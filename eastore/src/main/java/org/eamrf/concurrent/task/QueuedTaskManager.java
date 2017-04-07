@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.concurrent.task;
+package org.eamrf.concurrent.task;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -66,6 +66,15 @@ public class QueuedTaskManager implements TaskManager {
 		//this.executorService.submit(this);
 		this.executorService.execute(this);
 		
+	}
+
+	/**
+	 * get the ExecutorService for this task manager
+	 * 
+	 * @return
+	 */
+	public ExecutorService getExecutorService(){
+		return executorService;
 	}
 	
 	/**

@@ -2,15 +2,19 @@ package org.eamrf.eastore.core.service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.annotation.PostConstruct;
 
+import org.eamrf.concurrent.task.AbstractQueuedTask;
+import org.eamrf.concurrent.task.QueuedTaskManager;
+import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
-import org.eamrf.eastore.core.concurrent.task.AbstractQueuedTask;
-import org.eamrf.eastore.core.concurrent.task.QueuedTaskManager;
+import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.tree.Tree;
@@ -49,38 +53,45 @@ public class FileSystemService {
     @Autowired
     private PathResourceTreeService treeService;
     
-	@Autowired
-	private QueuedTaskManager taskManager;
+    @Autowired
+    private TaskManagerProvider taskManagerProvider;
+    
+	//@Autowired
+	//private QueuedTaskManager taskManager;
 	
 	// used in conjunction with the QueuedTaskManager
-	private ExecutorService taskExecutorService = null;    
+	//private ExecutorService taskExecutorService = null; 
+    
+    private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
     
 	public FileSystemService() {
 		
 	}
 	
 	/**
-	 * Start the QueuedTaskManager when this bean (FileSystemService) is created.
+	 * Create a QueuedTaskManager for each store. Any SQL update operations are queued per store.
 	 */
 	@PostConstruct
 	public void init(){
 		
-		if(taskManager != null){
+		List<Store> stores = null;
+		
+		try {
+			stores = getStores();
+		} catch (ServiceException e) {
+			logger.error("Failed to fetch list of stores. Cannot initialize task managers.");
+		}
+		
+		for(Store store : stores){
 			
-			logger.info("Starting " + FileSystemService.class.getName() + " queued task manager...");
+			logger.info("Creating queued task manager for store [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 			
-			taskExecutorService = Executors.newSingleThreadExecutor();
-			
-			taskManager.setManagerName(FileSystemService.class.getName() + " Service");
-			
-			taskManager.startTaskManager(taskExecutorService);
-			
-			logger.info(FileSystemService.class.getName() + " Queued task manager startup complete.");
-			
-		}else{
-			
-			logger.error("Cannot start " + FileSystemService.class.getName() + " Service. The " + 
-					QueuedTaskManager.class.getName() + " object is null.");
+			QueuedTaskManager manager = taskManagerProvider.createQueuedTaskManager();
+			manager.setManagerName("Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+			ExecutorService executor = Executors.newSingleThreadExecutor();
+			manager.startTaskManager(executor);
+			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, manager);
+			storeTaskManagerMap.put(store, mapEntry);
 			
 		}
 		
@@ -181,7 +192,7 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * Create a new store
+	 * Create a new store, and create it's queued task manager
 	 * 
 	 * @param storeName
 	 * @param storeDesc
@@ -193,39 +204,34 @@ public class FileSystemService {
 	 */
 	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws ServiceException {
 		
-		// TODO - this doesn't necessarily need to be queued... We just need to make sure that the
-		// store directory doesn't already exist
-		
-		class Task extends AbstractQueuedTask<Store> {
-
-			@Override
-			public Store doWork() throws ServiceException {
-		
-				Store store = null;
-				try {
-					store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
-				} catch (Exception e) {
-					throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
-				}
-				return store;				
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-			
+		Store store = null;
+		try {
+			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
+		} catch (Exception e) {
+			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
 		}
 		
-		Task task = new Task();
-		task.setName("Add Store [storeName=" + storeName + ", storeDesc=" + storeDesc + 
-					", Path=" + storePath + ", rooDirName=" + rootDirName + ", maxFileSizeDb=" + maxFileSizeDb + "]");
-		taskManager.addTask(task);
-		
-		Store store = task.get(); // block until finished
+		QueuedTaskManager manager = taskManagerProvider.createQueuedTaskManager();
+		manager.setManagerName("Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		manager.startTaskManager(executor);
+		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, manager);
+		storeTaskManagerMap.put(store, mapEntry);		
 		
 		return store;
+		
+	}
+	
+	/**
+	 * Fetch the queued task manager for the store;
+	 * 
+	 * @param store
+	 * @return
+	 */
+	private QueuedTaskManager getTaskManagerForStore(Store store){
+		
+		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
+		return map.getTaskManager();
 		
 	}
 	
@@ -240,6 +246,10 @@ public class FileSystemService {
 	 */
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
+		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
+		final Store store = getStore(dirRes.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
+		
 		class Task extends AbstractQueuedTask<FileMetaResource> {
 
 			@Override
@@ -247,7 +257,7 @@ public class FileSystemService {
 
 				FileMetaResource fileMetaResource = null;
 				try {
-					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirNodeId, filePath, replaceExisting);
+					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirRes, filePath, replaceExisting);
 				} catch (Exception e) {
 					throw new ServiceException("Error adding new file => " + filePath.toString() + 
 							", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
@@ -281,6 +291,9 @@ public class FileSystemService {
 	 * @throws ServiceException
 	 */
 	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
+		
+		final Store store = getStore(fileMetaResource.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<FileMetaResource> {
 
@@ -323,15 +336,17 @@ public class FileSystemService {
 	 */
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
+		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId);
+		final Store store = getStore(fileMetaResource.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		
 		class Task extends AbstractQueuedTask<Void> {
 
 			@Override
 			public Void doWork() throws ServiceException {
 	
-				FileMetaResource resource = getFileMetaResource(fileNodeId);
-				Store store = getStore(resource.getStoreId());
 				try {
-					fileSystemRepository.removeFile(store, resource);
+					fileSystemRepository.removeFile(store, fileMetaResource);
 				} catch (Exception e) {
 					throw new ServiceException("Error removing file with node id => " + fileNodeId + ". " + e.getMessage(), e);
 				}
@@ -372,11 +387,8 @@ public class FileSystemService {
 					+ "You cannot use this method to remove a root directory.");
 		}
 		
-		// build a tree that we can walk
-		final Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());
-		
-		// get store
-		final Store store = getStore(dirResource.getStoreId());		
+		final Store store = getStore(dirResource.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
 
@@ -384,6 +396,9 @@ public class FileSystemService {
 			public Void doWork() throws ServiceException {
 				
 				getLogger().info("Deleting Tree:");
+				
+				// build a tree that we can walk
+				final Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());				
 				
 				treeService.logPathResourceTree(tree);
 				
@@ -460,6 +475,23 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Fetch all stores
+	 * 
+	 * @return
+	 * @throws ServiceException
+	 */
+	public List<Store> getStores() throws ServiceException {
+		
+		List<Store> stores = null;
+		try {
+			stores = fileSystemRepository.getStores();
+		} catch (Exception e) {
+			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
+		}
+		return stores;
+	}
+	
+	/**
 	 * fetch a directory
 	 * 
 	 * @param dirNodeId
@@ -504,6 +536,8 @@ public class FileSystemService {
 	 * @throws ServiceException
 	 */
 	public DirectoryResource addDirectory(Long dirNodeId, String name) throws ServiceException {
+		
+		// TODO - wrap in task and add to queued task manager
 		
 		DirectoryResource dirResource = null;
 		try {
@@ -595,7 +629,7 @@ public class FileSystemService {
 				DirectoryResource dirDogs = addDirectory(dirFoo.getNodeId(), "dogs");
 					DirectoryResource dirBig = addDirectory(dirDogs.getNodeId(), "big");
 					DirectoryResource dirSmall = addDirectory(dirDogs.getNodeId(), "small");
-						DirectoryResource dirPics = addDirectory(dirSmall.getNodeId(), "pics");
+						DirectoryResource dirPics = addDirectory(dirSmall.getNodeId(), "pics");		
 		
 		return store;
 	}

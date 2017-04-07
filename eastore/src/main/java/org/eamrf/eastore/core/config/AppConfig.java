@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @ComponentScan(
 		basePackages = {
+			"org.eamrf.concurrent",
 			"org.eamrf.core.logging",
 			"org.eamrf.repository",
 			"org.eamrf.eastore.core",

@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.concurrent.task;
+package org.eamrf.concurrent.task;
 
 import java.util.concurrent.ExecutorService;
 

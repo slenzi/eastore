@@ -376,6 +376,19 @@ public class ClosureRepository {
 	}
 	
 	/**
+	 * Update node_name and updated_date in eas_node
+	 * 
+	 * @param n
+	 * @throws Exception
+	 */
+	public void updateNodeMeta(Node n) throws Exception {
+		
+		jdbcTemplate.update("update eas_node set node_name = ?, updated_date = ? where node_id = ?",
+				n.getNodeName(), n.getDateUpdated(), n.getNodeId());
+		
+	}
+	
+	/**
 	 * Get next id from eas_node_id_sequence
 	 * 
 	 * @return

@@ -118,6 +118,36 @@ public class FileSystemRepository {
 	}
 	
 	/**
+	 * Fetch all stores
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	public List<Store> getStores() throws Exception {
+		
+		String sql =
+				"select store_id, store_name, store_description, store_path, node_id, "
+				+ "max_file_size_in_db, creation_date, updated_date from eas_store";
+		
+		List<Store> stores = jdbcTemplate.query(
+				sql, (rs, rowNum) -> {
+					Store s = new Store();
+					s.setId(rs.getLong("store_id"));
+					s.setName(rs.getString("store_name"));
+					s.setDescription(rs.getString("store_description"));
+					s.setPath(Paths.get(rs.getString("store_path")));
+					s.setNodeId(rs.getLong("node_id"));
+					s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+					s.setDateCreated(rs.getTimestamp("creation_date"));
+					s.setDateUpdated(rs.getTimestamp("updated_date"));
+					return s;
+				});
+		
+		return stores;
+		
+	}
+	
+	/**
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
 	 * you can build a tree. This will not contain the binary data for files.
 	 * 
@@ -321,34 +351,35 @@ public class FileSystemRepository {
 	 * If a file with the same name already exists, then the file on disk is updated, and the old binary
 	 * data in eas_binary_resource is removed.
 	 * 
-	 * @param dirNodeId
-	 * @param filePath
+	 * @param parentDirectory
+	 * @param srcFilePath
 	 * @param replaceExisting
 	 * @return
 	 * @throws Exception
 	 */
-	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws Exception {
+	public FileMetaResource addFileWithoutBinary(
+			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {
 		
 		// make sure parentDirNodeId is actually of a directory
-		DirectoryResource parentDirectory = getDirectory(dirNodeId);
+		//DirectoryResource parentDirectory = getDirectory(dirNodeId);
 		
-		String fileName = filePath.getFileName().toString();
+		String fileName = srcFilePath.getFileName().toString();
 		
 		// check if directory already contains a file with the same name (case insensitive)
-		boolean hasExisting = hasChildPathResource(dirNodeId, fileName, ResourceType.FILE);
+		boolean hasExisting = hasChildPathResource(parentDirectory.getNodeId(), fileName, ResourceType.FILE);
 		
 		if(hasExisting && replaceExisting){
 			
-			return _updateFileDiscardOldBinary(parentDirectory, filePath);
+			return _updateFileDiscardOldBinary(parentDirectory, srcFilePath);
 		
 		}else if(hasExisting && !replaceExisting){
 			
-			throw new Exception("Directory with dirNodeId " + dirNodeId + 
+			throw new Exception("Directory with dirNodeId " + parentDirectory.getNodeId() + 
 					" already contains a file with the name '" + fileName + "', and 'replaceExisting' param is set to false.");
 			
 		}else{
 			
-			return _addNewFileWithoutBinary(parentDirectory, filePath);
+			return _addNewFileWithoutBinary(parentDirectory, srcFilePath);
 			
 		}
 		
@@ -498,71 +529,83 @@ public class FileSystemRepository {
 	 * Updates the physical file on disk, then removes the old binary data from the database.
 	 * 
 	 * @param dirResource - The directory where the new file will go
-	 * @param filePath - The new file to add. The old binary data in the database will be removed.
+	 * @param srcFilePath - The new file to add. The old binary data in the database will be removed.
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path filePath) throws Exception {
+	private FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath) throws Exception {
 		
-		String fileName = filePath.getFileName().toString();
-		Long fileSizeBytes = FileUtil.getFileSize(filePath);
-		String fileMimeType = FileUtil.detectMimeType(filePath);
+		String newFileName = srcFilePath.getFileName().toString();
 		
-		// TODO - we match file names on lowercase, but we might want to update the name in the 
-		// database (eas_node) to exactly match the case of the new file name...
-		
-		// get current (file) PathResource
-		PathResource existingResource = getChildPathResource(dirResource.getNodeId(), fileName, ResourceType.FILE);
-		if(existingResource == null){
-			throw new Exception("Cannot update file " + fileName + " in directory node => " + 
+		// get current (file) PathResource (case-insensitive search, so we can use the new file name)
+		PathResource currPathRes = getChildPathResource(dirResource.getNodeId(), newFileName, ResourceType.FILE);
+		if(currPathRes == null){
+			throw new Exception("Cannot update file " + newFileName + " in directory node => " + 
 					dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
-		}
+		}		
 		
-		// check if we have existing binary data in the database, we might need to remove it.
-		FileMetaResource existingFileResource = (FileMetaResource)existingResource;
-		if(existingFileResource.getIsBinaryInDatabase()){
-		
-			// remove existing binary data in database (it's the old file)
-			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", existingResource.getNodeId());
-			
-			// set is_file_data_in_db to 'N', and update file size to match new file. We also update mime type, but that should be the same...
-			jdbcTemplate.update(
-					"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ? where node_id = ?",
-					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
-		
-		// there was no existing binary data in the database, so we just have to update the meta data
-		}else{
-			
-			// update file size to match new file. We also update mime type, but that should be the same...
-			jdbcTemplate.update(
-					"update eas_file_meta_resource set file_size = ?, mime_type = ? where node_id = ?",
-					fileSizeBytes, fileMimeType, existingFileResource.getNodeId());
-			
-		}
-		
+		FileMetaResource currFileRes = (FileMetaResource)currPathRes;
 		Store store = getStoreById(dirResource.getStoreId());
 		
-		// delete old file
-		Path oldFilePath = Paths.get(store.getPath() + existingFileResource.getRelativePath());
+		Long newFileSizeBytes = FileUtil.getFileSize(srcFilePath);
+		String newFileMimeType = FileUtil.detectMimeType(srcFilePath);
+		String newRelFilePath = (dirResource.getRelativePath() + File.separator + newFileName).replace("\\", "/");
+		
+		// old/current tree path for the old physical file
+		Path oldFilePath = Paths.get(store.getPath() + currFileRes.getRelativePath());
+		// new tree path for the new physical file
+		Path newFilePath = Paths.get(store.getPath() + newRelFilePath);
+		
+		// check if we have existing binary data in the database, we might need to remove it.
+		if(currFileRes.getIsBinaryInDatabase()){
+			
+			// remove existing binary data in database (it's the old file)
+			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", currPathRes.getNodeId());
+			
+			currFileRes.setIsBinaryInDatabase(false);
+			
+		}
+		
+		currFileRes.setMimeType(newFileMimeType);
+		currFileRes.setFileSize(newFileSizeBytes);
+		currFileRes.setBinaryResource(null);
+		currFileRes.setDateUpdated(DateUtil.getCurrentTime());
+		currFileRes.setPathName(newFileName);
+		currFileRes.setRelativePath(newRelFilePath);
+			
+		// update eas_file_meta_resource
+		jdbcTemplate.update(
+				"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ?, "
+				+ "path_name = ?, relative_path = ? where node_id = ?",
+				currFileRes.getFileSize(), currFileRes.getMimeType(), currFileRes.getPathName(), 
+				currFileRes.getRelativePath(), currFileRes.getNodeId());
+			
+		// eas_path_resource to account for differences in uppercase/lowercase of file name
+		jdbcTemplate.update("update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?",
+				currFileRes.getPathName(), currFileRes.getRelativePath(), currFileRes.getNodeId());			
+		
+		// update eas_node
+		closureRepository.updateNodeMeta(currFileRes);
+		
+		// delete old file on local disk
 		try {
 			FileUtil.deletePath(oldFilePath);
 		} catch (Exception e) {
-			throw new Exception("Failed to remove old file at => " + oldFilePath.toString() + ". " + e.getMessage(), e);
+			throw new Exception("Failed to remove old file at => " + oldFilePath.toString() + 
+					". " + e.getMessage(), e);
 		}
 		
 		// copy new file to directory in the tree
 		try {
-			FileUtil.copyFile(filePath, oldFilePath);
+			FileUtil.copyFile(srcFilePath, newFilePath);
 		} catch (Exception e) {
-			throw new Exception("Failed to copy file from => " + filePath.toString() + " to " + oldFilePath.toString() + ". " + e.getMessage(), e);
+			throw new Exception("Failed to copy new file from => " + srcFilePath.toString() + 
+					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
 		}
 		
-		existingFileResource.setIsBinaryInDatabase(false);
-		existingFileResource.setMimeType(fileMimeType);
-		existingFileResource.setFileSize(fileSizeBytes);
-		existingFileResource.setBinaryResource(null);
+		// NOTE - do not delete file at srcFilePath
 		
-		return existingFileResource;
+		return currFileRes;
 		
 	}
 	

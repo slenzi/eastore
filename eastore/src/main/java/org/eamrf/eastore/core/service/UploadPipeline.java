@@ -18,11 +18,11 @@ import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
 
 import org.apache.commons.io.IOUtils;
+import org.eamrf.concurrent.task.AbstractQueuedTask;
+import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CodeTimer;
 import org.eamrf.core.util.FileUtil;
-import org.eamrf.eastore.core.concurrent.task.AbstractQueuedTask;
-import org.eamrf.eastore.core.concurrent.task.QueuedTaskManager;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
