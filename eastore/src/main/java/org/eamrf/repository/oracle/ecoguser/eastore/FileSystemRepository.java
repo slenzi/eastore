@@ -742,7 +742,7 @@ public class FileSystemRepository {
 	 * @param type - the type of child path resource to check for.
 	 * @return
 	 */
-	private boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+	public boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
 		if(childResources != null && childResources.size() > 0){
@@ -770,7 +770,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	private PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
 		if(childResources != null && childResources.size() > 0){

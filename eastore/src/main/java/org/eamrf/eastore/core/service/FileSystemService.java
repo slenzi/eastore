@@ -20,6 +20,7 @@ import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
@@ -594,7 +595,11 @@ public class FileSystemService {
 		
 		FileMetaResource fileMeta = addFileWithoutBinary(dirNodeId, sourceFilePath, replaceExisting);
 		
-		refreshBinaryDataInDatabase(fileMeta);
+		refreshBinaryDataInDatabase(fileMeta); // TODO - currently does not block
+		
+		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
+		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.
+		// we can lock a file meta resource right when we add it, then unlock it after we refresh the binary data.
 		
 		// TODO - do we want to block for updating binary data in the database?  Uhg!
 		// If we don't block then it's possible for one of those update tasks to fail (someone else might
@@ -602,21 +607,118 @@ public class FileSystemService {
 		
 	}
 	
-	public void copyDirectory() throws ServiceException {
+	/**
+	 * Copies directory 'copyDirNodeId' to destination directory 'destDirNodeId'. The destination directory
+	 * may already contain files and sub-directories with the same name. Directories will be merged. Files
+	 * will be overwritten if 'replaceExisting' is set to true. If 'replaceExisting' is set to false and there
+	 * exists a file with the same name then a ServiceException will be thrown.
+	 * 
+	 * @param copyDirNodeId
+	 * @param destDirNodeId
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	public void copyDirectory(Long copyDirNodeId, Long destDirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - implement
+		// TODO - finish
+		
+		if(copyDirNodeId.equals(destDirNodeId)){
+			throw new ServiceException("Source directory and destination directory are the same. "
+					+ "You cannot copy a directory to itself. copyDirNodeId=" + copyDirNodeId + 
+					", destDirNodeId=" + destDirNodeId + ", replaceExisting=" + replaceExisting);
+		}
+		
+		final DirectoryResource fromDir = getDirectoryResource(copyDirNodeId);
+		final DirectoryResource toDir = getDirectoryResource(copyDirNodeId);
+		final Store fromStore = getStore(fromDir.getStoreId());
+		final Store toStore = getStore(fromDir.getStoreId());
+
+		final Tree<PathResource> fromTree = treeService.buildPathResourceTree(copyDirNodeId);
+		
+		copyDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting);
 		
 	}
 	
+	/**
+	 * Recursively walk the tree to copy all child path resources
+	 * 
+	 * @param fromStore
+	 * @param toStore
+	 * @param pathResourceNode
+	 * @param toDir
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	private void copyDirectoryTraversal(
+			Store fromStore, Store toStore, TreeNode<PathResource> pathResourceNode, 
+			DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
+		
+		PathResource resourceToCopy = pathResourceNode.getData();
+		
+		if(resourceToCopy.getResourceType() == ResourceType.DIRECTORY){
+			
+			// copy the directory
+			DirectoryResource newToDir = _createCopyOfDirectory((DirectoryResource) resourceToCopy, toDir);
+			
+			// copy over children
+			if(pathResourceNode.hasChildren()){
+				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
+					copyDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting);
+				}
+			}
+			
+		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
+			
+			// TODO - add code to copy file
+			
+		}
+		
+	}
+	
+	/**
+	 * Makes a copy of 'dirToCopy' under directory 'toDir'. If there already exists a directory under 'toDir' with the
+	 * same name as directory 'dirToCopy', then than existing directory is returned. If not then a new directory is created.
+	 * 
+	 * @param dirToCopy
+	 * @param toDir
+	 * @return
+	 * @throws Exception
+	 */
+	private DirectoryResource _createCopyOfDirectory(DirectoryResource dirToCopy, DirectoryResource toDir) throws ServiceException {
+		
+		// see if there already exists a child directory with the same name
+		PathResource existingChildDir = null;
+		try {
+			existingChildDir = fileSystemRepository.getChildPathResource(
+					toDir.getNodeId(), dirToCopy.getPathName(), ResourceType.DIRECTORY);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to check for existing child directory with name '" + 
+					dirToCopy.getPathName() + "' under directory node " + toDir.getNodeId(), e);
+		}
+		
+		if(existingChildDir != null){
+			// directory with the same name already exists in the toDir
+			return (DirectoryResource) existingChildDir;
+		}else{
+			// create new directory
+			return addDirectory(toDir.getNodeId(), dirToCopy.getPathName());
+		}
+		
+	}
+
 	public void moveFile() throws ServiceException {
 		
 		// TODO - implement
+		
+		// preserve same node IDs when performing move operation
 		
 	}
 	
 	public void moveDirectory() throws ServiceException {
 		
 		// TODO - implement
+		
+		// preserve same node IDs when performing move operation
 		
 	}
 	
