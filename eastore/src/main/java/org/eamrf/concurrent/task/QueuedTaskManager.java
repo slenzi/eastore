@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
  * @author sal
  */
 @Component
-@Scope(value = "prototype")
+@Scope(value = "prototype") // new instance every time object is wired
 public class QueuedTaskManager implements TaskManager {
 
 	@InjectLogger
@@ -37,6 +37,15 @@ public class QueuedTaskManager implements TaskManager {
 	
 	public QueuedTaskManager() {
 		
+	}
+	
+	/**
+	 * Set a logger
+	 * 
+	 * @param logger
+	 */
+	public void setLogger(Logger logger){
+		this.logger = logger;
 	}
 	
 	/**

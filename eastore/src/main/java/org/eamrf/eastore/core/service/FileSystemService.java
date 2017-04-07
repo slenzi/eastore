@@ -1,5 +1,6 @@
 package org.eamrf.eastore.core.service;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
@@ -56,12 +58,7 @@ public class FileSystemService {
     @Autowired
     private TaskManagerProvider taskManagerProvider;
     
-	//@Autowired
-	//private QueuedTaskManager taskManager;
-	
-	// used in conjunction with the QueuedTaskManager
-	//private ExecutorService taskExecutorService = null; 
-    
+    // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
     
 	public FileSystemService() {
@@ -290,24 +287,23 @@ public class FileSystemService {
 	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
-	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
+	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
 		final Store store = getStore(fileMetaResource.getStoreId());
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
-		class Task extends AbstractQueuedTask<FileMetaResource> {
+		class Task extends AbstractQueuedTask<Void> {
 
 			@Override
-			public FileMetaResource doWork() throws ServiceException {
+			public Void doWork() throws ServiceException {
 
-				FileMetaResource updatedfileMetaResource = null;
 				try {
-					updatedfileMetaResource = fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
+					fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
 				} catch (Exception e) {
 					throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 							+ "for file resource node => " + fileMetaResource.getNodeId(), e);
 				}
-				return updatedfileMetaResource;				
+				return null;				
 				
 			}
 
@@ -322,10 +318,10 @@ public class FileSystemService {
 		task.setName("Refresh binary data in DB [" + fileMetaResource.toString() + "]");
 		taskManager.addTask(task);
 		
-		FileMetaResource updatedResource = task.get(); // block until finished
+		// TODO - do we actually want to wait for this to finish? It definitely needs to be queued!
 		
-		return updatedResource;	
-		
+		//FileMetaResource updatedResource = task.get(); // block until finished
+
 	}
 	
 	/**
@@ -537,20 +533,45 @@ public class FileSystemService {
 	 */
 	public DirectoryResource addDirectory(Long dirNodeId, String name) throws ServiceException {
 		
-		// TODO - wrap in task and add to queued task manager
+		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
+		final Store store = getStore(dirRes.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
-		DirectoryResource dirResource = null;
-		try {
-			dirResource = fileSystemRepository.addDirectory(dirNodeId, name);
-		} catch (Exception e) {
-			throw new ServiceException("Error adding new subdirectory to directory " + dirNodeId, e);
+		class Task extends AbstractQueuedTask<DirectoryResource> {
+
+			@Override
+			public DirectoryResource doWork() throws ServiceException {
+
+				DirectoryResource dirResource = null;
+				try {
+					dirResource = fileSystemRepository.addDirectory(dirNodeId, name);
+				} catch (Exception e) {
+					throw new ServiceException("Error adding new subdirectory to directory " + dirNodeId, e);
+				}
+				return dirResource;				
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+			
 		}
-		return dirResource;
+		
+		Task task = new Task();
+		task.setName("Add directory [dirNodeId=" + dirNodeId + ", name=" + name + "]");
+		taskManager.addTask(task);
+		
+		DirectoryResource newDir = task.get(); // block until complete
+		
+		return newDir;
 		
 	}
 	
 	/**
-	 * Copy file to another directory
+	 * Copy file to another directory (could be in another store)
 	 * 
 	 * @param fileNodeId - the file to copy
 	 * @param dirNodeId - the destination directory
@@ -559,8 +580,6 @@ public class FileSystemService {
 	 * @throws ServiceException
 	 */
 	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
-		
-		// TODO - finish
 		
 		FileMetaResource sourceFile = getFileMetaResource(fileNodeId);
 		DirectoryResource destitationDir = getDirectoryResource(dirNodeId);
@@ -573,7 +592,9 @@ public class FileSystemService {
 					+ "fileNodeId => " + fileNodeId + ", dirNodeId => " + dirNodeId);
 		}
 		
-		addFileWithoutBinary(dirNodeId, sourceFilePath, replaceExisting);
+		FileMetaResource fileMeta = addFileWithoutBinary(dirNodeId, sourceFilePath, replaceExisting);
+		
+		refreshBinaryDataInDatabase(fileMeta);
 		
 		// TODO - do we want to block for updating binary data in the database?  Uhg!
 		// If we don't block then it's possible for one of those update tasks to fail (someone else might
@@ -581,7 +602,7 @@ public class FileSystemService {
 		
 	}
 	
-	public void copyDirectoryFile() throws ServiceException {
+	public void copyDirectory() throws ServiceException {
 		
 		// TODO - implement
 		
@@ -593,9 +614,52 @@ public class FileSystemService {
 		
 	}
 	
-	public void moveDirectoryFile() throws ServiceException {
+	public void moveDirectory() throws ServiceException {
 		
 		// TODO - implement
+		
+	}
+	
+	/**
+	 * All files in 'tempDir' will be added to directory 'dirNodeId'
+	 * 
+	 * @param dirNodeId
+	 * @param tempDir
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	public void processToDirectory(Long dirNodeId, Path tempDir, boolean replaceExisting) throws ServiceException {
+		
+		// TODO - Eventually we'll want the ID of the user who uploaded. The JAX-RS service will have to use (possibly)
+		// the AuthWorld session key to identify users logged into the portal. That would give us access to the CTEP ID.
+		// We'll also need to add a field to eas_path_resource to store the user's ID.
+		
+		List<Path> filePaths = null;
+		try {
+			filePaths = FileUtil.listFilesToDepth(tempDir, 1);
+		} catch (IOException e) {
+			throw new ServiceException("Error listing files in temporary directory " + tempDir.toString());
+		}
+		
+		filePaths.stream().forEach(
+			(pathToFile) ->{
+				
+				// add file meta
+				FileMetaResource fileMetaResource = null;
+				try {
+					fileMetaResource = addFileWithoutBinary(dirNodeId, pathToFile, replaceExisting);
+				} catch (ServiceException e) {
+					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
+				}
+				
+				// go back and add binary to db
+				try {
+					refreshBinaryDataInDatabase(fileMetaResource);
+				} catch (ServiceException e) {
+					throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
+				}
+					
+			});
 		
 	}	
 	

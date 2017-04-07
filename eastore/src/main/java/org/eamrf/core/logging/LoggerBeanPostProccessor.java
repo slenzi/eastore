@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.FieldCallback;
@@ -22,7 +23,7 @@ import org.springframework.util.ReflectionUtils.FieldCallback;
  * 
  * @author slenzi
  */
-@Service
+@Component
 public class LoggerBeanPostProccessor implements BeanPostProcessor {
 
 	/* (non-Javadoc)
