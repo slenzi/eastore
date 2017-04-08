@@ -677,7 +677,7 @@ public class FileSystemService {
 	
 	/**
 	 * Makes a copy of 'dirToCopy' under directory 'toDir'. If there already exists a directory under 'toDir' with the
-	 * same name as directory 'dirToCopy', then than existing directory is returned. If not then a new directory is created.
+	 * same name as directory 'dirToCopy' then the existing directory is returned. If not then a new directory is created.
 	 * 
 	 * @param dirToCopy
 	 * @param toDir
@@ -697,7 +697,7 @@ public class FileSystemService {
 		}
 		
 		if(existingChildDir != null){
-			// directory with the same name already exists in the toDir
+			// directory with the same name already exists in the 'toDir'
 			return (DirectoryResource) existingChildDir;
 		}else{
 			// create new directory
