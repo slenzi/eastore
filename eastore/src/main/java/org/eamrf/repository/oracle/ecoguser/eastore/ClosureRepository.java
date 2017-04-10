@@ -319,6 +319,54 @@ public class ClosureRepository {
 	}
 	
 	/**
+	 * Move node 'moveNodeId' to under 'destNodeId'
+	 * 
+	 * @param moveNodeId
+	 * @param destNodeId
+	 * @throws Exception
+	 */
+	public void moveNode(Long moveNodeId, Long destNodeId) throws Exception {
+		
+		// TODO - can they move a root node?
+		
+		// TODO - finish
+		
+		// TODO - add n.creation_date, n.updated_date to ParentChildMappin, then create getNode(id) function
+		
+		if(moveNodeId.equals(destNodeId)){
+			throw new Exception("Cannot move a node to itself. [moveNodeId=" + moveNodeId + ", destNodeId=" + destNodeId + "]");
+		}
+		
+		// make sure node 'destNodeId' is not a child of 'moveNodeId'. You cannot
+		// move a node to under itself, or under one of it's children.
+		if(isChild(moveNodeId, destNodeId)){
+			throw new Exception("Cannot move " + moveNodeId + " to under node " + destNodeId + 
+					". Node " + destNodeId + " is a child of node " + moveNodeId + ". "
+							+ "[moveNodeId=" + moveNodeId + ", destNodeId=" + destNodeId + "]");
+		}
+		
+	}
+	
+	/**
+	 * Returns true if node 'nodeIdB' is a child node of node 'nodeIdA'
+	 * 
+	 * @param nodeIdA
+	 * @param nodeIdB
+	 * @return
+	 */
+	public boolean isChild(Long nodeIdA, Long nodeIdB) throws Exception {
+		
+		List<ParentChildMap> parentMappings = getParentMappings(nodeIdB);
+		if(parentMappings == null || parentMappings.size() == 0){
+			throw new Exception("No 'parent' ParentChildMap mappings for node id = > " + nodeIdB);
+		}
+		
+		return parentMappings.stream()
+	            .anyMatch(pcm -> pcm.getParentId().equals(nodeIdA));		
+		
+	}
+	
+	/**
 	 * Delete data from eas_node and eas_clusure linked to the prune_id
 	 * 
 	 * @param pruneId

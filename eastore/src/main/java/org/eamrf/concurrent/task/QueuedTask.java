@@ -18,6 +18,10 @@ public interface QueuedTask<T> extends Runnable, Comparable<QueuedTask<T>> {
 	
 	public void setTaskId(long taskId);
 	
+	public void setName(String name);
+	
+	public String getName();
+	
 	/**
 	 * Date & time task was added to queue for processing.
 	 * 

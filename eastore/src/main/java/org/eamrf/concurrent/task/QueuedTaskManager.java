@@ -191,12 +191,12 @@ public class QueuedTaskManager implements TaskManager {
 		
 		try {
 		
-			logger.info(this.getClass().getName() + ".addTask(...) called");
+			//logger.info(this.getClass().getName() + ".addTask(...) called");
 			
 			queue.put(task);
 
-			logger.info("Task was queued, id => " + task.getTaskId() + ", name => " + task.getClass().getName() + 
-					", queued at " + DateUtil.defaultFormat(task.getQueuedTime()) + ". Queue size => " + queue.size());
+			logger.info("Task was queued [id => " + task.getTaskId() + ", name => " + task.getName() + 
+					", time => " + DateUtil.defaultFormat(task.getQueuedTime()) + ", size => " + queue.size() + "]");
 			
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
@@ -217,8 +217,8 @@ public class QueuedTaskManager implements TaskManager {
 		
 		if(task != null){
 			
-			logger.info("Task consumed (for run), id => " + task.getTaskId() + ", name => " + task.getClass().getName() + 
-					", queued at " + DateUtil.defaultFormat(task.getQueuedTime()) + ". Queue size => " + queue.size());			
+			logger.info("Task consumed (for run), [id => " + task.getTaskId() + ", name => " + task.getName() + 
+					", time => " + DateUtil.defaultFormat(task.getQueuedTime()) + ", size => " + queue.size() + "]");			
 			
 			task.run();
 			
