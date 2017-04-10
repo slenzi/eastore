@@ -290,6 +290,70 @@ public class FileSystemResource extends BaseResourceHandler {
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
     	
+    }
+    
+    /**
+     * Copy a file
+     * 
+     * @param fileNodeId - id of file to copy
+     * @param dirNodeId - id of directory where file will be copied
+     * @param replaceExisting - pass true to replace any existing file with the same name (case insensitive match) in
+     * the target directory. Pass false not to replace. If you pass false and a file does already exist, then
+     * an exception will be thrown.
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/copyFile")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response copyFile(
+    		@QueryParam("fileNodeId") Long fileNodeId,
+    		@QueryParam("dirNodeId") Long dirNodeId,
+    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    	
+    	if(fileNodeId == null || dirNodeId == null || replaceExisting == null){
+    		handleError("Missing fileNodeId, dirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue());
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }
+
+    /**
+     * Copy a directory
+     * 
+     * @param copyDirNodeId
+     * @param destDirNodeId
+     * @param replaceExisting
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/copyDirectory")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response copyDirectory(
+    		@QueryParam("copyDirNodeId") Long copyDirNodeId,
+    		@QueryParam("destDirNodeId") Long destDirNodeId,
+    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    	
+    	if(copyDirNodeId == null || destDirNodeId == null || replaceExisting == null){
+    		handleError("Missing copyDirNodeId, destDirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue());
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
     }    
     
     /**

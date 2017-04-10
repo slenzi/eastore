@@ -575,10 +575,9 @@ public class FileSystemRepository {
 			
 		// update eas_file_meta_resource
 		jdbcTemplate.update(
-				"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ?, "
-				+ "path_name = ?, relative_path = ? where node_id = ?",
-				currFileRes.getFileSize(), currFileRes.getMimeType(), currFileRes.getPathName(), 
-				currFileRes.getRelativePath(), currFileRes.getNodeId());
+				"update eas_file_meta_resource set is_file_data_in_db = 'N', file_size = ?, mime_type = ? "
+				+ " where node_id = ?",
+				currFileRes.getFileSize(), currFileRes.getMimeType(), currFileRes.getNodeId());
 			
 		// eas_path_resource to account for differences in uppercase/lowercase of file name
 		jdbcTemplate.update("update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?",

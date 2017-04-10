@@ -237,7 +237,7 @@ public class FileSystemService {
 	 * Adds a new file, but does not add the binary data to eas_binary_resource
 	 * 
 	 * @param dirNodeId - directory where file will be added
-	 * @param filePath - current temp path where file resides on disk
+	 * @param filePath - path to file on local file system
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
@@ -245,6 +245,24 @@ public class FileSystemService {
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
+
+		return addFileWithoutBinary(dirRes, filePath, replaceExisting);
+		
+	}
+	
+	/**
+	 * Adds a new file, but does not add the binary data to eas_binary_resource
+	 * 
+	 * @param dirRes - directory where file will be added
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return
+	 * @throws ServiceException
+	 */
+	public FileMetaResource addFileWithoutBinary(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		//final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
 		final Store store = getStore(dirRes.getStoreId());
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
@@ -258,7 +276,7 @@ public class FileSystemService {
 					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirRes, filePath, replaceExisting);
 				} catch (Exception e) {
 					throw new ServiceException("Error adding new file => " + filePath.toString() + 
-							", to directory => " + dirNodeId + ", replaceExisting => " + replaceExisting, e);
+							", to directory => " + dirRes.getNodeId() + ", replaceExisting => " + replaceExisting, e);
 				}
 				return fileMetaResource;				
 				
@@ -272,7 +290,7 @@ public class FileSystemService {
 		}
 		
 		Task task = new Task();
-		task.setName("Add File Without Binary [dirNodeId=" + dirNodeId + ", filePath=" + filePath + 
+		task.setName("Add File Without Binary [dirNodeId=" + dirRes.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
 		taskManager.addTask(task);
 		
@@ -280,7 +298,7 @@ public class FileSystemService {
 		
 		return fileMetaResource;		
 		
-	}
+	}	
 	
 	/**
 	 * Refreshes the binary data in the database (data from the file on disk is copied to eas_binary_resource)
@@ -527,15 +545,30 @@ public class FileSystemService {
 	/**
 	 * Add new directory
 	 * 
-	 * @param dirNodeId
-	 * @param name
+	 * @param dirNodeId - id of parent directory
+	 * @param name - Name of new directory which will be created under the parent directory
 	 * @return
 	 * @throws ServiceException
 	 */
 	public DirectoryResource addDirectory(Long dirNodeId, String name) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
-		final Store store = getStore(dirRes.getStoreId());
+		
+		return addDirectory(dirRes, name);
+		
+	}
+	
+	/**
+	 * Add new directory.
+	 * 
+	 * @param parentDir - The parent directory
+	 * @param name - Name of new directory which will be created under the parent directory
+	 * @return
+	 * @throws ServiceException
+	 */
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name) throws ServiceException {
+		
+		final Store store = getStore(parentDir.getStoreId());
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<DirectoryResource> {
@@ -545,9 +578,10 @@ public class FileSystemService {
 
 				DirectoryResource dirResource = null;
 				try {
-					dirResource = fileSystemRepository.addDirectory(dirNodeId, name);
+					// TODO, pass parentDir rather than just it's node ID.
+					dirResource = fileSystemRepository.addDirectory(parentDir.getNodeId(), name);
 				} catch (Exception e) {
-					throw new ServiceException("Error adding new subdirectory to directory " + dirNodeId, e);
+					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
 				}
 				return dirResource;				
 				
@@ -562,14 +596,14 @@ public class FileSystemService {
 		}
 		
 		Task task = new Task();
-		task.setName("Add directory [dirNodeId=" + dirNodeId + ", name=" + name + "]");
+		task.setName("Add directory [dirNodeId=" + parentDir.getNodeId() + ", name=" + name + "]");
 		taskManager.addTask(task);
 		
 		DirectoryResource newDir = task.get(); // block until complete
 		
 		return newDir;
 		
-	}
+	}	
 	
 	/**
 	 * Copy file to another directory (could be in another store)
@@ -584,16 +618,23 @@ public class FileSystemService {
 		
 		FileMetaResource sourceFile = getFileMetaResource(fileNodeId);
 		DirectoryResource destitationDir = getDirectoryResource(dirNodeId);
-		Store soureStore = getStore(sourceFile.getStoreId());
-		Path sourceFilePath = Paths.get(soureStore.getPath() + sourceFile.getRelativePath());
+		
+		copyFile(sourceFile, destitationDir, replaceExisting);
+		
+	}
+	
+	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
+		
+		Store soureStore = getStore(fileToCopy.getStoreId());
+		Path sourceFilePath = Paths.get(soureStore.getPath() + fileToCopy.getRelativePath());
 		
 		// can't copy a file to the directory it's already in
-		if(sourceFile.getParentNodeId().equals(destitationDir.getNodeId())){
+		if(fileToCopy.getParentNodeId().equals(toDir.getNodeId())){
 			throw new ServiceException("You cannot copy a file to the directory that it's already in. "
-					+ "fileNodeId => " + fileNodeId + ", dirNodeId => " + dirNodeId);
+					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
 		}
 		
-		FileMetaResource fileMeta = addFileWithoutBinary(dirNodeId, sourceFilePath, replaceExisting);
+		FileMetaResource fileMeta = addFileWithoutBinary(toDir, sourceFilePath, replaceExisting);
 		
 		refreshBinaryDataInDatabase(fileMeta); // TODO - currently does not block
 		
@@ -605,7 +646,7 @@ public class FileSystemService {
 		// If we don't block then it's possible for one of those update tasks to fail (someone else might
 		// delete a file before the update process runs.)  We should make those tasks fail gracefully
 		
-	}
+	}	
 	
 	/**
 	 * Copies directory 'copyDirNodeId' to destination directory 'destDirNodeId'. The destination directory
@@ -629,7 +670,7 @@ public class FileSystemService {
 		}
 		
 		final DirectoryResource fromDir = getDirectoryResource(copyDirNodeId);
-		final DirectoryResource toDir = getDirectoryResource(copyDirNodeId);
+		final DirectoryResource toDir = getDirectoryResource(destDirNodeId);
 		final Store fromStore = getStore(fromDir.getStoreId());
 		final Store toStore = getStore(fromDir.getStoreId());
 
@@ -658,18 +699,23 @@ public class FileSystemService {
 		if(resourceToCopy.getResourceType() == ResourceType.DIRECTORY){
 			
 			// copy the directory
+			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
+			// to keep the directory that already exists (which we do now) or rename it to match exactly of
+			// the one we are copying?
 			DirectoryResource newToDir = _createCopyOfDirectory((DirectoryResource) resourceToCopy, toDir);
 			
-			// copy over children
+			// copy over children of the directory (files and subdirectories)
 			if(pathResourceNode.hasChildren()){
 				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
+					
 					copyDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting);
+					
 				}
 			}
 			
 		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
 			
-			// TODO - add code to copy file
+			copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting);
 			
 		}
 		
@@ -701,7 +747,8 @@ public class FileSystemService {
 			return (DirectoryResource) existingChildDir;
 		}else{
 			// create new directory
-			return addDirectory(toDir.getNodeId(), dirToCopy.getPathName());
+			//return addDirectory(toDir.getNodeId(), dirToCopy.getPathName());
+			return addDirectory(toDir, dirToCopy.getPathName());
 		}
 		
 	}
@@ -789,13 +836,13 @@ public class FileSystemService {
 		
 		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more");
 		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other");
-			DirectoryResource dirThings = addDirectory(dirOther.getNodeId(), "things");
-			DirectoryResource dirFoo = addDirectory(dirOther.getNodeId(), "foo");
-				DirectoryResource dirCats = addDirectory(dirFoo.getNodeId(), "cats");
-				DirectoryResource dirDogs = addDirectory(dirFoo.getNodeId(), "dogs");
-					DirectoryResource dirBig = addDirectory(dirDogs.getNodeId(), "big");
-					DirectoryResource dirSmall = addDirectory(dirDogs.getNodeId(), "small");
-						DirectoryResource dirPics = addDirectory(dirSmall.getNodeId(), "pics");		
+			DirectoryResource dirThings = addDirectory(dirOther, "things");
+			DirectoryResource dirFoo = addDirectory(dirOther, "foo");
+				DirectoryResource dirCats = addDirectory(dirFoo, "cats");
+				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs");
+					DirectoryResource dirBig = addDirectory(dirDogs, "big");
+					DirectoryResource dirSmall = addDirectory(dirDogs, "small");
+						DirectoryResource dirPics = addDirectory(dirSmall, "pics");		
 		
 		return store;
 	}
