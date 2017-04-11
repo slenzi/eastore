@@ -385,7 +385,7 @@ public class ClosureRepository {
 		}
 		
 		return parentMappings.stream()
-	            .anyMatch(pcm -> pcm.getParentNodeId().equals(nodeIdA));		
+	            .anyMatch(n -> n.getParentNodeId().equals(nodeIdA));		
 		
 	}
 	

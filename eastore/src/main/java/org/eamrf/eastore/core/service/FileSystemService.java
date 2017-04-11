@@ -765,20 +765,21 @@ public class FileSystemService {
 		
 		if(existingChildDir != null){
 			// directory with the same name already exists in the 'toDir'
+			// TODO - directory names might differ by case (uppercase/lowercase etc). Do we want to change
+			// the name of the existing directory to exactly match the one being copied?
 			return (DirectoryResource) existingChildDir;
 		}else{
 			// create new directory
-			//return addDirectory(toDir.getNodeId(), dirToCopy.getPathName());
 			return addDirectory(toDir, dirToCopy.getPathName());
 		}
 		
 	}
 
 	/**
-	 * Move a file, preserving same node id
+	 * Move a file, preserving same node id.
 	 * 
 	 * @param fileNodeId - the file to move
-	 * @param dirNodeId - the directory to mode it to
+	 * @param dirNodeId - the directory where the file will be moved to
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
@@ -820,11 +821,38 @@ public class FileSystemService {
 		
 	}
 	
-	public void moveDirectory() throws ServiceException {
+	/**
+	 * Move a directory (does not preserve node IDs for directories, but does for files.)
+	 * 
+	 * @param moveDirId - the directory to move
+	 * @param destDirId - the directory where 'moveDirId' will be moved to. 
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - implement
+		// TODO - finish
 		
-		// preserve same node IDs when performing move operation
+		// we can preserve file IDs but hard to preserve directory IDs...
+		
+		// make sure destDirId is not a child node under moveDirId. Cannot move a directory
+		// to under itself.
+		boolean isChild = false;
+		try {
+			isChild = fileSystemRepository.isChild(moveDirId, destDirId);
+		} catch (Exception e) {
+			throw new ServiceException("Error checking if directory " + destDirId + 
+					" is a child directory (at any depth) of directory " + moveDirId);
+		}
+		if(isChild){
+			throw new ServiceException("Cannot move directory " + moveDirId + " to under directory " + 
+					destDirId + " because directory " + destDirId + " is a child of directory " + moveDirId + ".");
+		}
+
+		final Tree<PathResource> treeToMove = treeService.buildPathResourceTree(moveDirId);
+		
+		// walk the tree top-down and copy over directories one at a time, then use your
+		// existing moveFile method. When finished, go back and delete all source directories.
 		
 	}
 	

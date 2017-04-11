@@ -389,10 +389,7 @@ public class FileSystemRepository {
 	 */
 	public FileMetaResource addFileWithoutBinary(
 			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {
-		
-		// make sure parentDirNodeId is actually of a directory
-		//DirectoryResource parentDirectory = getDirectory(dirNodeId);
-		
+			
 		String fileName = srcFilePath.getFileName().toString();
 		
 		// check if directory already contains a file with the same name (case insensitive)
@@ -815,6 +812,25 @@ public class FileSystemRepository {
 		return null;
 		
 	}
+	
+	/**
+	 * Returns true if node 'dirNodeB' is a child node (at any depth) of node 'dirNodeA'
+	 * 
+	 * @param dirNodeA
+	 * @param dirNodeB
+	 * @return
+	 */	
+	public boolean isChild(Long dirNodeA, Long dirNodeB) throws Exception {
+		
+		List<PathResource> parentResources = getParentPathResourceTree(dirNodeB);
+		if(parentResources == null || parentResources.size() == 0){
+			throw new Exception("No 'parent' PathResource mappings for dir node id = > " + dirNodeB);
+		}
+		
+		return parentResources.stream()
+	            .anyMatch(r -> r.getParentNodeId().equals(dirNodeA));		
+		
+	}	
 	
 	/**
 	 * Fetch a path resource. Every resource has a unique node id.
