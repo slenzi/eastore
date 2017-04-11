@@ -58,8 +58,11 @@ public class FileSystemRepository {
      * Maps results from query to PathResource objects
      */
 	private final RowMapper<PathResource> resourcePathRowMapper = (rs, rowNum) -> {
+		
 		PathResource r = null;
+		
 		ResourceType type = ResourceType.getFromString(rs.getString("path_type"));
+		
 		if(type == ResourceType.DIRECTORY){
 			r = new DirectoryResource();
 		}else if(type == ResourceType.FILE){
@@ -73,6 +76,7 @@ public class FileSystemRepository {
 				((FileMetaResource)r).setIsBinaryInDatabase(false);
 			}
 		}
+		
 		r.setNodeId(rs.getLong("node_id"));
 		r.setParentNodeId(rs.getLong("parent_node_id"));
 		r.setChildNodeId(rs.getLong("child_node_id"));
@@ -82,6 +86,19 @@ public class FileSystemRepository {
 		r.setRelativePath(rs.getString("relative_path"));
 		r.setResourceType( type );
 		r.setStoreId(rs.getLong("store_id"));
+
+		Store s = new Store();
+		s.setId(rs.getLong("store_id"));
+		s.setName(rs.getString("store_name"));
+		s.setDescription(rs.getString("store_description"));
+		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		s.setPath(Paths.get(rs.getString("store_path")));
+		s.setNodeId(rs.getLong("store_root_node_id"));
+		s.setDateCreated(rs.getTimestamp("store_creation_date"));
+		s.setDateUpdated(rs.getTimestamp("store_updated_date"));
+		
+		r.setStore(s);
+		
 		return r;
 	};    
     
@@ -127,22 +144,22 @@ public class FileSystemRepository {
 	public List<Store> getStores() throws Exception {
 		
 		String sql =
-				"select store_id, store_name, store_description, store_path, node_id, "
-				+ "max_file_size_in_db, creation_date, updated_date from eas_store";
+			"select store_id, store_name, store_description, store_path, node_id, "
+			+ "max_file_size_in_db, creation_date, updated_date from eas_store";
 		
 		List<Store> stores = jdbcTemplate.query(
-				sql, (rs, rowNum) -> {
-					Store s = new Store();
-					s.setId(rs.getLong("store_id"));
-					s.setName(rs.getString("store_name"));
-					s.setDescription(rs.getString("store_description"));
-					s.setPath(Paths.get(rs.getString("store_path")));
-					s.setNodeId(rs.getLong("node_id"));
-					s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-					s.setDateCreated(rs.getTimestamp("creation_date"));
-					s.setDateUpdated(rs.getTimestamp("updated_date"));
-					return s;
-				});
+			sql, (rs, rowNum) -> {
+				Store s = new Store();
+				s.setId(rs.getLong("store_id"));
+				s.setName(rs.getString("store_name"));
+				s.setDescription(rs.getString("store_description"));
+				s.setPath(Paths.get(rs.getString("store_path")));
+				s.setNodeId(rs.getLong("node_id"));
+				s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+				s.setDateCreated(rs.getTimestamp("creation_date"));
+				s.setDateUpdated(rs.getTimestamp("updated_date"));
+				return s;
+			});
 		
 		return stores;
 		
@@ -160,16 +177,19 @@ public class FileSystemRepository {
 	 */
 	public List<PathResource> getPathResourceTree(Long dirNodeId) throws Exception {
 		
-		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
+		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
 		
 		String sql =
 			"select " +
-			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
 			"from eas_closure c " +
-			"inner join eas_node n on c.child_node_id = n.node_id " +
+			"inner join eas_node n on c.child_node_id = n.node_id " + 
 			"inner join eas_path_resource r on n.node_id = r.node_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
+			"inner join eas_store s on r.store_id = s.store_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " + 
 			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
 			"where c.parent_node_id = ? " +
 			"order by c.depth, n.node_name";
@@ -194,14 +214,17 @@ public class FileSystemRepository {
 	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
-		
+
 		String sql =
 			"select " +
-			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
 			"from eas_closure c " +
 			"inner join eas_node n on c.child_node_id = n.node_id " +
 			"inner join eas_path_resource r on n.node_id = r.node_id " +
+			"inner join eas_store s on r.store_id = s.store_id " +
 			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
 			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
 			"where c.parent_node_id = ? and c.depth <= ? " +
@@ -226,25 +249,28 @@ public class FileSystemRepository {
 	 */
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws Exception {
 		
-		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)
+		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)	
 		
 		String sql =
 			"select " +
-			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " +
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
-			"  eas_node n2 inner join " + 
-			"  ( " +
-			"    select c.parent_node_id, c.depth " +
-			"    from eas_closure c " +
-			"    join eas_node n " +
-			"    on c.child_node_id = n.node_id " +
-			"    where c.child_node_id = ? " +
-			"  ) nlist on (n2.node_id = nlist.parent_node_id) " +
+			"  eas_node n2 inner join " +  
+			"  (  " +
+			"	select c.parent_node_id, c.depth " + 
+			"	from eas_closure c  " +
+			"	join eas_node n  " +
+			"	on c.child_node_id = n.node_id " + 
+			"	where c.child_node_id = ?  " +
+			"  ) nlist on (n2.node_id = nlist.parent_node_id) " + 
 			"inner join eas_path_resource r on n2.node_id = r.node_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
-			"order by " +
+			"inner join eas_store s on r.store_id = s.store_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " + 
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id  " +
+			"order by  " +
 			"  nlist.depth desc";
 		
 		List<PathResource> resources = jdbcTemplate.query(
@@ -267,25 +293,28 @@ public class FileSystemRepository {
 	 */
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws Exception {
 		
-		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)
+		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)	
 		
 		String sql =
 			"select " +
-			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " +
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db " +
+			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
-			"  eas_node n2 inner join " + 
-			"  ( " +
-			"    select c.parent_node_id, c.depth " +
-			"    from eas_closure c " +
-			"    join eas_node n " +
-			"    on c.child_node_id = n.node_id " +
-			"    where c.child_node_id = ? and c.depth <= ? " +
-			"  ) nlist on (n2.node_id = nlist.parent_node_id) " +
+			"  eas_node n2 inner join " +  
+			"  (  " +
+			"	select c.parent_node_id, c.depth " + 
+			"	from eas_closure c  " +
+			"	join eas_node n  " +
+			"	on c.child_node_id = n.node_id " + 
+			"	where c.child_node_id = ? and c.depth <= ? " +
+			"  ) nlist on (n2.node_id = nlist.parent_node_id) " + 
 			"inner join eas_path_resource r on n2.node_id = r.node_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
-			"order by " +
+			"inner join eas_store s on r.store_id = s.store_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " + 
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id  " +
+			"order by  " +
 			"  nlist.depth desc";
 		
 		List<PathResource> resources = jdbcTemplate.query(
@@ -518,7 +547,8 @@ public class FileSystemRepository {
 		try {
 			FileUtil.copyFile(filePath, newFilePath);
 		} catch (Exception e) {
-			throw new Exception("Failed to copy file from => " + filePath.toString() + " to " + newFilePath.toString() + ". " + e.getMessage(), e);
+			throw new Exception("Failed to copy file from => " + filePath.toString() + 
+					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
 		}
 		
 		return (FileMetaResource)resource;
@@ -685,8 +715,6 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name) throws Exception {
-		
-		//String storePathString = storePath.toString().replace("\\", "/");
 		
 		// add entry to eas_node and eas_closure
 		Node newNode = null;

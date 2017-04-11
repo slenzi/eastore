@@ -262,7 +262,7 @@ public class FileSystemService {
 	 */
 	public FileMetaResource addFileWithoutBinary(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		final Store store = getStore(dirRes.getStoreId());
+		final Store store = getStore(dirRes);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<FileMetaResource> {
@@ -307,7 +307,7 @@ public class FileSystemService {
 	 */
 	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
-		final Store store = getStore(fileMetaResource.getStoreId());
+		final Store store = getStore(fileMetaResource);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -351,7 +351,7 @@ public class FileSystemService {
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
 		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId);
-		final Store store = getStore(fileMetaResource.getStoreId());
+		final Store store = getStore(fileMetaResource);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -401,7 +401,7 @@ public class FileSystemService {
 					+ "You cannot use this method to remove a root directory.");
 		}
 		
-		final Store store = getStore(dirResource.getStoreId());
+		final Store store = getStore(dirResource);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -489,6 +489,30 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Fetch the store object from the PathResource object. If the store object is null then
+	 * this method will attempt to fetch it from the database using the store id.
+	 * 
+	 * @param r
+	 * @return
+	 * @throws ServiceException
+	 */
+	public Store getStore(PathResource r) throws ServiceException {
+		
+		if(r == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
+		}
+		Store s = r.getStore();
+		if(s != null){
+			return s;
+		}
+		if(r.getStoreId() == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
+		}
+		return getStore(r.getStoreId());
+		
+	}	
+	
+	/**
 	 * Fetch all stores
 	 * 
 	 * @return
@@ -567,7 +591,7 @@ public class FileSystemService {
 	 */
 	public DirectoryResource addDirectory(DirectoryResource parentDir, String name) throws ServiceException {
 		
-		final Store store = getStore(parentDir.getStoreId());
+		final Store store = getStore(parentDir);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<DirectoryResource> {
@@ -624,7 +648,7 @@ public class FileSystemService {
 	
 	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
-		Store soureStore = getStore(fileToCopy.getStoreId());
+		Store soureStore = getStore(fileToCopy);
 		Path sourceFilePath = Paths.get(soureStore.getPath() + fileToCopy.getRelativePath());
 		
 		// can't copy a file to the directory it's already in
@@ -668,8 +692,8 @@ public class FileSystemService {
 		
 		final DirectoryResource fromDir = getDirectoryResource(copyDirNodeId);
 		final DirectoryResource toDir = getDirectoryResource(destDirNodeId);
-		final Store fromStore = getStore(fromDir.getStoreId());
-		final Store toStore = getStore(fromDir.getStoreId());
+		final Store fromStore = getStore(fromDir);
+		final Store toStore = getStore(fromDir);
 
 		final Tree<PathResource> fromTree = treeService.buildPathResourceTree(copyDirNodeId);
 		
@@ -762,7 +786,7 @@ public class FileSystemService {
 		
 		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId);
 		final DirectoryResource destDir = getDirectoryResource(dirNodeId);
-		final Store store = getStore(destDir.getStoreId());
+		final Store store = getStore(destDir);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {

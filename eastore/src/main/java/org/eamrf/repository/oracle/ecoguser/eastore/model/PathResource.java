@@ -17,6 +17,7 @@ public class PathResource extends Node implements Serializable {
 	private Long storeId = -1L;
 	private ResourceType resourceType = null;
 	private String relativePath = null; // path to resource relative to the store directory.
+	private Store store = null;
 	
 	public PathResource() {
 		
@@ -54,11 +55,19 @@ public class PathResource extends Node implements Serializable {
 		this.resourceType = resourceType;
 	}
 
+	public Store getStore() {
+		return store;
+	}
+
+	public void setStore(Store store) {
+		this.store = store;
+	}
+
 	@Override
 	public String toString() {
 		return PathResource.class.getName() + " [nodeId=" + getNodeId() + ", parentNodeId=" + getParentNodeId() + ", childNodeId=" + getChildNodeId()
 				+ ", nodeName=" + getNodeName() + ", dateCreated=" + getDateCreated() + ", dateUpdated=" + getDateUpdated()
 				+ ", pathName=" + getPathName() + ", relativePath=" + getRelativePath() + ", resourceType=" + getResourceType().getTypeString()
-				+ ", storeId=" + getStoreId() + "]";
+				+ ", storeId=" + getStoreId() + ", haveStoreObj=" + ((store != null) ? true : false) + "]";
 	}	
 }
