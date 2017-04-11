@@ -13,6 +13,7 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
@@ -382,7 +383,6 @@ public class FileSystemRepository {
 			return _addNewFileWithoutBinary(parentDirectory, srcFilePath);
 			
 		}
-		
 		
 	}
 	
@@ -914,6 +914,120 @@ public class FileSystemRepository {
 				"select eas_store_id_sequence.nextval from dual", Long.class);
 		
 		return id;
+		
+	}
+
+	/**
+	 * Move a file
+	 * 
+	 * @param fileToMove - the file to move
+	 * @param destDir - the directory to move it to.
+	 * @param replaceExisting
+	 */
+	public void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws Exception {
+		
+		//
+		// TODO - Consider breaking up the deletion of the existing file in the destination directory as a separate
+		// task manager task (queued)
+		//
+		
+		// check if user is trying to move file to the same directory it's already in
+		if(fileToMove.getParentNodeId().equals(destDir.getNodeId())){
+			throw new ServiceException("Cannot move file to directory that it's already in. [fileNodeId=" + fileToMove.getNodeId() + 
+					", dirNodeId=" + destDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
+		}		
+		
+		// check if destination directory already contains file with the same name.
+		String fileName = fileToMove.getPathName();
+		PathResource existingFile = getChildPathResource(destDir.getNodeId(), fileName, ResourceType.FILE);
+		boolean hasExisting = (existingFile != null) ? true : false;
+		
+		// replace existing file
+		if(hasExisting && replaceExisting){
+			
+			Store sourceStore = getStoreById(fileToMove.getStoreId());
+			Store destinationStore = getStoreById(destDir.getStoreId());
+			
+			// current/old path to file on local file system
+			Path oldFullPath = Paths.get(sourceStore.getPath().toString() + fileToMove.getRelativePath());
+			// new path to file on local file system
+			Path newFullPath = Paths.get(destinationStore.getPath().toString() + 
+					destDir.getRelativePath() + File.separator + fileName);
+			// new relative path for eas_path_resource
+			String newRelativePath = (destDir.getRelativePath() + File.separator + fileName).replace("\\", "/");
+			
+			// delete existing file in destination directory
+			removeFile(destinationStore, (FileMetaResource)existingFile);
+			
+			// remove existing closure data for 'fileToMove'
+			// TODO - will this work if we have foreign key constraints? 
+			closureRepository.deleteNode(fileToMove.getNodeId());
+			
+			// add new closure data for 'fileToMove'
+			closureRepository.addNode(fileToMove.getNodeId(), destDir.getNodeId(), fileName);
+			
+			// nothing to update in eas_file_meta_resource
+			
+			// update data in eas_path_resource
+			jdbcTemplate.update(
+					"update eas_path_resource set store_id = ?, relative_path = ? where node_id = ?", 
+					destinationStore.getId(), newRelativePath, fileToMove.getNodeId());			
+			
+			// move physical file on disk
+			try {
+				FileUtil.moveFile(oldFullPath, newFullPath);
+			} catch (Exception e) {
+				throw new Exception("Failed to move file " + fileToMove.getNodeId() + " to directory " + destDir.getNodeId() + 
+						". oldFullPath => " + oldFullPath.toString() + ", newFullPath => " + newFullPath.toString() + 
+						". " + e.getMessage(), e);
+			}
+			
+		}else if(hasExisting && !replaceExisting){
+			
+			throw new Exception("Cannot move file " + fileToMove.getNodeId() + " to directory " + destDir.getNodeId() + 
+					" because destination directory already contains a file with the same name, and "
+					+ "replaceExisting => " + replaceExisting);
+			
+		}else{
+			
+			Store sourceStore = getStoreById(fileToMove.getStoreId());
+			Store destinationStore = getStoreById(destDir.getStoreId());
+			
+			// current/old path to file on local file system
+			Path oldFullPath = Paths.get(sourceStore.getPath().toString() + fileToMove.getRelativePath());
+			// new path to file on local file system
+			Path newFullPath = Paths.get(destinationStore.getPath().toString() + 
+					destDir.getRelativePath() + File.separator + fileName);
+			// new relative path for eas_path_resource
+			String newRelativePath = (destDir.getRelativePath() + File.separator + fileName).replace("\\", "/");
+			
+			// delete existing file in destination directory
+			//removeFile(destinationStore, (FileMetaResource)existingFile);
+			
+			// remove existing closure data for 'fileToMove'
+			// TODO - will this work if we have foreign key constraints? 
+			closureRepository.deleteNode(fileToMove.getNodeId());
+			
+			// add new closure data for 'fileToMove'
+			closureRepository.addNode(fileToMove.getNodeId(), destDir.getNodeId(), fileName);
+			
+			// nothing to update in eas_file_meta_resource
+			
+			// update data in eas_path_resource
+			jdbcTemplate.update(
+					"update eas_path_resource set store_id = ?, relative_path = ? where node_id = ?", 
+					destinationStore.getId(), newRelativePath, fileToMove.getNodeId());			
+			
+			// move physical file on disk
+			try {
+				FileUtil.moveFile(oldFullPath, newFullPath);
+			} catch (Exception e) {
+				throw new Exception("Failed to move file " + fileToMove.getNodeId() + " to directory " + destDir.getNodeId() + 
+						". oldFullPath => " + oldFullPath.toString() + ", newFullPath => " + newFullPath.toString() + 
+						". " + e.getMessage(), e);
+			}
+			
+		}
 		
 	}
 

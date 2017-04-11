@@ -6,7 +6,6 @@ import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.repository.oracle.ecoguser.eastore.ClosureRepository;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,7 @@ public class ClosureService {
     private ClosureRepository closureRepository;
     
     @Autowired
-    private PCMTreeService pcmTreeService;
+    private NodeTreeService nodeTreeService;
 
     /**
      * Fetch top-down parent-child mappings (root node to all child nodes)
@@ -37,9 +36,9 @@ public class ClosureService {
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getChildMappings(Long nodeId) throws ServiceException {
+    public List<Node> getChildMappings(Long nodeId) throws ServiceException {
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureRepository.getChildMappings(nodeId);
 		} catch (Exception e) {
@@ -61,9 +60,9 @@ public class ClosureService {
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getChildMappings(Long nodeId, int depth) throws ServiceException {
+    public List<Node> getChildMappings(Long nodeId, int depth) throws ServiceException {
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureRepository.getChildMappings(nodeId, depth);
 		} catch (Exception e) {
@@ -82,9 +81,9 @@ public class ClosureService {
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getParentMappings(Long nodeId) throws ServiceException {
+    public List<Node> getParentMappings(Long nodeId) throws ServiceException {
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureRepository.getParentMappings(nodeId);
 		} catch (Exception e) {
@@ -104,9 +103,9 @@ public class ClosureService {
      * @return
      * @throws ServiceException
      */
-    public List<ParentChildMap> getParentMappings(Long nodeId, int levels) throws ServiceException {
+    public List<Node> getParentMappings(Long nodeId, int levels) throws ServiceException {
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureRepository.getParentMappings(nodeId, levels);
 		} catch (Exception e) {

@@ -262,7 +262,6 @@ public class FileSystemService {
 	 */
 	public FileMetaResource addFileWithoutBinary(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		//final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
 		final Store store = getStore(dirRes.getStoreId());
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
@@ -751,11 +750,49 @@ public class FileSystemService {
 		
 	}
 
-	public void moveFile() throws ServiceException {
+	/**
+	 * Move a file, preserving same node id
+	 * 
+	 * @param fileNodeId - the file to move
+	 * @param dirNodeId - the directory to mode it to
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - implement
+		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId);
+		final DirectoryResource destDir = getDirectoryResource(dirNodeId);
+		final Store store = getStore(destDir.getStoreId());
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
-		// preserve same node IDs when performing move operation
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+
+				try {
+					fileSystemRepository.moveFile(fileToMove, destDir, replaceExisting);
+				} catch (Exception e) {
+					throw new ServiceException("Error moving file " + fileNodeId + " to directory " + 
+							dirNodeId + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
+				}
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+				
+		}		
+		
+		Task task = new Task();
+		task.setName("Move file [fileNodeId=" + fileNodeId + ", dirNodeId=" + dirNodeId + ", replaceExisting=" + replaceExisting + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until finished		
 		
 	}
 	

@@ -16,11 +16,9 @@ import javax.ws.rs.core.Response;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.ClosureService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -36,9 +34,6 @@ public class ClosureResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
-    
-    @Autowired
-    private ManagedProperties appProps;
     
     @Autowired
     private ClosureService closureService;
@@ -57,13 +52,13 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/child/{nodeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<Node> getChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureService.getChildMappings(nodeId);
 		} catch (ServiceException e) {
@@ -85,7 +80,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/child/{nodeId}/depth/{depth}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getChildMappings(
+    public List<Node> getChildMappings(
     		@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
     	
     	if(nodeId == null){
@@ -95,7 +90,7 @@ public class ClosureResource extends BaseResourceHandler {
     		handleError("Depth param must be positive.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureService.getChildMappings(nodeId, depth);
 		} catch (ServiceException e) {
@@ -116,13 +111,13 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/parent/{nodeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getParentMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<Node> getParentMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureService.getParentMappings(nodeId);
 		} catch (ServiceException e) {
@@ -144,7 +139,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/parent/{nodeId}/levels/{levels}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<ParentChildMap> getParentMappings(
+    public List<Node> getParentMappings(
     		@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
     	
     	if(nodeId == null){
@@ -154,7 +149,7 @@ public class ClosureResource extends BaseResourceHandler {
     		handleError("Levels param must be positive.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	List<ParentChildMap> mappings = null;
+    	List<Node> mappings = null;
     	try {
 			mappings = closureService.getParentMappings(nodeId, levels);
 		} catch (ServiceException e) {

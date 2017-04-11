@@ -13,7 +13,7 @@ import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -176,41 +176,6 @@ public class PathResourceTreeService {
 			addChildrenFromPathResourceMap(childTreeNode, map);
 			
 		}
-		
-	}
-
-	/**
-	 * logs the tree data (prints tree, plus pre-order and post-order traversals.)
-	 * 
-	 * @param tree
-	 */
-	public void logPCMTree(Tree<ParentChildMap> tree){
-		
-    	logger.info("Tree:\n" + tree.printTree());
-    	
-    	logger.info("Pre-Order Traversal (top-down):");
-    	try {
-			Trees.walkTree(tree,
-					(treeNode) -> {
-						ParentChildMap pcm = treeNode.getData();
-						logger.info(pcm.toString());
-					},
-					WalkOption.PRE_ORDER_TRAVERSAL);
-		} catch (TreeNodeVisitException e) {
-			logger.error("Error walking tree in pre-order (top-down) traversal", e);
-		}
-    	logger.info("");
-    	logger.info("Post-Order Traversal (bottom-up):");
-    	try {
-			Trees.walkTree(tree,
-					(treeNode) -> {
-						ParentChildMap pcm = treeNode.getData();
-						logger.info(pcm.toString());
-					},
-					WalkOption.POST_ORDER_TRAVERSAL);
-		} catch (TreeNodeVisitException e) {
-			logger.error("Error walking tree in post-order (bottom-up) traversal", e);
-		}    	
 		
 	}
 	

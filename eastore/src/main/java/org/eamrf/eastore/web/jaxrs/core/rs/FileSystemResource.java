@@ -296,7 +296,7 @@ public class FileSystemResource extends BaseResourceHandler {
      * Copy a file
      * 
      * @param fileNodeId - id of file to copy
-     * @param dirNodeId - id of directory where file will be copied
+     * @param dirNodeId - id of directory where file will be copied to
      * @param replaceExisting - pass true to replace any existing file with the same name (case insensitive match) in
      * the target directory. Pass false not to replace. If you pass false and a file does already exist, then
      * an exception will be thrown.
@@ -312,7 +312,8 @@ public class FileSystemResource extends BaseResourceHandler {
     		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
     	
     	if(fileNodeId == null || dirNodeId == null || replaceExisting == null){
-    		handleError("Missing fileNodeId, dirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
+    		handleError("Cannot copy file, missing fileNodeId, dirNodeId, and/or replaceExisting params.", 
+    				WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
@@ -354,6 +355,40 @@ public class FileSystemResource extends BaseResourceHandler {
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
     	
+    }
+    
+    /**
+     * Move a file
+     * 
+     * @param fileNodeId - id of file to move
+     * @param dirNodeId - id of directory where file will be moved to
+     * @param replaceExisting - pass true to replace any existing file with the same name (case insensitive match) in
+     * the target directory. Pass false not to replace. If you pass false and a file does already exist, then
+     * an exception will be thrown.
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/moveFile")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveFile(
+    		@QueryParam("fileNodeId") Long fileNodeId,
+    		@QueryParam("dirNodeId") Long dirNodeId,
+    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    	
+    	if(fileNodeId == null || dirNodeId == null || replaceExisting == null){
+    		handleError("Cannot move file, missing fileNodeId, dirNodeId, and/or replaceExisting params.", 
+    				WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue());
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
     }    
     
     /**
@@ -363,7 +398,6 @@ public class FileSystemResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @POST
     @Path("/createTestStore")
     @Produces(MediaType.APPLICATION_JSON)    
     public Store createTestStore() throws WebServiceException {

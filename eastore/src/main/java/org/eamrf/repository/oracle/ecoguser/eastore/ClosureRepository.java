@@ -11,10 +11,10 @@ import javax.sql.DataSource;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ParentChildMap;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -38,6 +38,17 @@ public class ClosureRepository {
     // no need to autowire this. we simply autowire it so we can print some debug info
     @Autowired
     DataSource dataSource;
+    
+    private final RowMapper<Node> nodeRowMapper = (rs, rowNum) -> {
+    	Node n = new Node();
+    	n.setNodeId(rs.getLong("node_id"));
+    	n.setParentNodeId(rs.getLong("parent_node_id"));
+    	n.setChildNodeId(rs.getLong("child_node_id"));
+    	n.setNodeName(rs.getString("node_name"));
+    	n.setDateCreated(rs.getTimestamp("creation_date"));
+    	n.setDateUpdated(rs.getTimestamp("updated_date"));
+    	return n;
+    };    
 	
 	public ClosureRepository() {
 		
@@ -61,19 +72,42 @@ public class ClosureRepository {
 	}
 	
 	/**
+	 * Fetch node by ID
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	public Node getNode(Long nodeId) throws Exception {
+		
+		List<Node> childResources = getChildMappings(nodeId, 0);
+		if(childResources == null){
+			throw new Exception("No node found for node id => " + nodeId);
+		}else if(childResources.size() != 1){
+			// should never get here...
+			throw new Exception("Expected 1 node for node id => " + nodeId + ", but fetched " + childResources.size());
+		}
+		
+		Node n = childResources.get(0);
+		
+		return n;
+		
+	}
+	
+	/**
 	 * Fetch top-down parent-child mappings (root node to all child nodes).
 	 * This data can be used to build an in-memory tree representation.
 	 * 
 	 * @param nodeId
 	 * @return
 	 */
-	public List<ParentChildMap> getChildMappings(Long nodeId) throws Exception {
+	public List<Node> getChildMappings(Long nodeId) throws Exception {
 		
 		debugDatasource();
 		
 		String sql = 
 			"select " +
-			"  n.parent_node_id, c.child_node_id, n.node_name " +
+			"  n.node_id, n.parent_node_id, c.child_node_id, n.node_name, n.creation_date, n.updated_date " +
 			"from " +
 			"  eas_closure c " +
 			"inner join " +
@@ -85,9 +119,8 @@ public class ClosureRepository {
 			"order by " +
 			"  c.depth, n.node_name";
 
-		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId },
-				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name")));
+		List<Node> mappings = jdbcTemplate.query(
+				sql, new Object[] { nodeId }, nodeRowMapper);
 
 		return mappings;
 		
@@ -101,11 +134,11 @@ public class ClosureRepository {
 	 * @param depth - number of levels down the tree, from the node, to include.
 	 * @return
 	 */
-	public List<ParentChildMap> getChildMappings(Long nodeId, int depth) throws Exception {
+	public List<Node> getChildMappings(Long nodeId, int depth) throws Exception {
 		
 		String sql = 
 			"select " +
-			"  n.parent_node_id, c.child_node_id, n.node_name " +
+			"  n.node_id, n.parent_node_id, c.child_node_id, n.node_name, n.creation_date, n.updated_date " +
 			"from " +
 			"  eas_closure c " +
 			"inner join " +
@@ -118,9 +151,8 @@ public class ClosureRepository {
 			"order by " +
 			"  c.depth, n.node_name";
 
-		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId, new Integer(depth) },
-				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name")));
+		List<Node> mappings = jdbcTemplate.query(
+				sql, new Object[] { nodeId, new Integer(depth) }, nodeRowMapper);
 
 		return mappings;		
 		
@@ -134,10 +166,10 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	public List<ParentChildMap> getParentMappings(Long nodeId) throws Exception {
+	public List<Node> getParentMappings(Long nodeId) throws Exception {
 		
 		String sql = 
-			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name " +
+			"select n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date " +
 			"from " +
 			"  eas_node n2, " +
 			"  ( " +
@@ -152,9 +184,8 @@ public class ClosureRepository {
 			"order by " +
 			"  nlist.depth desc";
 
-		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId },
-				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name")));
+		List<Node> mappings = jdbcTemplate.query(
+				sql, new Object[] { nodeId }, nodeRowMapper);
 
 		return mappings;		
 		
@@ -169,10 +200,10 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	public List<ParentChildMap> getParentMappings(Long nodeId, int levels) throws Exception {
+	public List<Node> getParentMappings(Long nodeId, int levels) throws Exception {
 		
 		String sql = 
-			"select n2.parent_node_id, n2.node_id as child_node_id, n2.node_name " +
+			"select n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date " +
 			"from " +
 			"  eas_node n2, " +
 			"  ( " +
@@ -188,9 +219,8 @@ public class ClosureRepository {
 			"order by " +
 			"  nlist.depth desc";
 
-		List<ParentChildMap> mappings = jdbcTemplate.query(sql, new Object[] { nodeId, new Integer(levels) },
-				(rs, rowNum) -> new ParentChildMap(rs.getLong("parent_node_id"), rs.getLong("child_node_id"),
-						rs.getString("node_name")));
+		List<Node> mappings = jdbcTemplate.query(
+				sql, new Object[] { nodeId, new Integer(levels) }, nodeRowMapper);
 
 		return mappings;		
 		
@@ -318,20 +348,12 @@ public class ClosureRepository {
 		
 	}
 	
-	/**
-	 * Move node 'moveNodeId' to under 'destNodeId'
-	 * 
-	 * @param moveNodeId
-	 * @param destNodeId
-	 * @throws Exception
-	 */
+	/*
 	public void moveNode(Long moveNodeId, Long destNodeId) throws Exception {
 		
 		// TODO - can they move a root node?
 		
 		// TODO - finish
-		
-		// TODO - add n.creation_date, n.updated_date to ParentChildMappin, then create getNode(id) function
 		
 		if(moveNodeId.equals(destNodeId)){
 			throw new Exception("Cannot move a node to itself. [moveNodeId=" + moveNodeId + ", destNodeId=" + destNodeId + "]");
@@ -346,6 +368,7 @@ public class ClosureRepository {
 		}
 		
 	}
+	*/
 	
 	/**
 	 * Returns true if node 'nodeIdB' is a child node of node 'nodeIdA'
@@ -356,13 +379,13 @@ public class ClosureRepository {
 	 */
 	public boolean isChild(Long nodeIdA, Long nodeIdB) throws Exception {
 		
-		List<ParentChildMap> parentMappings = getParentMappings(nodeIdB);
+		List<Node> parentMappings = getParentMappings(nodeIdB);
 		if(parentMappings == null || parentMappings.size() == 0){
-			throw new Exception("No 'parent' ParentChildMap mappings for node id = > " + nodeIdB);
+			throw new Exception("No 'parent' node mappings for node id = > " + nodeIdB);
 		}
 		
 		return parentMappings.stream()
-	            .anyMatch(pcm -> pcm.getParentId().equals(nodeIdA));		
+	            .anyMatch(pcm -> pcm.getParentNodeId().equals(nodeIdA));		
 		
 	}
 	
