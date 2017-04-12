@@ -389,7 +389,38 @@ public class FileSystemResource extends BaseResourceHandler {
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
     	
-    }    
+    }
+    
+    /**
+     * Move a directory
+     * 
+     * @param copyDirNodeId
+     * @param destDirNodeId
+     * @param replaceExisting
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/moveDirectory")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveDirectory(
+    		@QueryParam("moveDirNodeId") Long moveDirNodeId,
+    		@QueryParam("destDirNodeId") Long destDirNodeId,
+    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    	
+    	if(moveDirNodeId == null || destDirNodeId == null || replaceExisting == null){
+    		handleError("Missing moveDirNodeId, destDirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue());
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }
     
     /**
      * Create the test store
