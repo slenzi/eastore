@@ -26,7 +26,8 @@
 		<version.jodatime>2.9.7</version.jodatime>
 		<version.javax.mail>1.5.6</version.javax.mail>
 		<version.javax.mail.api>1.5.6</version.javax.mail.api>  
-		<version.hikaricp>2.6.1</version.hikaricp>	
+		<version.hikaricp>2.6.1</version.hikaricp>
+		<version.jcabi-aspects>0.22.6</version.jcabi-aspects>	
   		
 		<!-- artifactory dependencies -->
 		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
@@ -130,13 +131,15 @@
 		    <scope>test</scope>
 		</dependency>
 			
+		<!-- jax-rs web services -->	
 		<!-- https://mvnrepository.com/artifact/org.apache.cxf/cxf-rt-frontend-jaxrs -->
 		<dependency>
 		    <groupId>org.apache.cxf</groupId>
 		    <artifactId>cxf-rt-frontend-jaxrs</artifactId>
 		    <version>${version.apache.cxf}</version>
 		</dependency>		
-				
+		
+		<!-- json marshalling for jax-rs -->		
 		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider -->
 		<dependency>
 		    <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -144,6 +147,7 @@
 		    <version>${version.jackson.json.provider}</version>
 		</dependency>
 		
+		<!-- database connection pooling library -->
 		<!-- https://mvnrepository.com/artifact/com.zaxxer/HikariCP -->
 		<dependency>
 		    <groupId>com.zaxxer</groupId>
@@ -151,6 +155,7 @@
 		    <version>${version.hikaricp}</version>
 		</dependency>
 		
+		<!-- library to get mime type information from files  -->
 		<!-- https://mvnrepository.com/artifact/org.apache.tika/tika-core -->
 		<dependency>
 		    <groupId>org.apache.tika</groupId>
@@ -163,6 +168,14 @@
 		    <groupId>commons-io</groupId>
 		    <artifactId>commons-io</artifactId>
 		    <version>${version.apache.commons.io}</version>
+		</dependency>
+		
+		<!-- aspect oriented programming (AOP) utility library which allows us to profile method execution times -->
+		<!-- https://mvnrepository.com/artifact/com.jcabi/jcabi-aspects -->
+		<dependency>
+		    <groupId>com.jcabi</groupId>
+		    <artifactId>jcabi-aspects</artifactId>
+		    <version>${version.jcabi-aspects}</version>
 		</dependency>						
 		
 		<dependency>
