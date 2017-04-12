@@ -22,9 +22,9 @@ public class DirectoryResource extends PathResource {
 	
 	@Override
 	public String toString() {
-		return DirectoryResource.class.getName() + " [nodeId=" + getNodeId() + ", parentNodeId=" + getParentNodeId() + ", childNodeId=" + getChildNodeId()
-				+ ", nodeName=" + getNodeName() + ", dateCreated=" + getDateCreated() + ", dateUpdated=" + getDateUpdated()
-				+ ", pathName=" + getPathName() + ", relativePath=" + getRelativePath() + ", resourceType=" + getResourceType().getTypeString()
+		return DirectoryResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", childId=" + getChildNodeId()
+				+ ", name=" + getNodeName() + ", dtCreated=" + getDateCreated() + ", dtUpdated=" + getDateUpdated()
+				+ ", pathName=" + getPathName() + ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
 				+ ", storeId=" + getStoreId() + "]";
 	}	
 

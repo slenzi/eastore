@@ -118,4 +118,13 @@ public class Store implements Serializable {
 		return true;
 	}
 
+	@Override
+	public String toString() {
+		return Store.class.getSimpleName() + " [id=" + id + ", name=" + name + ", description=" + description + ", path=" + path + ", nodeId="
+				+ nodeId + ", maxFileSizeBytes=" + maxFileSizeBytes + ", dateCreated=" + dateCreated + ", dateUpdated="
+				+ dateUpdated + "]";
+	}
+
+	
+	
 }

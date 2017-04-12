@@ -12,12 +12,14 @@ import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.core.service.NodeTreeService;
 import org.eamrf.eastore.core.service.PathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -40,7 +42,10 @@ public class TreeResource extends BaseResourceHandler {
     private NodeTreeService nodeTreeService;
     
     @Autowired
-    private PathResourceTreeService pathResourceTreeService;  
+    private PathResourceTreeService pathResourceTreeService;
+    
+    @Autowired
+    private FileSystemService fileSystemService;
     
 	public TreeResource() {
 
@@ -224,12 +229,9 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
-    	
-    	pathResourceTreeService.logPathResourceTree(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree);
 
-    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
     }
     
@@ -264,12 +266,9 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
-
-    	pathResourceTreeService.logPathResourceTree(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree);
     	
-    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
     }
     
@@ -300,12 +299,9 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
-    	
-    	pathResourceTreeService.logPathResourceTree(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree);
 
-    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
+    	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
     }
     
@@ -339,14 +335,49 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for node => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
+    	String htmlTree = buildPathResourceTreeHtml(tree);
+
+    	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
+    	
+    }
+    
+    /**
+     * Prints the tree, and it's store, in HTML, and returns that HTML content as a String.
+     * 
+     * This method also logs the tree.
+     * 
+     * @param tree
+     * @return
+     * @throws WebServiceException
+     */
+    private String buildPathResourceTreeHtml(Tree<PathResource> tree) throws WebServiceException {
+    	
+    	if(tree == null){
+    		return "null tree";
+    	}
+    	
+    	PathResource rootNode = tree.getRootNode().getData();
+    	
+    	Store store = null;
+    	try {
+			store = fileSystemService.getStore(rootNode);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
     	StringBuffer buf = new StringBuffer();
+    	buf.append(store.toString() + "<br>");
+    	if(!rootNode.getParentNodeId().equals(0L)){
+    		// the root node of the tree is not a root node of a store (there are some other directories in-between)
+    		buf.append("[...other directories here...]<br>");
+    	}
     	buf.append( tree.printHtmlTree() );
     	
     	pathResourceTreeService.logPathResourceTree(tree);
-
-    	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
-    }    
+    	return buf.toString();
+    	
+    }
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.eastore.web.jaxrs.BaseResourceHandler#getLogger()

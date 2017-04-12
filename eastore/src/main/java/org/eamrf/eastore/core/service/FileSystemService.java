@@ -646,7 +646,7 @@ public class FileSystemService {
 		
 	}
 	
-	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
+	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
 		Store soureStore = getStore(fileToCopy);
 		Path sourceFilePath = Paths.get(soureStore.getPath() + fileToCopy.getRelativePath());
@@ -684,6 +684,8 @@ public class FileSystemService {
 	 */
 	public void copyDirectory(Long copyDirNodeId, Long destDirNodeId, boolean replaceExisting) throws ServiceException {
 		
+		// TODO - wrap in queued task
+		
 		if(copyDirNodeId.equals(destDirNodeId)){
 			throw new ServiceException("Source directory and destination directory are the same. "
 					+ "You cannot copy a directory to itself. copyDirNodeId=" + copyDirNodeId + 
@@ -720,6 +722,7 @@ public class FileSystemService {
 		if(resourceToCopy.getResourceType() == ResourceType.DIRECTORY){
 			
 			// copy the directory
+			
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
@@ -778,8 +781,8 @@ public class FileSystemService {
 	/**
 	 * Move a file, preserving same node id.
 	 * 
-	 * @param fileNodeId - the file to move
-	 * @param dirNodeId - the directory where the file will be moved to
+	 * @param fileNodeId - id of the file to move
+	 * @param dirNodeId - id of the directory where the file will be moved to
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
@@ -787,6 +790,21 @@ public class FileSystemService {
 		
 		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId);
 		final DirectoryResource destDir = getDirectoryResource(dirNodeId);
+				
+		moveFile(fileToMove, destDir, replaceExisting);
+		
+	}
+	
+	/**
+	 * Move a file, preserving same node id.
+	 * 
+	 * @param fileNodeId - the file to move
+	 * @param dirNodeId - the directory where the file will be moved to
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws ServiceException {
+		
 		final Store store = getStore(destDir);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
 		
@@ -798,8 +816,8 @@ public class FileSystemService {
 				try {
 					fileSystemRepository.moveFile(fileToMove, destDir, replaceExisting);
 				} catch (Exception e) {
-					throw new ServiceException("Error moving file " + fileNodeId + " to directory " + 
-							dirNodeId + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
+					throw new ServiceException("Error moving file " + fileToMove.getNodeId() + " to directory " + 
+							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 				}
 				
 				return null;
@@ -814,10 +832,11 @@ public class FileSystemService {
 		}		
 		
 		Task task = new Task();
-		task.setName("Move file [fileNodeId=" + fileNodeId + ", dirNodeId=" + dirNodeId + ", replaceExisting=" + replaceExisting + "]");
+		task.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + 
+				", replaceExisting=" + replaceExisting + "]");
 		taskManager.addTask(task);
 		
-		task.waitComplete(); // block until finished		
+		task.waitComplete(); // block until finished	
 		
 	}
 	
@@ -825,15 +844,25 @@ public class FileSystemService {
 	 * Move a directory (does not preserve node IDs for directories, but does for files.)
 	 * 
 	 * @param moveDirId - the directory to move
-	 * @param destDirId - the directory where 'moveDirId' will be moved to. 
+	 * @param destDirId - the directory where 'moveDirId' will be moved to (under). 
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
 	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - finish
+		// TODO - wrap in queued task
 		
 		// we can preserve file IDs but hard to preserve directory IDs...
+		// if you eventually manage to preserv directory IDs, then you might have to worry about
+		// updating the eas_store.node_id (root node) value.
+		
+		DirectoryResource dirToMove = getDirectoryResource(moveDirId);
+		
+		// make sure the user is not trying to move a root directory for a store
+		if(dirToMove.getParentNodeId().equals(0L)){
+			throw new ServiceException("You cannot move a root directory of a store. All stores require a root directory. "
+					+ "moveDirId = " + moveDirId + ", destDirId = " + destDirId);
+		}
 		
 		// make sure destDirId is not a child node under moveDirId. Cannot move a directory
 		// to under itself.
@@ -849,13 +878,53 @@ public class FileSystemService {
 					destDirId + " because directory " + destDirId + " is a child of directory " + moveDirId + ".");
 		}
 
-		final Tree<PathResource> treeToMove = treeService.buildPathResourceTree(moveDirId);
+		final Tree<PathResource> fromTree = treeService.buildPathResourceTree(dirToMove.getNodeId());
 		
-		// walk the tree top-down and copy over directories one at a time, then use your
-		// existing moveFile method. When finished, go back and delete all source directories.
+		DirectoryResource toDir = getDirectoryResource(destDirId);
+		final Store fromStore = getStore(dirToMove);
+		final Store toStore = getStore(toDir);
+		
+		// walk the tree top-down and copy over directories one at a time, then use
+		// existing moveFile method.
+		moveDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting);
+		
+		// remove from dir and all child directories
+		removeDirectory(dirToMove.getNodeId());
 		
 	}
 	
+	private void moveDirectoryTraversal(
+			Store fromStore, Store toStore, TreeNode<PathResource> pathResourceNode, 
+			DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
+		
+		PathResource resourceToMove = pathResourceNode.getData();
+		
+		if(resourceToMove.getResourceType() == ResourceType.DIRECTORY){
+			
+			// move the directory
+			
+			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
+			// to keep the directory that already exists (which we do now) or rename it to match exactly of
+			// the one we are copying?
+			DirectoryResource newToDir = _createCopyOfDirectory((DirectoryResource) resourceToMove, toDir);
+			
+			// move children of the directory (files and sub-directories)
+			if(pathResourceNode.hasChildren()){
+				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
+					
+					moveDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting);
+					
+				}
+			}
+			
+		}else if(resourceToMove.getResourceType() == ResourceType.FILE){
+			
+			moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting);
+			
+		}
+		
+	}
+
 	/**
 	 * All files in 'tempDir' will be added to directory 'dirNodeId'
 	 * 

@@ -52,12 +52,12 @@ public class FileMetaResource extends PathResource {
 
 	@Override
 	public String toString() {
-		return FileMetaResource.class.getName() + " [nodeId=" + getNodeId() + ", parentNodeId=" + getParentNodeId()
-				+ ", childNodeId=" + getChildNodeId() + ", nodeName=" + getNodeName() + ", dateCreated="
-				+ getDateCreated() + ", dateUpdated=" + getDateUpdated() + ", pathName=" + getPathName()
-				+ ", relativePath=" + getRelativePath() + ", resourceType=" + getResourceType().getTypeString()
-				+ ", storeId=" + getStoreId() + ", fileSize=" + getFileSize() + ", mimeType=" + getMimeType() 
-				+ ", isBinaryInDb=" + isBinaryInDatabase + "]";
+		return FileMetaResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId()
+				+ ", childId=" + getChildNodeId() + ", name=" + getNodeName() + ", dtCreated="
+				+ getDateCreated() + ", dtUpdated=" + getDateUpdated() + ", pathName=" + getPathName()
+				+ ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
+				+ ", storeId=" + getStoreId() + ", size=" + getFileSize() + ", mime=" + getMimeType() 
+				+ ", isBinInDb=" + isBinaryInDatabase + "]";
 	}	
 	
 }
