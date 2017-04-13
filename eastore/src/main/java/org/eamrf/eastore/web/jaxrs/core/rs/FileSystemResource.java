@@ -4,6 +4,7 @@
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
@@ -22,6 +23,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.PathSegment;
 
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
@@ -116,6 +118,7 @@ public class FileSystemResource extends BaseResourceHandler {
     }
 	
 	/**
+	 * Download a file by it's file node ID.
 	 * 
 	 * @return
 	 * @throws WebServiceException
@@ -136,6 +139,66 @@ public class FileSystemResource extends BaseResourceHandler {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
+		
+		if(fileMeta == null){
+			handleError("Returned FileMetaResource object was null. fileId=" + fileId, WebExceptionType.CODE_IO_ERROR);
+		}		
+		
+		return writeFileToResponse(fileMeta);
+		
+	}
+	
+	/**
+	 * Download a file by store name and relative path value within the store.
+	 * 
+	 * @param list
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/download/{storeName}/{relPath:.+}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response getFile(
+			@PathParam("storeName") String storeName,
+			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
+			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
+		}
+		StringBuffer relativePath = new StringBuffer();
+		for(PathSegment ps : list){
+			relativePath.append(File.separator + ps.getPath().trim());
+		}
+		
+		storeName = storeName.trim();
+		String relPath = relativePath.toString().replace("\\", "/");
+		
+		logger.info("File Download: storeName=" + storeName + ", relPath=" + relPath);
+		
+		FileMetaResource fileMeta = null;
+		try {
+			fileMeta = fileSystemService.getFileMetaResource(storeName, relPath, true);
+		} catch (ServiceException e) {
+			handleError("Error downloading file, failed to get file resource with binary data, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		if(fileMeta == null){
+			handleError("Returned FileMetaResource object was null. storeName=" + storeName + 
+					", relPath=" + relPath, WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		return writeFileToResponse(fileMeta);
+		
+	}
+	
+	/**
+	 * Writes the file binary data to the response
+	 * 
+	 * @param fileMeta
+	 * @return
+	 */
+	private Response writeFileToResponse(FileMetaResource fileMeta) {
 		
 		//
 		// Write data to output/response
@@ -160,8 +223,7 @@ public class FileSystemResource extends BaseResourceHandler {
 					bis.close();
 				}
 			}
-		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();
-			
+		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();		
 		
 	}
 	

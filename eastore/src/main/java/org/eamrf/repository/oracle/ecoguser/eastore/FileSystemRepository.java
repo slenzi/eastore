@@ -55,6 +55,20 @@ public class FileSystemRepository {
     
     @Autowired
     private ClosureRepository closureRepository;
+    
+    // common query element used by several methods below
+    private final String SQL_PATH_RESOURCE_COMMON =
+			"select " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
+			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
+			"from eas_closure c " +
+			"inner join eas_node n on c.child_node_id = n.node_id " +  
+			"inner join eas_path_resource r on n.node_id = r.node_id " +
+			"inner join eas_store s on r.store_id = s.store_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +  
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id ";    		
 	
     /**
      * Maps results from query to PathResource objects
@@ -109,7 +123,7 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Get store by its ID.
+	 * Fetch store by store id
 	 * 
 	 * @param storeId
 	 * @return
@@ -137,6 +151,36 @@ public class FileSystemRepository {
 		}, new Object[] { storeId });		
 		
 	}
+	
+	/**
+	 * Fetch store by name
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public Store getStoreByName(String storeName) throws Exception {
+		
+		String sql =
+			"select store_id, store_name, store_description, store_path, node_id, "
+			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
+			+ "where lower(store_name) = ?";
+		
+		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+			Store s = new Store();
+			s.setId(rs.getLong("store_id"));
+			s.setName(rs.getString("store_name"));
+			s.setDescription(rs.getString("store_description"));
+			s.setPath(Paths.get(rs.getString("store_path")));
+			s.setNodeId(rs.getLong("node_id"));
+			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+			s.setDateCreated(rs.getTimestamp("creation_date"));
+			s.setDateUpdated(rs.getTimestamp("updated_date"));
+			return s;			
+		}, new Object[] { storeName });		
+		
+	}	
 	
 	/**
 	 * Fetch all stores
@@ -185,6 +229,7 @@ public class FileSystemRepository {
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
 		
 		String sql =
+			/*
 			"select " +
 			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
 			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
@@ -196,6 +241,8 @@ public class FileSystemRepository {
 			"inner join eas_store s on r.store_id = s.store_id " +
 			"left join eas_directory_resource dr on r.node_id = dr.node_id " + 
 			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			*/
+			SQL_PATH_RESOURCE_COMMON +
 			"where c.parent_node_id = ? " +
 			"order by c.depth, n.node_name";
 		
@@ -222,6 +269,7 @@ public class FileSystemRepository {
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
 
 		String sql =
+			/*
 			"select " +
 			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
 			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
@@ -233,6 +281,8 @@ public class FileSystemRepository {
 			"inner join eas_store s on r.store_id = s.store_id " +
 			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
 			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			*/
+			SQL_PATH_RESOURCE_COMMON +
 			"where c.parent_node_id = ? and c.depth <= ? " +
 			"order by c.depth, n.node_name";
 		
@@ -872,7 +922,40 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Fetch a FileMetaResource, does not include the binary data from eas_binary_resource
+	 * Fetch a path resource by store and relative path.
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @return
+	 * @throws Exception
+	 */
+	public PathResource getPathResource(String storeName, String relativePath) throws Exception {
+		
+		String sql =
+			/*
+			"select " +
+			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
+			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
+			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
+			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date, c.depth " +
+			"from eas_closure c " +
+			"inner join eas_node n on c.child_node_id = n.node_id " +  
+			"inner join eas_path_resource r on n.node_id = r.node_id " +
+			"inner join eas_store s on r.store_id = s.store_id " +
+			"left join eas_directory_resource dr on r.node_id = dr.node_id " +  
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
+			*/
+			SQL_PATH_RESOURCE_COMMON +
+			"where lower(s.store_name) = ? and lower(r.relative_path) = ? and c.depth = 0 " +
+			"order by c.depth, n.node_name";
+			
+			return jdbcTemplate.queryForObject(sql, resourcePathRowMapper,
+					new Object[] { storeName.toLowerCase(), relativePath.toLowerCase() });		
+		
+	}	
+	
+	/**
+	 * Fetch a FileMetaResource
 	 * 
 	 * @param nodeId - file node Id
 	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
@@ -890,10 +973,38 @@ public class FileSystemRepository {
 			}
 			return fileMeta;
 		}else{
-			throw new Exception("Error fetching file meta resource. Node id => " + nodeId + " is not a file meta resource.");
+			throw new Exception("Error fetching file meta resource for nodeId=" + nodeId + 
+					". Path resource is not a file meta resource.");
 		}
 		
 	}
+	
+	/**
+	 * Fetch a FileMetaResource
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public FileMetaResource getFileMetaResource(String storeName, String relativePath, boolean includeBinary) throws Exception {
+		
+		PathResource resource = getPathResource(storeName, relativePath);
+		if(resource.getResourceType() == ResourceType.FILE){
+			FileMetaResource fileMeta = (FileMetaResource)resource;
+			if(includeBinary){
+				fileMeta = populateWithBinaryData(fileMeta);
+			}
+			return fileMeta;
+		}else{
+			throw new Exception("Error fetching file meta resource, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", includeBinary=" + includeBinary + 
+					". Path resource is not a file meta resource.");
+		}
+		
+	}	
 	
 	/**
 	 * Adds a BinaryResource object to the FileMetaResource with either the byte[] data from
@@ -979,6 +1090,26 @@ public class FileSystemRepository {
 		}
 		
 	}
+	
+	/**
+	 * Fetch a DirectoryResource
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @return
+	 * @throws Exception
+	 */
+	public DirectoryResource getDirectory(String storeName, String relativePath) throws Exception {
+		
+		PathResource resource = getPathResource(storeName, relativePath);
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new Exception("Error fetching directory resource, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", is not a directory resource.");
+		}
+		
+	}	
 	
 	/**
 	 * Remove a file

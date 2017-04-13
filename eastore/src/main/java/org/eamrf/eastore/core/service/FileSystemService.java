@@ -481,24 +481,44 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * fetch a store
+	 * fetch a store by id
 	 * 
 	 * @param storeId
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public Store getStore(Long storeId) throws ServiceException {
+	public Store getStoreById(Long storeId) throws ServiceException {
 		
 		Store store = null;
 		try {
 			store = fileSystemRepository.getStoreById(storeId);
 		} catch (Exception e) {
-			throw new ServiceException("Failed to get store for store id => " + storeId);
+			throw new ServiceException("Failed to get store for store id => " + storeId, e);
 		}
 		return store;
 		
 	}
+	
+	/**
+	 * fetch a store by name
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStoreByName(String storeName) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreByName(storeName);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store name => " + storeName, e);
+		}
+		return store;
+		
+	}	
 	
 	/**
 	 * Fetch the store object from the PathResource object. If the store object is null then
@@ -521,7 +541,7 @@ public class FileSystemService {
 		if(r.getStoreId() == null){
 			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
 		}
-		return getStore(r.getStoreId());
+		return getStoreById(r.getStoreId());
 		
 	}	
 	
@@ -558,7 +578,29 @@ public class FileSystemService {
 		try {
 			resource = fileSystemRepository.getFileMetaResource(fileNodeId, includeBinary);
 		} catch (Exception e) {
-			throw new ServiceException("Failed to get file meta resource for node id => " + fileNodeId);
+			throw new ServiceException("Failed to get file meta resource for, nodeId=" + fileNodeId + ", includeBinary=" + includeBinary, e);
+		}
+		return resource;
+	}
+	
+	/**
+	 * fetch a directory
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource getFileMetaResource(String storeName, String relativePath, boolean includeBinary) throws ServiceException {
+		
+		FileMetaResource resource = null;
+		try {
+			resource = fileSystemRepository.getFileMetaResource(storeName, relativePath, includeBinary);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get file meta resource for, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", includeBinary=" + includeBinary, e);
 		}
 		return resource;
 	}	
@@ -566,7 +608,7 @@ public class FileSystemService {
 	/**
 	 * fetch a directory
 	 * 
-	 * @param dirNodeId
+	 * @param dirNodeId - id of the directory node
 	 * @return
 	 * @throws ServiceException
 	 */
@@ -577,10 +619,31 @@ public class FileSystemService {
 		try {
 			resource = fileSystemRepository.getDirectory(dirNodeId);
 		} catch (Exception e) {
-			throw new ServiceException("Failed to get directory for node id => " + dirNodeId);
+			throw new ServiceException("Failed to get directory resource for, nodeId=" + dirNodeId, e);
 		}
 		return resource;
 	}
+	
+	/**
+	 * fetch a directory
+	 * 
+	 * @param storeName - store name
+	 * @param relativePath - the relative path within the store
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getDirectoryResource(String storeName, String relativePath) throws ServiceException {
+		
+		DirectoryResource resource = null;
+		try {
+			resource = fileSystemRepository.getDirectory(storeName, relativePath);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get directory resource for, storeName=" + storeName + 
+					", relativePath=" + relativePath, e);
+		}
+		return resource;
+	}	
 	
 	/**
 	 * Add new directory
@@ -894,7 +957,7 @@ public class FileSystemService {
 			isChild = fileSystemRepository.isChild(moveDirId, destDirId);
 		} catch (Exception e) {
 			throw new ServiceException("Error checking if directory " + destDirId + 
-					" is a child directory (at any depth) of directory " + moveDirId);
+					" is a child directory (at any depth) of directory " + moveDirId, e);
 		}
 		if(isChild){
 			throw new ServiceException("Cannot move directory " + moveDirId + " to under directory " + 
