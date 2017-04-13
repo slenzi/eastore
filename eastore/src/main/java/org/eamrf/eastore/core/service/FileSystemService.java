@@ -16,6 +16,7 @@ import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
@@ -105,6 +106,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<PathResource> getPathResourceTree(Long dirNodeId) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -129,6 +131,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -152,6 +155,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -176,6 +180,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -200,6 +205,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws ServiceException {
 		
 		Store store = null;
@@ -226,6 +232,7 @@ public class FileSystemService {
 	 * @param store
 	 * @return
 	 */
+	@MethodTimer
 	private QueuedTaskManager getTaskManagerForStore(Store store){
 		
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
@@ -242,6 +249,7 @@ public class FileSystemService {
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
 	 */
+	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
@@ -260,6 +268,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(dirRes);
@@ -305,6 +314,7 @@ public class FileSystemService {
 	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
 		final Store store = getStore(fileMetaResource);
@@ -348,6 +358,7 @@ public class FileSystemService {
 	 * @param fileNodeId - id of the FileMetaResource
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
 		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId);
@@ -390,6 +401,7 @@ public class FileSystemService {
 	 * @param dirNodeId
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void removeDirectory(Long dirNodeId) throws ServiceException {
 		
 		// this function call makes sure the dirNodeId points to an actual directory
@@ -476,6 +488,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Store getStore(Long storeId) throws ServiceException {
 		
 		Store store = null;
@@ -496,6 +509,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Store getStore(PathResource r) throws ServiceException {
 		
 		if(r == null){
@@ -518,6 +532,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<Store> getStores() throws ServiceException {
 		
 		List<Store> stores = null;
@@ -536,6 +551,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public FileMetaResource getFileMetaResource(Long fileNodeId) throws ServiceException {
 		
 		FileMetaResource resource = null;
@@ -554,6 +570,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public DirectoryResource getDirectoryResource(Long dirNodeId) throws ServiceException {
 		
 		DirectoryResource resource = null;
@@ -573,6 +590,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public DirectoryResource addDirectory(Long dirNodeId, String name) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
@@ -589,6 +607,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public DirectoryResource addDirectory(DirectoryResource parentDir, String name) throws ServiceException {
 		
 		final Store store = getStore(parentDir);
@@ -637,6 +656,7 @@ public class FileSystemService {
 	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
 		FileMetaResource sourceFile = getFileMetaResource(fileNodeId);
@@ -646,6 +666,7 @@ public class FileSystemService {
 		
 	}
 	
+	@MethodTimer
 	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
 		Store soureStore = getStore(fileToCopy);
@@ -682,6 +703,7 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void copyDirectory(Long copyDirNodeId, Long destDirNodeId, boolean replaceExisting) throws ServiceException {
 		
 		// TODO - wrap in queued task
@@ -754,6 +776,7 @@ public class FileSystemService {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	private DirectoryResource _createCopyOfDirectory(DirectoryResource dirToCopy, DirectoryResource toDir) throws ServiceException {
 		
 		// see if there already exists a child directory with the same name
@@ -786,6 +809,7 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
 		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId);
@@ -803,6 +827,7 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(destDir);
@@ -848,6 +873,7 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting) throws ServiceException {
 		
 		// TODO - wrap in queued task
@@ -933,6 +959,7 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void processToDirectory(Long dirNodeId, Path tempDir, boolean replaceExisting) throws ServiceException {
 		
 		// TODO - Eventually we'll want the ID of the user who uploaded. The JAX-RS service will have to use (possibly)
@@ -973,6 +1000,7 @@ public class FileSystemService {
 	 * 
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Store createTestStore() throws ServiceException {
 		
 		String testStoreName = appProps.getProperty("store.test.name");

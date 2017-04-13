@@ -27,7 +27,13 @@
 		<version.javax.mail>1.5.6</version.javax.mail>
 		<version.javax.mail.api>1.5.6</version.javax.mail.api>  
 		<version.hikaricp>2.6.1</version.hikaricp>
-		<version.jcabi-aspects>0.22.6</version.jcabi-aspects>	
+		
+		<!-- for code time weaving (used by spring aop) -->
+		<version.aspectj>1.8.10</version.aspectj>
+		
+		<!-- decided to use spring aop instead
+		<version.jcabi-aspects>0.22.6</version.jcabi-aspects>
+		-->
   		
 		<!-- artifactory dependencies -->
 		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
@@ -172,11 +178,20 @@
 		
 		<!-- aspect oriented programming (AOP) utility library which allows us to profile method execution times -->
 		<!-- https://mvnrepository.com/artifact/com.jcabi/jcabi-aspects -->
+		<!-- decided to use spring aop instead
 		<dependency>
 		    <groupId>com.jcabi</groupId>
 		    <artifactId>jcabi-aspects</artifactId>
 		    <version>${version.jcabi-aspects}</version>
-		</dependency>						
+		</dependency>
+		-->						
+
+		<!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
+		<dependency>
+		    <groupId>org.aspectj</groupId>
+		    <artifactId>aspectjweaver</artifactId>
+		    <version>${version.aspectj}</version>
+		</dependency>
 		
 		<dependency>
 		    <groupId>com.oracle</groupId>
