@@ -24,9 +24,9 @@ public final class Trees {
 
 		// uses <br> tag to separate lines
 		HTML,
-
+		
 		// uses system line.separator to separate lines
-		TERMINAL
+		TERMINAL,
 
 	}
 
@@ -119,6 +119,8 @@ public final class Trees {
 	 * @param option
 	 *            - options on how to print the tree
 	 * @return
+	 * 
+	 * @deprecated - use printTree(TreeNode<N> start, PrintOption option, ToString<N> toString)
 	 */
 	public static <N> String printTree(TreeNode<N> start, PrintOption option) {
 
@@ -128,7 +130,7 @@ public final class Trees {
 
 		case HTML:
 			printHtml(start, "", true, buffer, null);
-			break;
+			break;		
 
 		case TERMINAL:
 			printTerminal(start, "", true, buffer, null);
@@ -178,7 +180,7 @@ public final class Trees {
 
 		return buffer.toString();
 
-	}
+	}	
 
 	/**
 	 * Print for html page
@@ -188,8 +190,8 @@ public final class Trees {
 	 * @param isTail
 	 * @param buffer
 	 */
-	private static <N> void printHtml(TreeNode<N> node, String linePrefix, boolean isTail, StringBuffer buffer,
-			ToString<N> toString) {
+	private static <N> void printHtml(
+			TreeNode<N> node, String linePrefix, boolean isTail, StringBuffer buffer, ToString<N> toString) {
 
 		buffer.append(linePrefix + (isTail ? "|__" : "|__")
 				+ ((toString != null) ? toString.toString(node.getData()) : node.getData().toString()) + "<br>");
@@ -220,8 +222,8 @@ public final class Trees {
 	 * @param isTail
 	 * @param buffer
 	 */
-	private static <N> void printTerminal(TreeNode<N> node, String linePrefix, boolean isTail, StringBuffer buffer,
-			ToString<N> toString) {
+	private static <N> void printTerminal(
+			TreeNode<N> node, String linePrefix, boolean isTail, StringBuffer buffer, ToString<N> toString) {
 
 		buffer.append(linePrefix + (isTail ? "|__" : "|__")
 				+ ((toString != null) ? toString.toString(node.getData()) : node.getData().toString())

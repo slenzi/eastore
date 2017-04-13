@@ -32,6 +32,18 @@ public class MethodTimerAspect {
 	@Pointcut("execution(* *(..))")
     public void allMethodsPointcut(){}	
 	
+	/**
+	 * Define an "around" advice that gets executed both before & after any function call that's annotated with @MethodTimer.
+	 * This works in conjunction with our "allMethodsPointcut". 
+	 * 
+	 * Before the function that's annotated with @MethodTimer is called, this function is called and the code timer
+	 * is started. The pjp.proceed() method calls the actual proxied function, then the rest of this method completes
+	 * and the code timer is stopped. The elapsed time is logged.
+	 * 
+	 * @param pjp
+	 * @return
+	 * @throws Throwable
+	 */
     @Around("allMethodsPointcut() && @annotation(MethodTimer)")
     public Object logMethodExecutionTime(ProceedingJoinPoint pjp) throws Throwable {
     	

@@ -12,13 +12,16 @@ import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.core.service.NodeTreeService;
 import org.eamrf.eastore.core.service.PathResourceTreeService;
+import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
@@ -39,6 +42,9 @@ public class TreeResource extends BaseResourceHandler {
     private Logger logger;
     
     @Autowired
+    private ManagedProperties appProps;    
+    
+    @Autowired
     private NodeTreeService nodeTreeService;
     
     @Autowired
@@ -46,6 +52,49 @@ public class TreeResource extends BaseResourceHandler {
     
     @Autowired
     private FileSystemService fileSystemService;
+    
+    // basic toString() call on the Node
+	private class NodeToString implements ToString<Node>{
+		@Override
+		public String toString(Node node) {
+			return node.toString();
+		}
+	}    
+    
+	// basic toString() call on the PathResource
+	private class PathResourceToString implements ToString<PathResource>{
+		@Override
+		public String toString(PathResource resource) {
+			return resource.toString();
+		}
+	}
+	
+	// Creates an ahref download URL for all FileMetaResources
+	// DirectoryResource are simple text
+	private class PathResourceToAhrefDownload implements ToString<PathResource>{
+		@Override
+		public String toString(PathResource resource) {
+			
+			if(resource.getResourceType() == ResourceType.DIRECTORY){
+				
+				return "<span style=\"font-weight: bold;\">" + resource.getPathName() + "</span>";
+				
+			}else if(resource.getResourceType() == ResourceType.FILE){
+				
+				String appContext = appProps.getProperty("server.contextPath");
+				String downloadUrlPrefix = appContext + "/services/easapi/v1/fsys/download";
+				String storeName = resource.getStore().getName();
+				String relPath = resource.getRelativePath();
+				String downloadUrl = downloadUrlPrefix + "/" + storeName + relPath;
+				
+				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a>";
+				
+			}
+			
+			return "";
+			
+		}
+	}	
     
 	public TreeResource() {
 
@@ -79,7 +128,7 @@ public class TreeResource extends BaseResourceHandler {
     	}
     	
     	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
+    	buf.append( tree.printHtmlTree(new NodeToString()) );
     	
     	nodeTreeService.logTree(tree);
 
@@ -119,7 +168,7 @@ public class TreeResource extends BaseResourceHandler {
     	}
     	
     	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
+    	buf.append( tree.printHtmlTree(new NodeToString()) );
 
     	nodeTreeService.logTree(tree);
     	
@@ -155,7 +204,7 @@ public class TreeResource extends BaseResourceHandler {
     	}
     	
     	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
+    	buf.append( tree.printHtmlTree(new NodeToString()) );
     	
     	nodeTreeService.logTree(tree);
 
@@ -194,7 +243,7 @@ public class TreeResource extends BaseResourceHandler {
     	}
     	
     	StringBuffer buf = new StringBuffer();
-    	buf.append( tree.printHtmlTree() );
+    	buf.append( tree.printHtmlTree(new NodeToString()) );
     	
     	nodeTreeService.logTree(tree);
 
@@ -341,6 +390,42 @@ public class TreeResource extends BaseResourceHandler {
     	
     }
     
+	/**
+	 * Fetch PathResource top-down (root to all leafs) tree in HTML representation, with ahref download links
+	 * for all FileMetaResources
+	 * 
+	 * @param dirNodeId
+	 * @return
+	 * @throws WebServiceException
+	 */
+    @GET
+    @Path("/pathresource/download/{dirNodeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPathResourceDownloadTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    	
+    	if(dirNodeId == null){
+    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	String htmlTree = buildPathResourceTreeDownload(tree);
+    	
+    	String htmlResponse = "<html><body>" + htmlTree + "</body></html>";
+
+    	return Response.ok(htmlResponse, MediaType.TEXT_HTML).build();
+    	
+    }    
+    
     /**
      * Prints the tree, and it's store, in HTML, and returns that HTML content as a String.
      * 
@@ -370,14 +455,55 @@ public class TreeResource extends BaseResourceHandler {
     	if(!rootNode.getParentNodeId().equals(0L)){
     		// the root node of the tree is not a root node of a store (there are some other directories in-between)
     		buf.append("[...other directories here...]<br>");
-    	}
-    	buf.append( tree.printHtmlTree() );
+    	}    	
+    	
+    	buf.append( tree.printHtmlTree(new PathResourceToString()) );
     	
     	pathResourceTreeService.logTree(tree);
     	
     	return buf.toString();
     	
     }
+    
+    /**
+     * Prints the tree, and it's store, in HTML, with ahref download links for all FileMetaResource,
+     * and returns that HTML content as a String.
+     * 
+     * This method also logs the tree.
+     * 
+     * @param tree
+     * @return
+     * @throws WebServiceException
+     */
+    private String buildPathResourceTreeDownload(Tree<PathResource> tree) throws WebServiceException {
+    	
+    	if(tree == null){
+    		return "null tree";
+    	}
+    	
+    	PathResource rootNode = tree.getRootNode().getData();
+    	
+    	Store store = null;
+    	try {
+			store = fileSystemService.getStore(rootNode);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	StringBuffer buf = new StringBuffer();
+    	buf.append(store.toString() + "<br>");
+    	if(!rootNode.getParentNodeId().equals(0L)){
+    		// the root node of the tree is not a root node of a store (there are some other directories in-between)
+    		buf.append("[...other directories here...]<br>");
+    	}    	
+    	
+    	buf.append( tree.printHtmlTree(new PathResourceToAhrefDownload()) );
+    	
+    	pathResourceTreeService.logTree(tree);
+    	
+    	return buf.toString();
+    	
+    }    
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.eastore.web.jaxrs.BaseResourceHandler#getLogger()

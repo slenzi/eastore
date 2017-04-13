@@ -8,11 +8,13 @@ import java.util.Map;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -185,7 +187,14 @@ public class PathResourceTreeService {
 	 */
 	public void logTree(Tree<PathResource> tree){
 		
-    	logger.info("Tree:\n" + tree.printTree());
+		class PathResourceToString implements ToString<PathResource>{
+			@Override
+			public String toString(PathResource resource) {
+				return resource.toString();
+			}
+		}		
+		
+    	logger.info("Tree:\n" + tree.printTree(new PathResourceToString()));
 		
 	}
 	

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
@@ -186,7 +187,15 @@ public class NodeTreeService {
 	 */
 	public void logTree(Tree<Node> tree){
 		
-    	logger.info("Tree:\n" + tree.printTree());
+		// simply calls toString() on the node
+		class NodeToString implements ToString<Node>{
+			@Override
+			public String toString(Node node) {
+				return node.toString();
+			}
+		}
+		
+    	logger.info("Tree:\n" + tree.printTree(new NodeToString()));
     
 	}
 	

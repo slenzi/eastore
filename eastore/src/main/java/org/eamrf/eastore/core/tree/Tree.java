@@ -33,6 +33,12 @@ public class Tree<N> {
 		this.rootNode = rootNode;
 	}
 	
+	/**
+	 * Prints the tree
+	 * 
+	 * @return
+	 * @deprecated - use printTree(ToString<N> toString)
+	 */
     public String printTree(){
     	
     	return Trees.printTree(rootNode, PrintOption.TERMINAL);
@@ -43,6 +49,7 @@ public class Tree<N> {
      * Prints the tree, calling toString on each object stored in the tree.
      * 
      * @return
+     * @deprecated - use printHtmlTree(ToString<N> toString)
      */
     public String printHtmlTree(){
     	
@@ -51,7 +58,19 @@ public class Tree<N> {
     }
     
     /**
-     * Print the tree, using the toString function interface to specify how to print each object in the tree.
+     * Print the tree for terminal/console, using the toString function interface to specify how to print each object in the tree.
+     * 
+     * @param toString
+     * @return
+     */    
+    public String printTree(ToString<N> toString){
+    	
+    	return Trees.printTree(rootNode, PrintOption.TERMINAL, toString);
+    	
+    }     
+    
+    /**
+     * Print the tree for HTML page, using the toString function interface to specify how to print each object in the tree.
      * 
      * @param toString
      * @return

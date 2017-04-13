@@ -768,8 +768,6 @@ public class FileSystemService {
 	@MethodTimer
 	public void copyDirectory(Long copyDirNodeId, Long destDirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		// TODO - wrap in queued task
-		
 		if(copyDirNodeId.equals(destDirNodeId)){
 			throw new ServiceException("Source directory and destination directory are the same. "
 					+ "You cannot copy a directory to itself. copyDirNodeId=" + copyDirNodeId + 
