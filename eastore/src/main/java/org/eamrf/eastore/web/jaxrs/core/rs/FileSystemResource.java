@@ -3,6 +3,9 @@
  */
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -14,8 +17,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.MultivaluedMap;
 
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
@@ -29,6 +34,7 @@ import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.core.service.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
@@ -108,6 +114,56 @@ public class FileSystemResource extends BaseResourceHandler {
     	return store;
     	
     }
+	
+	/**
+	 * 
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/download/id/{fileId}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response getFile(@PathParam("fileId") Long fileId) throws WebServiceException {
+		
+		if(fileId == null){
+			handleError("Missing fileId path param", WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		FileMetaResource fileMeta = null;
+		try {
+			fileMeta = fileSystemService.getFileMetaResource(fileId, true);
+		} catch (ServiceException e) {
+			handleError("Error downloading file, failed to get file resource with binary data, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		//
+		// Write data to output/response
+		//
+		ByteArrayInputStream bis = new ByteArrayInputStream(fileMeta.getBinaryResource().getFileData());
+		
+		//ContentDisposition contentDisposition = ContentDisposition.type("attachment")
+		//	    .fileName("filename.csv").creationDate(new Date()).build();
+		//ContentDisposition contentDisposition = new ContentDisposition("attachment; filename=image.jpg");
+		
+		return Response.ok(
+			new StreamingOutput() {
+				@Override
+				public void write(OutputStream out) throws IOException, WebApplicationException {
+					byte[] buffer = new byte[4 * 1024];
+					int bytesRead;
+					while ((bytesRead = bis.read(buffer)) != -1) {
+						out.write(buffer, 0, bytesRead);
+					}
+					out.flush();
+					out.close();
+					bis.close();
+				}
+			}
+		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();
+			
+		
+	}
 	
 	/**
 	 * Processes http multipart for data uploads. Allows user to add a file.

@@ -15,6 +15,7 @@ import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.BinaryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
@@ -873,18 +874,89 @@ public class FileSystemRepository {
 	/**
 	 * Fetch a FileMetaResource, does not include the binary data from eas_binary_resource
 	 * 
-	 * @param nodeId
+	 * @param nodeId - file node Id
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public FileMetaResource getFileMetaResource(Long nodeId) throws Exception {
+	public FileMetaResource getFileMetaResource(Long nodeId, boolean includeBinary) throws Exception {
 		
 		PathResource resource = getPathResource(nodeId);
 		if(resource.getResourceType() == ResourceType.FILE){
-			return (FileMetaResource)resource;
+			FileMetaResource fileMeta = (FileMetaResource)resource;
+			if(includeBinary){
+				fileMeta = populateWithBinaryData(fileMeta);
+			}
+			return fileMeta;
 		}else{
 			throw new Exception("Error fetching file meta resource. Node id => " + nodeId + " is not a file meta resource.");
+		}
+		
+	}
+	
+	/**
+	 * Adds a BinaryResource object to the FileMetaResource with either the byte[] data from
+	 * the database (if it exists) or from the local file system.
+	 * 
+	 * @param resource
+	 * @return
+	 * @throws Exception
+	 */
+	private FileMetaResource populateWithBinaryData(FileMetaResource resource) throws Exception {
+		
+		// error checking
+		if(resource == null){
+			throw new Exception("FileMetaResource object is null. Cannot populate FileMetaResource with binary data.");
+		}else if(resource.getNodeId() == null){
+			throw new Exception("FileMetaResource nodeId value is null. Cannot populate FileMetaResource with binary data.");
+		}
+		
+		// get binary data from database
+		if(resource.getIsBinaryInDatabase()){
+			
+			BinaryResource binRes = jdbcTemplate.queryForObject(
+					"select node_id, file_data from eas_binary_resource where node_id = ?",
+					new Object[]{ resource.getNodeId() }, (rs, rowNum) -> {
+						BinaryResource br = new BinaryResource();
+						br.setNodeId(rs.getLong("node_id"));
+						br.setFileData(rs.getBytes(2));
+						return br;
+					});
+			resource.setBinaryResource(binRes);
+			return resource;
+		
+		// else get data from local file system
+		}else{
+		
+			Store store = resource.getStore();
+			if(store == null){
+				Long storeId = resource.getStoreId();
+				if(storeId == null){
+					throw new Exception("FileMetaResource storeId value is null. Need store path information to read file "
+							+ "data from local file system. Cannot populate FileMetaResource with binary data.");
+				}
+				store = getStoreById(storeId);
+				if(store == null){
+					throw new Exception("Failed to fetch store from DB for FileMetaResource, returned store object "
+							+ "was null, storeId => " + storeId + " Cannot populate FileMetaResource with binary data.");
+				}
+				resource.setStore(store);
+			}
+			Path pathToFile = Paths.get(store.getPath() + resource.getRelativePath());
+			if(!Files.exists(pathToFile)){
+				throw new Exception("Error, file on local file system does not exist for FileMetaResource "
+						+ "with file node id => " + resource.getNodeId() + ", path => " + pathToFile.toString() +
+						". Cannot populate FileMetaResource with binary data.");				
+			}
+			byte[] fileBytes = Files.readAllBytes(pathToFile);
+			BinaryResource br = new BinaryResource();
+			br.setNodeId(resource.getNodeId());
+			br.setFileData(fileBytes);
+			resource.setBinaryResource(br);
+			
+			return resource;
+			
 		}
 		
 	}	

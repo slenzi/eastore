@@ -360,7 +360,7 @@ public class FileSystemService {
 	@MethodTimer
 	public void removeFile(Long fileNodeId) throws ServiceException {
 		
-		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId);
+		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId, false);
 		final Store store = getStore(fileMetaResource);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
 		
@@ -546,16 +546,17 @@ public class FileSystemService {
 	/**
 	 * fetch a directory
 	 * 
-	 * @param dirNodeId
+	 * @param fileNodeId - file node id
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public FileMetaResource getFileMetaResource(Long fileNodeId) throws ServiceException {
+	public FileMetaResource getFileMetaResource(Long fileNodeId, boolean includeBinary) throws ServiceException {
 		
 		FileMetaResource resource = null;
 		try {
-			resource = fileSystemRepository.getFileMetaResource(fileNodeId);
+			resource = fileSystemRepository.getFileMetaResource(fileNodeId, includeBinary);
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get file meta resource for node id => " + fileNodeId);
 		}
@@ -658,7 +659,7 @@ public class FileSystemService {
 	@MethodTimer
 	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		FileMetaResource sourceFile = getFileMetaResource(fileNodeId);
+		FileMetaResource sourceFile = getFileMetaResource(fileNodeId, false);
 		DirectoryResource destitationDir = getDirectoryResource(dirNodeId);
 		
 		copyFile(sourceFile, destitationDir, replaceExisting);
@@ -809,7 +810,7 @@ public class FileSystemService {
 	@MethodTimer
 	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting) throws ServiceException {
 		
-		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId);
+		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId, false);
 		final DirectoryResource destDir = getDirectoryResource(dirNodeId);
 				
 		moveFile(fileToMove, destDir, replaceExisting);
