@@ -180,14 +180,23 @@ public class NodeTreeService {
 	}
 	
 	/**
-	 * logs the tree data (prints tree, plus pre-order and post-order traversals.)
+	 * logs the tree data (prints tree)
 	 * 
 	 * @param tree
 	 */
-	public void logNodeTree(Tree<Node> tree){
+	public void logTree(Tree<Node> tree){
 		
     	logger.info("Tree:\n" + tree.printTree());
-    	
+    
+	}
+	
+	/**
+	 * Logs pre-order traversal (top-down) order of nodes in the tree
+	 * 
+	 * @param tree
+	 */
+	public void logPreOrderTraversal(Tree<Node> tree) {
+		
     	logger.info("Pre-Order Traversal (top-down):");
     	try {
 			Trees.walkTree(tree,
@@ -198,8 +207,17 @@ public class NodeTreeService {
 					WalkOption.PRE_ORDER_TRAVERSAL);
 		} catch (TreeNodeVisitException e) {
 			logger.error("Error walking tree in pre-order (top-down) traversal", e);
-		}
-    	logger.info("");
+		}		
+		
+	}
+	
+	/**
+	 * Logs post-order traversal (bottom-up) order of nodes in the tree
+	 * 
+	 * @param tree
+	 */	
+	public void logPostOrderTraversal(Tree<Node> tree) {
+		
     	logger.info("Post-Order Traversal (bottom-up):");
     	try {
 			Trees.walkTree(tree,
@@ -210,7 +228,7 @@ public class NodeTreeService {
 					WalkOption.POST_ORDER_TRAVERSAL);
 		} catch (TreeNodeVisitException e) {
 			logger.error("Error walking tree in post-order (bottom-up) traversal", e);
-		}    	
+		} 		
 		
 	}	
 	

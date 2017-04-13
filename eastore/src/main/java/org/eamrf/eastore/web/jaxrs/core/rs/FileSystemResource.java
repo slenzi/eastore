@@ -126,24 +126,22 @@ public class FileSystemResource extends BaseResourceHandler {
     	
     	// See -> http://stackoverflow.com/questions/25797650/fileupload-with-jax-rs
     	
-    	/*
-		@Consumes(MediaType.MULTIPART_FORM_DATA)
-		public Response uploadFile(@Multipart(value = "vendor") String vendor,
-        @Multipart(value = "uploadedFile") Attachment attr) {    	 
-    	 */
+		//@Consumes(MediaType.MULTIPART_FORM_DATA)
+		//public Response uploadFile(@Multipart(value = "vendor") String vendor,
+        //@Multipart(value = "uploadedFile") Attachment attr) {
     	
     	List<Attachment> attachments = body.getAllAttachments();
     	Attachment rootAttachement = body.getRootAttachment();
     	
-    	logger.info("Root Attachement:");
-    	logAttachement(rootAttachement);
-    	logger.info("Attachements:");
-    	for(Attachment attach : CollectionUtil.emptyIfNull(attachments)){
-    		logAttachement(attach);
-    	}
+    	//logger.info("Root Attachement:");
+    	//logAttachement(rootAttachement);
+    	//logger.info("Attachements:");
+    	//for(Attachment attach : CollectionUtil.emptyIfNull(attachments)){
+    	//	logAttachement(attach);
+    	//}
     	
     	String dirId = getStringValue("dirId", body);
-    	logger.info("dirId => " + dirId);
+    	//logger.info("dirId => " + dirId);
     	
     	Long longDirId = -1L;
     	try {

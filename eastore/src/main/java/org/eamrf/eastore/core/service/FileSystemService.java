@@ -232,7 +232,6 @@ public class FileSystemService {
 	 * @param store
 	 * @return
 	 */
-	@MethodTimer
 	private QueuedTaskManager getTaskManagerForStore(Store store){
 		
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
@@ -426,7 +425,7 @@ public class FileSystemService {
 				// build a tree that we can walk
 				final Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());				
 				
-				treeService.logPathResourceTree(tree);
+				treeService.logTree(tree);
 				
 				try {
 					
@@ -666,7 +665,6 @@ public class FileSystemService {
 		
 	}
 	
-	@MethodTimer
 	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
 		Store soureStore = getStore(fileToCopy);
@@ -776,7 +774,6 @@ public class FileSystemService {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
 	private DirectoryResource _createCopyOfDirectory(DirectoryResource dirToCopy, DirectoryResource toDir) throws ServiceException {
 		
 		// see if there already exists a child directory with the same name
@@ -827,7 +824,6 @@ public class FileSystemService {
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
-	@MethodTimer
 	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(destDir);

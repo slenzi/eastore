@@ -13,6 +13,7 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
@@ -113,6 +114,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public Store getStoreById(Long storeId) throws Exception {
 		
 		String sql =
@@ -141,6 +143,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public List<Store> getStores() throws Exception {
 		
 		String sql =
@@ -175,6 +178,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public List<PathResource> getPathResourceTree(Long dirNodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
@@ -211,6 +215,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
@@ -247,6 +252,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)	
@@ -291,6 +297,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)	
@@ -335,6 +342,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws Exception {
 	
 		Long storeId = getNextStoreId();
@@ -387,6 +395,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(
 			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {
 			
@@ -419,6 +428,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws Exception {
 		
 		final Store store = getStoreById(fileMetaResource.getStoreId());
@@ -643,6 +653,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
 		
 		// make sure parentDirNodeId is actually of a directory path resource type
@@ -766,6 +777,7 @@ public class FileSystemRepository {
 	 * @param type - the type of child path resource to check for.
 	 * @return
 	 */
+	@MethodTimer
 	public boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
@@ -794,6 +806,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
@@ -819,7 +832,8 @@ public class FileSystemRepository {
 	 * @param dirNodeA
 	 * @param dirNodeB
 	 * @return
-	 */	
+	 */
+	@MethodTimer
 	public boolean isChild(Long dirNodeA, Long dirNodeB) throws Exception {
 		
 		List<PathResource> parentResources = getParentPathResourceTree(dirNodeB);
@@ -841,6 +855,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public PathResource getPathResource(Long nodeId) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(nodeId, 0);
@@ -862,6 +877,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public FileMetaResource getFileMetaResource(Long nodeId) throws Exception {
 		
 		PathResource resource = getPathResource(nodeId);
@@ -880,6 +896,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public DirectoryResource getDirectory(Long nodeId) throws Exception {
 		
 		PathResource resource = getPathResource(nodeId);
@@ -898,6 +915,7 @@ public class FileSystemRepository {
 	 * @param resource
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public void removeFile(Store store, FileMetaResource resource) throws Exception {
 		
 		Path filePath = Paths.get(store.getPath() + resource.getRelativePath());
@@ -928,6 +946,7 @@ public class FileSystemRepository {
 	 * @param resource
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public void removeDirectory(Store store, DirectoryResource resource) throws Exception {
 		
 		Path dirPath = Paths.get(store.getPath() + resource.getRelativePath());
@@ -968,6 +987,7 @@ public class FileSystemRepository {
 	 * @param destDir - the directory to move it to.
 	 * @param replaceExisting
 	 */
+	@MethodTimer
 	public void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws Exception {
 		
 		//

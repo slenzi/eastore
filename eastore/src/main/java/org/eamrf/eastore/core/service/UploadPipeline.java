@@ -15,6 +15,7 @@ import javax.activation.DataHandler;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ public class UploadPipeline {
 	 * and file with the same name already exists, then a service exception will be thrown.
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public void processUpload(Long dirNodeId, String fileName, DataHandler dataHandler, boolean replaceExisting) throws ServiceException {
 		
 		Path tempDir = createTempDir();

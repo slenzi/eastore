@@ -81,7 +81,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	nodeTreeService.logNodeTree(tree);
+    	nodeTreeService.logTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -121,7 +121,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
 
-    	nodeTreeService.logNodeTree(tree);
+    	nodeTreeService.logTree(tree);
     	
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -157,7 +157,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	nodeTreeService.logNodeTree(tree);
+    	nodeTreeService.logTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -196,7 +196,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append( tree.printHtmlTree() );
     	
-    	nodeTreeService.logNodeTree(tree);
+    	nodeTreeService.logTree(tree);
 
     	return Response.ok(buf.toString(), MediaType.TEXT_HTML).build();
     	
@@ -373,7 +373,7 @@ public class TreeResource extends BaseResourceHandler {
     	}
     	buf.append( tree.printHtmlTree() );
     	
-    	pathResourceTreeService.logPathResourceTree(tree);
+    	pathResourceTreeService.logTree(tree);
     	
     	return buf.toString();
     	

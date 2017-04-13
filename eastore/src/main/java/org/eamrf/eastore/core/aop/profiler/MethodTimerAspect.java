@@ -12,6 +12,10 @@ import org.springframework.stereotype.Component;
 /**
  * An aspect for profiling method run times.
  * 
+ * Simply annotate a method with @MethodTimer and the method runtime will be logged.
+ * 
+ * Of course, this only works on spring proxied method calls (i.e., no private methods)
+ * 
  * @author slenzi
  */
 @Component
@@ -20,8 +24,6 @@ public class MethodTimerAspect {
 	
 	private Logger logger = LoggerFactory.getLogger(MethodTimerAspect.class);
 
-	private CodeTimer timer = new CodeTimer();
-	
 	/**
 	 * This pointcut is a catch all pointcut with the scope of execution.
 	 * 
@@ -31,10 +33,12 @@ public class MethodTimerAspect {
     public void allMethodsPointcut(){}	
 	
     @Around("allMethodsPointcut() && @annotation(MethodTimer)")
-    public Object doBasicProfiling(ProceedingJoinPoint pjp) throws Throwable {
+    public Object logMethodExecutionTime(ProceedingJoinPoint pjp) throws Throwable {
     	
         String packageName = pjp.getSignature().getDeclaringTypeName();
-        String methodName = pjp.getSignature().getName();    	
+        String methodName = pjp.getSignature().getName();
+        
+        CodeTimer timer = new CodeTimer();
     	
         // start stopwatch
     	timer.start();
