@@ -11,6 +11,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.FileSystemService;
@@ -23,6 +24,7 @@ import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -87,7 +89,9 @@ public class TreeResource extends BaseResourceHandler {
 				String relPath = resource.getRelativePath();
 				String downloadUrl = downloadUrlPrefix + "/" + storeName + relPath;
 				
-				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a>";
+				String byteFormat = FileUtil.humanReadableByteCount( ((FileMetaResource)resource).getFileSize(), true);
+				
+				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a> (" + byteFormat + ")";
 				
 			}
 			
