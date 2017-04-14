@@ -3,6 +3,9 @@
  */
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
+import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicLong;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -11,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
@@ -19,6 +23,9 @@ import org.eamrf.eastore.core.service.NodeTreeService;
 import org.eamrf.eastore.core.service.PathResourceTreeService;
 import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNodeVisitException;
+import org.eamrf.eastore.core.tree.Trees;
+import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
@@ -72,14 +79,16 @@ public class TreeResource extends BaseResourceHandler {
 	}
 	
 	// Creates an ahref download URL for all FileMetaResources
-	// DirectoryResource are simple text
+	// File size, update date, and mime type are also displayed
+	// DirectoryResources are simple bold text
 	private class PathResourceToAhrefDownload implements ToString<PathResource>{
 		@Override
 		public String toString(PathResource resource) {
 			
 			if(resource.getResourceType() == ResourceType.DIRECTORY){
 				
-				return "<span style=\"font-weight: bold;\">" + resource.getPathName() + "</span>";
+				return "<span style=\"font-weight: bold;\">" + resource.getPathName() + "</span> - " +
+						"[id=" + resource.getNodeId() + "]";
 				
 			}else if(resource.getResourceType() == ResourceType.FILE){
 				
@@ -89,9 +98,13 @@ public class TreeResource extends BaseResourceHandler {
 				String relPath = resource.getRelativePath();
 				String downloadUrl = downloadUrlPrefix + "/" + storeName + relPath;
 				
-				String byteFormat = FileUtil.humanReadableByteCount( ((FileMetaResource)resource).getFileSize(), true);
+				String fileByteFormat = FileUtil.humanReadableByteCount( ((FileMetaResource)resource).getFileSize(), true);
+				String fileMimeType = ((FileMetaResource)resource).getMimeType();
+				String fileUpdateDate = DateUtil.defaultDateFormat(resource.getDateUpdated());
 				
-				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a> (" + byteFormat + ")";
+				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a>" +
+					" (" + fileMimeType + ", " + fileByteFormat + ", " + fileUpdateDate + ") - " +
+					"[id=" + resource.getNodeId() + "]";
 				
 			}
 			
@@ -424,9 +437,20 @@ public class TreeResource extends BaseResourceHandler {
     	
     	String htmlTree = buildPathResourceTreeDownload(tree);
     	
-    	String htmlResponse = "<html><body>" + htmlTree + "</body></html>";
-
-    	return Response.ok(htmlResponse, MediaType.TEXT_HTML).build();
+    	StringBuffer htmlResponse = new StringBuffer();
+    	
+    	htmlResponse.append("<html>\n");
+    	htmlResponse.append("<head>\n");
+    	htmlResponse.append("<style type=\"text/css\">\n");
+    	htmlResponse.append("body {font-size: 75%; line-height:1 !important; }\n");
+    	htmlResponse.append("</style>\n");
+    	htmlResponse.append("</head>\n");
+    	htmlResponse.append("<body>\n");
+    	htmlResponse.append(htmlTree + "\n");
+    	htmlResponse.append("</body>\n");
+    	htmlResponse.append("</html>\n");
+    	
+    	return Response.ok(htmlResponse.toString(), MediaType.TEXT_HTML).build();
     	
     }    
     
@@ -494,13 +518,31 @@ public class TreeResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
+    	// get total size of all files in the store
+    	AtomicLong totalSize = new AtomicLong();
+    	try {
+			Trees.walkTree(tree, (treeNode) -> {
+				PathResource r = treeNode.getData();
+				if(r.getResourceType() == ResourceType.FILE){
+					totalSize.addAndGet(((FileMetaResource)r).getFileSize());
+				}
+			}, WalkOption.PRE_ORDER_TRAVERSAL);
+		} catch (TreeNodeVisitException e) {
+			handleError("Error computing total file size of all files in store. " + e.getMessage(),
+					WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
     	StringBuffer buf = new StringBuffer();
-    	buf.append(store.toString() + "<br>");
+    	buf.append("<span style=\"font-weight: bold;\">" + store.getName() + "</span>");
+    	buf.append("[id=" + store.getId() + ", path=" + store.getPath() + ", diskUsage=" + 
+    			FileUtil.humanReadableByteCount(totalSize.get(), true)+ "]<br>");
+    	buf.append("[<br>");
+    	buf.append(store.getDescription() + "<br>");
+    	buf.append("]<br>");
     	if(!rootNode.getParentNodeId().equals(0L)){
     		// the root node of the tree is not a root node of a store (there are some other directories in-between)
     		buf.append("[...other directories here...]<br>");
-    	}    	
-    	
+    	} 
     	buf.append( tree.printHtmlTree(new PathResourceToAhrefDownload()) );
     	
     	pathResourceTreeService.logTree(tree);
