@@ -1,5 +1,7 @@
 package org.eamrf.eastore.core.tree;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -242,6 +244,24 @@ public final class Trees {
 			}
 		}
 
+	}
+	
+	/**
+	 * Recursively walks the node, and applies the comparator to the child node lists
+	 * to order the children.
+	 * 
+	 * @param node
+	 * @param comparator
+	 */
+	public static <N> void sortChildren(TreeNode<N> node, Comparator<TreeNode<N>> comparator) {
+		
+		if(node.hasChildren()){
+			Collections.sort(node.getChildren(), comparator);
+			for(TreeNode<N> child : node.getChildren()){
+				Trees.sortChildren(child, comparator);
+			}
+		}
+		
 	}
 
 }

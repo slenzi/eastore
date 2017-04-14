@@ -230,9 +230,21 @@ public class FileSystemResource extends BaseResourceHandler {
 	/**
 	 * Processes http multipart for data uploads. Allows user to add a file.
 	 * 
-	 * Request must contain the following fields:
-	 * file_0: the file that was uploaded
-	 * dirId: text/plain the directory node ID where the file will be added
+	 * Request must contain the following parameter:
+	 * 'file_0': The file that was uploaded (multipart/form-data attachment)
+	 * 
+	 * In addition to the 'file_0' parameter the request must contain either the ID
+	 * of the directory where the file is being uploaded, or, the store name +
+	 * the relative path value of a directory resource.
+	 * 
+	 * 'dirId': Directory node ID where the file will be added (text/plain)
+	 * 
+	 * or,
+	 * 
+	 * 'dirRelPath': Relative path for the directory where the file will be added.
+	 * 'storeName': Name of the store for the directory.
+	 * 
+	 * In a nutshell, you need 'file_0' and ('dirId' or ('dirRelPath' plus 'storeName'))
 	 * 
 	 * @return
 	 * @throws WebServiceException
@@ -251,37 +263,55 @@ public class FileSystemResource extends BaseResourceHandler {
     	List<Attachment> attachments = body.getAllAttachments();
     	Attachment rootAttachement = body.getRootAttachment();
     	
-    	//logger.info("Root Attachement:");
-    	//logAttachement(rootAttachement);
-    	//logger.info("Attachements:");
-    	//for(Attachment attach : CollectionUtil.emptyIfNull(attachments)){
-    	//	logAttachement(attach);
-    	//}
-    	
-    	String dirId = getStringValue("dirId", body);
-    	//logger.info("dirId => " + dirId);
-    	
-    	Long longDirId = -1L;
-    	try {
-			longDirId = Long.valueOf(dirId);
-		} catch (NumberFormatException e) {
-			handleError("Error parsing dirId '" + dirId +"' to long", WebExceptionType.CODE_IO_ERROR, e);
-		}
-    	
+    	// check if we actually have a multipart/form-data attachment for param 'file_0'
     	Attachment fileAttachment = body.getAttachment("file_0");
+    	if(fileAttachment == null){
+    		handleError("Error, no 'file_0' multipart/form-data attachement found in request",
+    				WebExceptionType.CODE_IO_ERROR);
+    	}
     	ContentDisposition cd = fileAttachment.getContentDisposition();
     	if (cd == null || cd.getParameter("filename") == null) {
-    		handleError("Could not pull file name form content disposition", WebExceptionType.CODE_IO_ERROR);
+    		handleError("Could not pull file name from content disposition", WebExceptionType.CODE_IO_ERROR);
     	}
-    	
     	String fileName = cd.getParameter("filename");
-    	DataHandler dataHandler = fileAttachment.getDataHandler();
+    	DataHandler dataHandler = fileAttachment.getDataHandler();    	
     	
-    	try {
-			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true);
-		} catch (ServiceException e) {
-			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
-		}
+    	// check for additional upload parameters
+    	String dirId = getStringValue("dirId", body);
+    	String storeName = getStringValue("storeName", body);
+    	String dirRelPath = getStringValue("dirRelPath", body);
+    	
+    	// if user provided a 'dirId' value then use that
+    	if(!StringUtil.isNullEmpty(dirId)){
+    		
+        	Long longDirId = -1L;
+        	try {
+    			longDirId = Long.valueOf(dirId);
+    		} catch (NumberFormatException e) {
+    			handleError("Error parsing dirId '" + dirId +"' to long", WebExceptionType.CODE_IO_ERROR, e);
+    		}
+        	
+        	try {
+    			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true);
+    		} catch (ServiceException e) {
+    			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
+    		}        	
+    	
+        // use store name and directory relative patn value
+    	}else if(!StringUtil.isNullEmpty(storeName) && !StringUtil.isNullEmpty(dirRelPath)){
+    		
+        	try {
+    			uploadPipeline.processUpload(storeName, dirRelPath, fileName, dataHandler, true);
+    		} catch (ServiceException e) {
+    			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
+    		}    		
+    		
+    	}else{
+    		
+    		handleError("Error processig upload. Need either 'dirId' parameter, or 'storeName' + 'dirRelPath' parameters",
+    				WebExceptionType.CODE_IO_ERROR);
+    		
+    	}
     	
     	return Response.ok("File processed").build(); 
     	
@@ -293,16 +323,14 @@ public class FileSystemResource extends BaseResourceHandler {
      * @param key - the attribute name from the request
      * @param body - the multipartbody
      * @return
-     * @throws WebServiceException
      */
-    private String getStringValue(String key, MultipartBody body) throws WebServiceException {
+    private String getStringValue(String key, MultipartBody body) {
     	
     	Attachment att = body.getAttachment(key);
     	if(att == null){
-    		handleError("Missing '" + key +"' in multipart request", WebExceptionType.CODE_IO_ERROR);
+    		return null;
     	}
-    	String value = att.getObject(String.class);
-    	return value;
+    	return att.getObject(String.class);
     	
     }
     

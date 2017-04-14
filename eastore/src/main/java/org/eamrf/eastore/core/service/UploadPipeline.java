@@ -55,7 +55,47 @@ public class UploadPipeline {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void processUpload(Long dirNodeId, String fileName, DataHandler dataHandler, boolean replaceExisting) throws ServiceException {
+	public void processUpload(
+			Long dirNodeId, String fileName, DataHandler dataHandler, 
+			boolean replaceExisting) throws ServiceException {
+		
+		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
+		
+		fileSystemService.processToDirectory(dirNodeId, tempDir, replaceExisting);
+		
+	}
+	
+	/**
+	 * Process file through upload pipeline
+	 * 
+	 * @param storeName - name of the store
+	 * @param dirRelPath - relative path of the directory within the store
+	 * @param fileName - name of file
+	 * @param dataHandler - interface to the binary data for the file
+	 * @param replaceExisting - pass true to replace exiting file, or pass false. If you pass false and
+	 * and file with the same name already exists, then a service exception will be thrown.
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void processUpload(
+			String storeName, String dirRelPath, String fileName, DataHandler dataHandler, 
+			boolean replaceExisting) throws ServiceException {	
+		
+		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
+		
+		fileSystemService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting);
+		
+	}
+	
+	/**
+	 * Saves the file data to a new temp directory
+	 * 
+	 * @param fileName
+	 * @param dataHandler
+	 * @return
+	 * @throws ServiceException
+	 */
+	private Path saveIncomingDataToTempDir(String fileName, DataHandler dataHandler) throws ServiceException {
 		
 		Path tempDir = createTempDir();
 		
@@ -74,16 +114,7 @@ public class UploadPipeline {
 			throw new ServiceException("Error saving incoming file to => " + destFile.toString() + ", " + e.getMessage(), e);
 		}
 		
-		/*
-		byte[] bytes = null;
-		try {
-			bytes = IOUtils.toByteArray(inStream);
-		} catch (IOException e) {
-			throw new ServiceException("Upload pipeline error, failed to get InputStream from DataHandler, " + e.getMessage(), e);
-		}
-		*/
-		
-		fileSystemService.processToDirectory(dirNodeId, tempDir, replaceExisting);
+		return tempDir;
 		
 	}
 	
@@ -112,6 +143,8 @@ public class UploadPipeline {
 		
 		return tempPath;
 		
-	}	
+	}
+
+	
 
 }

@@ -260,6 +260,27 @@ public class FileSystemService {
 	/**
 	 * Adds a new file, but does not add the binary data to eas_binary_resource
 	 * 
+	 * @param storeName - name of the store
+	 * @param dirRelPath - relative path of directory resource within the store
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFileWithoutBinary(
+			String storeName, String dirRelPath, Path filePath, boolean replaceExisting) throws ServiceException {
+
+		DirectoryResource dirResource = getDirectoryResource(storeName, dirRelPath);
+		
+		return addFileWithoutBinary(dirResource, filePath, replaceExisting);
+		
+	}	
+	
+	/**
+	 * Adds a new file, but does not add the binary data to eas_binary_resource
+	 * 
 	 * @param dirRes - directory where file will be added
 	 * @param filePath - path to file on local file system
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
@@ -268,7 +289,8 @@ public class FileSystemService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public FileMetaResource addFileWithoutBinary(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
+	public FileMetaResource addFileWithoutBinary(
+			DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(dirRes);
 		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
@@ -1012,13 +1034,14 @@ public class FileSystemService {
 	/**
 	 * All files in 'tempDir' will be added to directory 'dirNodeId'
 	 * 
-	 * @param dirNodeId
-	 * @param tempDir
+	 * @param dirNodeId - id of the directory node
+	 * @param tempDir - directory where files are located.
 	 * @param replaceExisting
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void processToDirectory(Long dirNodeId, Path tempDir, boolean replaceExisting) throws ServiceException {
+	public void processToDirectory(
+			Long dirNodeId, Path tempDir, boolean replaceExisting) throws ServiceException {
 		
 		// TODO - Eventually we'll want the ID of the user who uploaded. The JAX-RS service will have to use (possibly)
 		// the AuthWorld session key to identify users logged into the portal. That would give us access to the CTEP ID.
@@ -1051,8 +1074,56 @@ public class FileSystemService {
 					
 			});
 		
-	}	
+	}
 	
+	/**
+	 * All files in 'tempDir' will be added to the directory (the correct directory will be determined using the
+	 * store name and dirRelPath values.)
+	 * 
+	 * @param storeName - the name of the store
+	 * @param dirRelPath - the relative path of the directory resource within the store
+	 * @param tempDir - directory where files are located.
+	 * @param replaceExisting
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void processToDirectory(
+			String storeName, String dirRelPath, Path tempDir, boolean replaceExisting) throws ServiceException{
+	
+		// TODO - Eventually we'll want the ID of the user who uploaded. The JAX-RS service will have to use (possibly)
+		// the AuthWorld session key to identify users logged into the portal. That would give us access to the CTEP ID.
+		// We'll also need to add a field to eas_path_resource to store the user's ID.
+		
+		List<Path> filePaths = null;
+		try {
+			filePaths = FileUtil.listFilesToDepth(tempDir, 1);
+		} catch (IOException e) {
+			throw new ServiceException("Error listing files in temporary directory " + tempDir.toString());
+		}
+		
+		filePaths.stream().forEach(
+			(pathToFile) ->{
+				
+				// add file meta
+				FileMetaResource fileMetaResource = null;
+				try {
+					fileMetaResource = addFileWithoutBinary(storeName, dirRelPath, pathToFile, replaceExisting);
+				} catch (ServiceException e) {
+					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 
+							dirRelPath + "', under store name '" + storeName + "'.", e);
+				}
+				
+				// go back and add binary to db
+				try {
+					refreshBinaryDataInDatabase(fileMetaResource);
+				} catch (ServiceException e) {
+					throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
+				}
+					
+			});		
+		
+	}
+
 	/**
 	 * Create sample store for testing, with some sub-directories.
 	 * 
@@ -1087,6 +1158,7 @@ public class FileSystemService {
 						DirectoryResource dirPics = addDirectory(dirSmall, "pics");		
 		
 		return store;
+	
 	}
 
 }

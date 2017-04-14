@@ -4,6 +4,7 @@
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.ws.rs.GET;
@@ -23,6 +24,7 @@ import org.eamrf.eastore.core.service.NodeTreeService;
 import org.eamrf.eastore.core.service.PathResourceTreeService;
 import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
@@ -81,7 +83,7 @@ public class TreeResource extends BaseResourceHandler {
 	// Creates an ahref download URL for all FileMetaResources
 	// File size, update date, and mime type are also displayed
 	// DirectoryResources are simple bold text
-	private class PathResourceToAhrefDownload implements ToString<PathResource>{
+	private class PathResourceHtmlAhrefDownloadToString implements ToString<PathResource>{
 		@Override
 		public String toString(PathResource resource) {
 			
@@ -111,7 +113,22 @@ public class TreeResource extends BaseResourceHandler {
 			return "";
 			
 		}
-	}	
+	}
+	
+	// sort tree children so files appear before directories, and if resources
+	// are the same resource type then sort alphabetically by name
+	private Comparator<TreeNode<PathResource>> nodePathResourceCompare = (TreeNode<PathResource> n1, TreeNode<PathResource> n2) -> {
+		
+		if(n1.getData().getResourceType() == n2.getData().getResourceType()){
+			// same type, so compare on resource name
+			return n1.getData().getPathName().compareTo(n2.getData().getPathName());
+		}else if(n1.getData().getResourceType() == ResourceType.FILE){
+			return -1;
+		}else{
+			return 1;
+		}
+		
+	};	
     
 	public TreeResource() {
 
@@ -478,6 +495,9 @@ public class TreeResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
+    	// sort by resource type so files appear before directories, then sort by resource name
+    	Trees.sortChildren(tree.getRootNode(), nodePathResourceCompare);
+    	
     	StringBuffer buf = new StringBuffer();
     	buf.append(store.toString() + "<br>");
     	if(!rootNode.getParentNodeId().equals(0L)){
@@ -487,7 +507,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	buf.append( tree.printHtmlTree(new PathResourceToString()) );
     	
-    	pathResourceTreeService.logTree(tree);
+    	//pathResourceTreeService.logTree(tree);
     	
     	return buf.toString();
     	
@@ -518,6 +538,9 @@ public class TreeResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
+    	// sort by resource type so files appear before directories, then sort by resource name
+    	Trees.sortChildren(tree.getRootNode(), nodePathResourceCompare);    	
+    	
     	// get total size of all files in the store
     	AtomicLong totalSize = new AtomicLong();
     	try {
@@ -543,9 +566,9 @@ public class TreeResource extends BaseResourceHandler {
     		// the root node of the tree is not a root node of a store (there are some other directories in-between)
     		buf.append("[...other directories here...]<br>");
     	} 
-    	buf.append( tree.printHtmlTree(new PathResourceToAhrefDownload()) );
+    	buf.append( tree.printHtmlTree(new PathResourceHtmlAhrefDownloadToString()) );
     	
-    	pathResourceTreeService.logTree(tree);
+    	//pathResourceTreeService.logTree(tree);
     	
     	return buf.toString();
     	
