@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
  * @author slenzi
  */
 @Path("/closure")
-@Service("eaClosureResource")
+@Service("closureResource")
 public class ClosureResource extends BaseResourceHandler {
 
     @InjectLogger

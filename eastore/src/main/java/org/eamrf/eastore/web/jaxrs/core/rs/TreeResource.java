@@ -3,7 +3,6 @@
  */
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
-import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,7 +45,7 @@ import org.springframework.stereotype.Service;
  * @author slenzi
  */
 @Path("/tree")
-@Service("eaTreeResource")
+@Service("treeResource")
 public class TreeResource extends BaseResourceHandler {
 
     @InjectLogger

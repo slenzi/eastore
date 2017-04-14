@@ -23,7 +23,7 @@ import com.google.gson.Gson;
  * @author slenzi
  */
 @Path("/test")
-@Service("eaTestResource")
+@Service("testResource")
 public class TestResource extends BaseResourceHandler {
 
     @InjectLogger

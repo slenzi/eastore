@@ -45,12 +45,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
+ * JAX-RS resource for modifying our file system (edit files and directories, etc)
+ * 
  * @author slenzi
- *
  */
-@Path("/fsys")
-@Service("eaFileSystemResource")
-public class FileSystemResource extends BaseResourceHandler {
+@Path("/fsys/action")
+@Service("fileSystemActionResource")
+public class FileSystemActionResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;    
@@ -61,7 +62,7 @@ public class FileSystemResource extends BaseResourceHandler {
     @Autowired
     private UploadPipeline uploadPipeline;
     
-	public FileSystemResource() {
+	public FileSystemActionResource() {
 
 	}
 
@@ -126,7 +127,7 @@ public class FileSystemResource extends BaseResourceHandler {
 	@GET
 	@Path("/download/id/{fileId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response getFile(@PathParam("fileId") Long fileId) throws WebServiceException {
+	public Response downloadFile(@PathParam("fileId") Long fileId) throws WebServiceException {
 		
 		if(fileId == null){
 			handleError("Missing fileId path param", WebExceptionType.CODE_IO_ERROR);
@@ -158,7 +159,7 @@ public class FileSystemResource extends BaseResourceHandler {
 	@GET
 	@Path("/download/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response getFile(
+	public Response downloadFile(
 			@PathParam("storeName") String storeName,
 			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
 		
@@ -193,42 +194,7 @@ public class FileSystemResource extends BaseResourceHandler {
 	}
 	
 	/**
-	 * Writes the file binary data to the response
-	 * 
-	 * @param fileMeta
-	 * @return
-	 */
-	private Response writeFileToResponse(FileMetaResource fileMeta) {
-		
-		//
-		// Write data to output/response
-		//
-		ByteArrayInputStream bis = new ByteArrayInputStream(fileMeta.getBinaryResource().getFileData());
-		
-		//ContentDisposition contentDisposition = ContentDisposition.type("attachment")
-		//	    .fileName("filename.csv").creationDate(new Date()).build();
-		//ContentDisposition contentDisposition = new ContentDisposition("attachment; filename=image.jpg");
-		
-		return Response.ok(
-			new StreamingOutput() {
-				@Override
-				public void write(OutputStream out) throws IOException, WebApplicationException {
-					byte[] buffer = new byte[4 * 1024];
-					int bytesRead;
-					while ((bytesRead = bis.read(buffer)) != -1) {
-						out.write(buffer, 0, bytesRead);
-					}
-					out.flush();
-					out.close();
-					bis.close();
-				}
-			}
-		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();		
-		
-	}
-	
-	/**
-	 * Processes http multipart for data uploads. Allows user to add a file.
+	 * Processes multipart/form-data uploads. Allows user to add a file.
 	 * 
 	 * Request must contain the following parameter:
 	 * 'file_0': The file that was uploaded (multipart/form-data attachment)
@@ -252,7 +218,7 @@ public class FileSystemResource extends BaseResourceHandler {
     @POST
     @Path("/uploadFile")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response processUpload(MultipartBody body) throws WebServiceException {
+    public Response addFile(MultipartBody body) throws WebServiceException {
     	
     	// See -> http://stackoverflow.com/questions/25797650/fileupload-with-jax-rs
     	
@@ -314,44 +280,6 @@ public class FileSystemResource extends BaseResourceHandler {
     	}
     	
     	return Response.ok("File processed").build(); 
-    	
-    }
-    
-    /**
-     * Fetch a string value from the multipart body
-     * 
-     * @param key - the attribute name from the request
-     * @param body - the multipartbody
-     * @return
-     */
-    private String getStringValue(String key, MultipartBody body) {
-    	
-    	Attachment att = body.getAttachment(key);
-    	if(att == null){
-    		return null;
-    	}
-    	return att.getObject(String.class);
-    	
-    }
-    
-    /**
-     * Log debug info for attachment object
-     * 
-     * @param attach
-     */
-    private void logAttachement(Attachment attach){
-    	
-    	logger.info("Content ID => " + attach.getContentId());
-    	
-    	MultivaluedMap<String, String> headers = attach.getHeaders();
-    	for(String key : headers.keySet()){
-    		List<String> values = headers.get(key);
-    		for(String val : CollectionUtil.emptyIfNull(values)){
-    			logger.info("Key => " + key + ", Values => " + val);
-    		}
-    	}
-    	
-    	logger.info("Content type => " + attach.getContentType().toString());
     	
     }
     
@@ -587,5 +515,78 @@ public class FileSystemResource extends BaseResourceHandler {
     	return testStore;
     	
     }
+    
+    /**
+     * Fetch a string value from the multipart body
+     * 
+     * @param key - the attribute name from the request
+     * @param body - the multipartbody
+     * @return
+     */
+    private String getStringValue(String key, MultipartBody body) {
+    	
+    	Attachment att = body.getAttachment(key);
+    	if(att == null){
+    		return null;
+    	}
+    	return att.getObject(String.class);
+    	
+    }
+    
+    /**
+     * Log debug info for attachment object
+     * 
+     * @param attach
+     */
+    private void logAttachement(Attachment attach){
+    	
+    	logger.info("Content ID => " + attach.getContentId());
+    	
+    	MultivaluedMap<String, String> headers = attach.getHeaders();
+    	for(String key : headers.keySet()){
+    		List<String> values = headers.get(key);
+    		for(String val : CollectionUtil.emptyIfNull(values)){
+    			logger.info("Key => " + key + ", Values => " + val);
+    		}
+    	}
+    	
+    	logger.info("Content type => " + attach.getContentType().toString());
+    	
+    }
+    
+	/**
+	 * Writes the file binary data to the response
+	 * 
+	 * @param fileMeta
+	 * @return
+	 */
+	private Response writeFileToResponse(FileMetaResource fileMeta) {
+		
+		//
+		// Write data to output/response
+		//
+		ByteArrayInputStream bis = new ByteArrayInputStream(fileMeta.getBinaryResource().getFileData());
+		
+		//ContentDisposition contentDisposition = ContentDisposition.type("attachment")
+		//	    .fileName("filename.csv").creationDate(new Date()).build();
+		//ContentDisposition contentDisposition = new ContentDisposition("attachment; filename=image.jpg");
+		
+		return Response.ok(
+			new StreamingOutput() {
+				@Override
+				public void write(OutputStream out) throws IOException, WebApplicationException {
+					byte[] buffer = new byte[4 * 1024];
+					int bytesRead;
+					while ((bytesRead = bis.read(buffer)) != -1) {
+						out.write(buffer, 0, bytesRead);
+					}
+					out.flush();
+					out.close();
+					bis.close();
+				}
+			}
+		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();		
+		
+	}    
 
 }

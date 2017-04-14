@@ -13,7 +13,8 @@ import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.transport.servlet.CXFServlet;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.web.jaxrs.core.rs.ClosureResource;
-import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemActionResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemJsonResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.StoreApplication;
 import org.eamrf.eastore.web.jaxrs.core.rs.TestResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.TreeResource;
@@ -83,7 +84,8 @@ public class CxfConfig {
 							getTestResource(), 
 							getTreeResource(), 
 							getClosureResource(),
-							getFileSystemResource()
+							getFileSystemJsonResource(),
+							getFileSystemActionResource()
 							)
 					);
 			
@@ -119,8 +121,13 @@ public class CxfConfig {
 		}
 		
 		@Bean
-		public FileSystemResource getFileSystemResource(){
-			return new FileSystemResource();
+		public FileSystemJsonResource getFileSystemJsonResource(){
+			return new FileSystemJsonResource();
+		}
+		
+		@Bean
+		public FileSystemActionResource getFileSystemActionResource(){
+			return new FileSystemActionResource();
 		}
 		
 		// marshalling json for our jax-rs services

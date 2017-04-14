@@ -586,6 +586,48 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Fetch path resource by node id
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public PathResource getPathResource(Long nodeId) throws ServiceException {
+		
+		PathResource resource = null;
+		try {
+			resource = fileSystemRepository.getPathResource(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to fetch path resource for nodeId=" + nodeId + ", " + e.getMessage(), e);
+		}
+		return resource;
+		
+	}
+	
+	/**
+	 * Fetch a path resource by store name and relative path of resource under that store.
+	 * 
+	 * @param storeName
+	 * @param relativePath
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public PathResource getPathResource(String storeName, String relativePath) throws ServiceException {
+		
+		PathResource resource = null;
+		try {
+			resource = fileSystemRepository.getPathResource(storeName, relativePath);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to fetch path resource for storeName=" + storeName + 
+					", relativePath=" + relativePath + ", " + e.getMessage(), e);
+		}
+		return resource;		
+		
+	}	
+	
+	/**
 	 * fetch a directory
 	 * 
 	 * @param fileNodeId - file node id
