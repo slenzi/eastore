@@ -3,11 +3,13 @@ package org.eamrf.eastore.core.service;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -60,6 +62,9 @@ public class FileSystemService {
     @Autowired
     private TaskManagerProvider taskManagerProvider;
     
+    @Autowired
+    private FileSystemUtil fileSystemUtil;
+    
     // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
     
@@ -102,19 +107,19 @@ public class FileSystemService {
 	 * 
 	 * This is functionally equivalent to ClosureService.getChildMappings(Long nodeId)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public List<PathResource> getPathResourceTree(Long dirNodeId) throws ServiceException {
+	public List<PathResource> getPathResourceTree(Long nodeId) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
-			resources = fileSystemRepository.getPathResourceTree(dirNodeId);
+			resources = fileSystemRepository.getPathResourceTree(nodeId);
 		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for directory node node " + 
-					dirNodeId + ". " + e.getMessage(), e);
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
 		}
 		return resources;
 		
@@ -126,20 +131,20 @@ public class FileSystemService {
 	 * 
 	 * This is functionally equivalent to ClosureService.getChildMappings(Long nodeId, int depth)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @param depth
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws ServiceException {
+	public List<PathResource> getPathResourceTree(Long nodeId, int depth) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
-			resources = fileSystemRepository.getPathResourceTree(dirNodeId, depth);
+			resources = fileSystemRepository.getPathResourceTree(nodeId, depth);
 		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for directory node node " + 
-					dirNodeId + ". " + e.getMessage(), e);
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
 		}
 		return resources;		
 		
@@ -151,19 +156,19 @@ public class FileSystemService {
 	 * 
 	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws ServiceException {
+	public List<PathResource> getParentPathResourceTree(Long nodeId) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
-			resources = fileSystemRepository.getParentPathResourceTree(dirNodeId);
+			resources = fileSystemRepository.getParentPathResourceTree(nodeId);
 		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for directory node node " + 
-					dirNodeId + ". " + e.getMessage(), e);
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
 		}
 		return resources;
 		
@@ -175,20 +180,20 @@ public class FileSystemService {
 	 * 
 	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId, int depth)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @param levels
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws ServiceException {
+	public List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
-			resources = fileSystemRepository.getParentPathResourceTree(dirNodeId, levels);
+			resources = fileSystemRepository.getParentPathResourceTree(nodeId, levels);
 		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for directory node node " + 
-					dirNodeId + ". " + e.getMessage(), e);
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
 		}
 		return resources;		
 		
@@ -625,6 +630,51 @@ public class FileSystemService {
 		}
 		return resource;		
 		
+	}
+	
+	/**
+	 * Fetch the parent path resource for the specified node. If the node is a root node, and
+	 * has no parent, then null will be returned.
+	 * 
+	 * @param nodeId - id of the child resource. The parent of this node will be returned.
+	 * @return The nodes parent, or null if the node is a root node and has no parent.
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public PathResource getParentPathResource(Long nodeId) throws ServiceException {
+		
+		Tree<PathResource> tree = treeService.buildParentPathResourceTree(nodeId, 1);
+		
+		PathResource resource = tree.getRootNode().getData();
+		if(resource.getNodeId().equals(nodeId) && resource.getParentNodeId().equals(0L)){
+			// this is a root node with no parent
+			return null;
+		}
+		return resource;
+		
+	}
+	
+	/**
+	 * Fetch the first level children for the path resource.
+	 * 
+	 * @param nodeId - id of the resource. All first level children will be returned
+	 * @return All the first-level children, or an empty list of the node has no children
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public List<PathResource> getChildPathResource(Long nodeId) throws ServiceException {
+		
+		Tree<PathResource> tree = treeService.buildPathResourceTree(nodeId, 1);
+		
+		if(tree.getRootNode().hasChildren()){
+			List<PathResource> children = tree.getRootNode().getChildren().stream()
+					.map(n -> n.getData())
+					.collect(Collectors.toCollection(ArrayList::new));
+			return children;
+		}else{
+			return new ArrayList<PathResource>();
+		}
+		
 	}	
 	
 	/**
@@ -796,7 +846,7 @@ public class FileSystemService {
 	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
 		Store soureStore = getStore(fileToCopy);
-		Path sourceFilePath = Paths.get(soureStore.getPath() + fileToCopy.getRelativePath());
+		Path sourceFilePath = fileSystemUtil.buildPath(soureStore, fileToCopy);
 		
 		// can't copy a file to the directory it's already in
 		if(fileToCopy.getParentNodeId().equals(toDir.getNodeId())){
@@ -1176,7 +1226,7 @@ public class FileSystemService {
 		
 		String testStoreName = appProps.getProperty("store.test.name");
 		String testStoreDesc = appProps.getProperty("store.test.desc");
-		String testStorePath = appProps.getProperty("store.test.path").replace("\\", "/");
+		String testStorePath = fileSystemUtil.cleanFullPath(appProps.getProperty("store.test.path"));
 		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
 		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
 		

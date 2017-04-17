@@ -1,6 +1,5 @@
 package org.eamrf.repository.oracle.ecoguser.eastore;
 
-import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +14,7 @@ import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.FileSystemUtil;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.BinaryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
@@ -55,6 +55,9 @@ public class FileSystemRepository {
     
     @Autowired
     private ClosureRepository closureRepository;
+    
+    @Autowired
+    private FileSystemUtil fileSystemUtil;    
     
     // common query element used by several methods below
     private final String SQL_PATH_RESOURCE_COMMON =
@@ -219,12 +222,12 @@ public class FileSystemRepository {
 	 * 
 	 * This is functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public List<PathResource> getPathResourceTree(Long dirNodeId) throws Exception {
+	public List<PathResource> getPathResourceTree(Long nodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
 		
@@ -247,7 +250,7 @@ public class FileSystemRepository {
 			"order by c.depth, n.node_name";
 		
 		List<PathResource> resources = jdbcTemplate.query(
-				sql, new Object[] { dirNodeId }, resourcePathRowMapper);		
+				sql, new Object[] { nodeId }, resourcePathRowMapper);		
 		
 		return resources;
 		
@@ -259,12 +262,12 @@ public class FileSystemRepository {
 	 * 
 	 * This is functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public List<PathResource> getPathResourceTree(Long dirNodeId, int depth) throws Exception {
+	public List<PathResource> getPathResourceTree(Long nodeId, int depth) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
 
@@ -287,7 +290,7 @@ public class FileSystemRepository {
 			"order by c.depth, n.node_name";
 		
 		List<PathResource> resources = jdbcTemplate.query(
-				sql, new Object[] { dirNodeId, new Integer(depth) }, resourcePathRowMapper);		
+				sql, new Object[] { nodeId, new Integer(depth) }, resourcePathRowMapper);		
 		
 		return resources;
 		
@@ -299,12 +302,12 @@ public class FileSystemRepository {
 	 * 
 	 * functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public List<PathResource> getParentPathResourceTree(Long dirNodeId) throws Exception {
+	public List<PathResource> getParentPathResourceTree(Long nodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)	
 		
@@ -331,7 +334,7 @@ public class FileSystemRepository {
 			"  nlist.depth desc";
 		
 		List<PathResource> resources = jdbcTemplate.query(
-				sql, new Object[] { dirNodeId }, resourcePathRowMapper);		
+				sql, new Object[] { nodeId }, resourcePathRowMapper);		
 		
 		return resources;		
 		
@@ -343,13 +346,13 @@ public class FileSystemRepository {
 	 * 
 	 * functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)
 	 * 
-	 * @param dirNodeId
+	 * @param nodeId
 	 * @param levels
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public List<PathResource> getParentPathResourceTree(Long dirNodeId, int levels) throws Exception {
+	public List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)	
 		
@@ -376,7 +379,7 @@ public class FileSystemRepository {
 			"  nlist.depth desc";
 		
 		List<PathResource> resources = jdbcTemplate.query(
-				sql, new Object[] { dirNodeId, new Integer(levels) }, resourcePathRowMapper);		
+				sql, new Object[] { nodeId, new Integer(levels) }, resourcePathRowMapper);		
 		
 		return resources;
 		
@@ -401,7 +404,7 @@ public class FileSystemRepository {
 		
 		Timestamp dtNow = DateUtil.getCurrentTime();
 		
-		String storePathString = storePath.toString().replace("\\", "/");
+		String storePathString = fileSystemUtil.cleanFullPath(storePath.toString());
 				
 		// add entry to eas_store
 		jdbcTemplate.update(
@@ -484,7 +487,7 @@ public class FileSystemRepository {
 		
 		final Store store = getStoreById(fileMetaResource.getStoreId());
 		final Long nodeId = fileMetaResource.getNodeId();
-		final Path filePath = Paths.get(store.getPath() + fileMetaResource.getRelativePath());
+		final Path filePath = fileSystemUtil.buildPath(store, fileMetaResource);
 		final boolean haveBinaryInDb = fileMetaResource.getIsBinaryInDatabase();
 		long lFileSize = Files.size(filePath);
 		final int fileSize = toIntExact(lFileSize);
@@ -574,7 +577,7 @@ public class FileSystemRepository {
 		
 		Store store = getStoreById(dirResource.getStoreId());
 		
-		String fileRelPathString = (dirResource.getRelativePath() + File.separator + fileName).replace("\\", "/");
+		String fileRelPathString = fileSystemUtil.buildRelativePath(dirResource, fileName);
 		
 		PathResource resource = new FileMetaResource();
 		resource.setNodeId(newNode.getNodeId());
@@ -601,7 +604,7 @@ public class FileSystemRepository {
 					resource.getNodeId(), fileSizeBytes, fileMimeType, ((isBinaryInDb) ? "Y" : "N"));
 		
 		// copy file to directory in the tree
-		Path newFilePath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path newFilePath = fileSystemUtil.buildPath(store, resource);
 		try {
 			FileUtil.copyFile(filePath, newFilePath);
 		} catch (Exception e) {
@@ -637,12 +640,12 @@ public class FileSystemRepository {
 		
 		Long newFileSizeBytes = FileUtil.getFileSize(srcFilePath);
 		String newFileMimeType = FileUtil.detectMimeType(srcFilePath);
-		String newRelFilePath = (dirResource.getRelativePath() + File.separator + newFileName).replace("\\", "/");
+		String newRelFilePath = fileSystemUtil.buildRelativePath(dirResource, newFileName);
 		
 		// old/current tree path for the old physical file
-		Path oldFilePath = Paths.get(store.getPath() + currFileRes.getRelativePath());
+		Path oldFilePath = fileSystemUtil.buildPath(store, currFileRes);
 		// new tree path for the new physical file
-		Path newFilePath = Paths.get(store.getPath() + newRelFilePath);
+		Path newFilePath = fileSystemUtil.buildPath(store, newRelFilePath);
 		
 		// check if we have existing binary data in the database, we might need to remove it.
 		if(currFileRes.getIsBinaryInDatabase()){
@@ -726,7 +729,7 @@ public class FileSystemRepository {
 		
 		Store store = getStoreById(parentDirectory.getStoreId());
 		
-		String dirRelPathString = (parentDirectory.getRelativePath() + File.separator + name).replace("\\", "/");
+		String dirRelPathString = fileSystemUtil.buildRelativePath(parentDirectory, name);
 		
 		PathResource resource = new DirectoryResource();
 		resource.setNodeId(newNode.getNodeId());
@@ -751,7 +754,7 @@ public class FileSystemRepository {
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
-		Path newDirectoryPath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path newDirectoryPath = fileSystemUtil.buildPath(store, resource);
 		try {
 			FileUtil.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
@@ -783,7 +786,7 @@ public class FileSystemRepository {
 			throw new Exception("Error adding directory node", e);
 		}
 		
-		String dirRelPathString = (File.separator + name).replace("\\", "/");
+		String dirRelPathString = fileSystemUtil.cleanRelativePath(name);
 		
 		PathResource dirResource = new DirectoryResource();
 		dirResource.setNodeId(newNode.getNodeId());
@@ -808,7 +811,7 @@ public class FileSystemRepository {
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
-		Path newDirectoryPath = Paths.get(storePath + dirResource.getRelativePath());
+		Path newDirectoryPath = fileSystemUtil.buildPath(storePath, dirResource);
 		try {
 			FileUtil.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
@@ -1054,7 +1057,7 @@ public class FileSystemRepository {
 				}
 				resource.setStore(store);
 			}
-			Path pathToFile = Paths.get(store.getPath() + resource.getRelativePath());
+			Path pathToFile = fileSystemUtil.buildPath(store, resource);
 			if(!Files.exists(pathToFile)){
 				throw new Exception("Error, file on local file system does not exist for FileMetaResource "
 						+ "with file node id => " + resource.getNodeId() + ", path => " + pathToFile.toString() +
@@ -1121,7 +1124,7 @@ public class FileSystemRepository {
 	@MethodTimer
 	public void removeFile(Store store, FileMetaResource resource) throws Exception {
 		
-		Path filePath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path filePath = fileSystemUtil.buildPath(store, resource);
 		
 		// delete from eas_binary_resource
 		if(resource.getIsBinaryInDatabase()){
@@ -1152,7 +1155,7 @@ public class FileSystemRepository {
 	@MethodTimer
 	public void removeDirectory(Store store, DirectoryResource resource) throws Exception {
 		
-		Path dirPath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path dirPath = fileSystemUtil.buildPath(store, resource);
 		
 		// delete from eas_directory_resource
 		jdbcTemplate.update("delete from eas_directory_resource where node_id = ?", resource.getNodeId());
@@ -1216,12 +1219,11 @@ public class FileSystemRepository {
 			Store destinationStore = getStoreById(destDir.getStoreId());
 			
 			// current/old path to file on local file system
-			Path oldFullPath = Paths.get(sourceStore.getPath().toString() + fileToMove.getRelativePath());
+			Path oldFullPath = fileSystemUtil.buildPath(sourceStore, fileToMove);
 			// new path to file on local file system
-			Path newFullPath = Paths.get(destinationStore.getPath().toString() + 
-					destDir.getRelativePath() + File.separator + fileName);
+			Path newFullPath = fileSystemUtil.buildPath(destinationStore, destDir, fileName);
 			// new relative path for eas_path_resource
-			String newRelativePath = (destDir.getRelativePath() + File.separator + fileName).replace("\\", "/");
+			String newRelativePath = fileSystemUtil.buildRelativePath(destDir, fileName);
 			
 			// delete existing file in destination directory
 			removeFile(destinationStore, (FileMetaResource)existingFile);
@@ -1261,15 +1263,11 @@ public class FileSystemRepository {
 			Store destinationStore = getStoreById(destDir.getStoreId());
 			
 			// current/old path to file on local file system
-			Path oldFullPath = Paths.get(sourceStore.getPath().toString() + fileToMove.getRelativePath());
+			Path oldFullPath = fileSystemUtil.buildPath(sourceStore, fileToMove);
 			// new path to file on local file system
-			Path newFullPath = Paths.get(destinationStore.getPath().toString() + 
-					destDir.getRelativePath() + File.separator + fileName);
+			Path newFullPath = fileSystemUtil.buildPath(destinationStore, destDir, fileName);
 			// new relative path for eas_path_resource
-			String newRelativePath = (destDir.getRelativePath() + File.separator + fileName).replace("\\", "/");
-			
-			// delete existing file in destination directory
-			//removeFile(destinationStore, (FileMetaResource)existingFile);
+			String newRelativePath = fileSystemUtil.buildRelativePath(destDir, fileName);
 			
 			// remove existing closure data for 'fileToMove'
 			// TODO - will this work if we have foreign key constraints? 

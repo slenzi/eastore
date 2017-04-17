@@ -15,8 +15,8 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
+import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -51,6 +51,39 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	}
 	
 	/**
+	 * Fetch a path resource by ID
+	 * 
+	 * @param nodeId - node id of the resource
+	 * @return The path resource
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/resource/nodeId/{nodeId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public PathResource getPathResourceById(
+			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+		
+		if( nodeId == null ){
+			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
+		}
+
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getPathResource(nodeId);
+		} catch (ServiceException e) {
+			handleError("Error fetching path resource, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		if(resource == null){
+			handleError("Returned PathResource object was null. nodeId=" + nodeId, WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		return resource;
+		
+	}	
+	
+	/**
 	 * Fetch a path resource by store name and resource relative path.
 	 * 
 	 * @param storeName - name of the store that the resource resides under
@@ -82,7 +115,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		try {
 			resource = fileSystemService.getPathResource(storeName, relPath);
 		} catch (ServiceException e) {
-			handleError("Error downloading file, failed to get file resource with binary data, " + 
+			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
 		
@@ -94,5 +127,121 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		return resource;
 		
 	}
+	
+	/**
+	 * Fetch the parent of a resource, or null if the resource is a root node and
+	 * has no parent.
+	 * 
+	 * @param nodeId - id of the child node. the parent will be returned, or null
+	 * if the node is a root node and has no parent.
+	 * @return The parent resource, or null if the node is a root node and has no parent
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/parent/resource/nodeId/{nodeId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public PathResource getParentPathResource(
+			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+		
+		if( nodeId == null ){
+			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
+		}
+
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getParentPathResource(nodeId);
+		} catch (ServiceException e) {
+			handleError("Error fetching parent path resource for node " + nodeId + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return resource;
+		
+	}
+	
+	/**
+	 * Fetch all the first-level children for the resource
+	 * 
+	 * @param nodeId - id of the child node. the parent will be returned, or null
+	 * if the node is a root node and has no parent.
+	 * @return The parent resource, or null if the node is a root node and has no parent
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/child/resource/nodeId/{nodeId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<PathResource> getChildPathResource(
+			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+		
+		if( nodeId == null ){
+			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
+		}
+
+		List<PathResource> children = null;
+		try {
+			children = fileSystemService.getChildPathResource(nodeId);
+		} catch (ServiceException e) {
+			handleError("Error fetching child path resources for node " + nodeId + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return children;
+		
+	}	
+	
+	/**
+	 * Fetch store by name
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/store/name/{storeName}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Store getStoreByName(@PathParam("storeName") String storeName) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(storeName)){
+			handleError("Missing storeName parameter", WebExceptionType.CODE_IO_ERROR);
+		}
+		storeName = storeName.trim();
+		
+		logger.info("Get Store: storeName=" + storeName);
+		
+		Store store = null;
+		try {
+			store = fileSystemService.getStoreByName(storeName);
+		} catch (ServiceException e) {
+			handleError("Error fetching store, storeName=" + storeName + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return store;
+		
+	}
+	
+	/**
+	 * Fetch all stores
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/store")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Store> getStores() throws WebServiceException {
+		
+		List<Store> stores = null;
+		try {
+			stores = fileSystemService.getStores();
+		} catch (ServiceException e) {
+			handleError("Error fetching stores, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return stores;
+		
+	}	
 
 }

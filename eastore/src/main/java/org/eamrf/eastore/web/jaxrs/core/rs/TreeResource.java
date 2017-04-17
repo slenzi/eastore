@@ -93,8 +93,9 @@ public class TreeResource extends BaseResourceHandler {
 				
 			}else if(resource.getResourceType() == ResourceType.FILE){
 				
-				String appContext = appProps.getProperty("server.contextPath");
-				String downloadUrlPrefix = appContext + "/services/easapi/v1/fsys/download";
+				//String appContext = appProps.getProperty("server.contextPath");
+				//String downloadUrlPrefix = appContext + "/services/easapi/v1/fsys/action/download";
+				String downloadUrlPrefix = appProps.getProperty("rest.endpoint.fsys.action") + "/download";
 				String storeName = resource.getStore().getName();
 				String relPath = resource.getRelativePath();
 				String downloadUrl = downloadUrlPrefix + "/" + storeName + relPath;

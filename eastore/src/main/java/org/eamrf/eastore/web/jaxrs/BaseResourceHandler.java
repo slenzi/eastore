@@ -1,7 +1,6 @@
 package org.eamrf.eastore.web.jaxrs;
 
 import org.eamrf.core.util.Mailer;
-import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.constants.AppConstants;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.web.rs.exception.WebServiceException;

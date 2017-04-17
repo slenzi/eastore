@@ -11,6 +11,9 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import javax.activation.DataHandler;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -33,6 +36,7 @@ import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
+import org.eamrf.eastore.core.service.FileSystemUtil;
 import org.eamrf.eastore.core.service.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
@@ -60,7 +64,16 @@ public class FileSystemActionResource extends BaseResourceHandler {
     private FileSystemService fileSystemService;
     
     @Autowired
+    private FileSystemUtil fileSystemUtil;    
+    
+    @Autowired
     private UploadPipeline uploadPipeline;
+    
+    @Autowired
+    private HttpSession session;
+    
+    @Autowired
+    private HttpServletRequest request;    
     
 	public FileSystemActionResource() {
 
@@ -165,15 +178,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
-		}
-		StringBuffer relativePath = new StringBuffer();
-		for(PathSegment ps : list){
-			relativePath.append(File.separator + ps.getPath().trim());
-		}
-		
+		}	
 		storeName = storeName.trim();
-		String relPath = relativePath.toString().replace("\\", "/");
-		
+		String relPath = buildRelativePathSegment(list);
 		logger.info("File Download: storeName=" + storeName + ", relPath=" + relPath);
 		
 		FileMetaResource fileMeta = null;
@@ -190,6 +197,62 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		}
 		
 		return writeFileToResponse(fileMeta);
+		
+	}
+	
+	/**
+	 * Uses request dispatcher to 'load' the resource
+	 * 
+	 * @param storeName
+	 * @param list
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/dispatch/{storeName}/{relPath:.+}")
+	public void dispatchFile(
+			@PathParam("storeName") String storeName,
+			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+		
+		handleError("Feature not supported", WebExceptionType.CODE_IO_ERROR);
+		
+		// TODO - Cannot use request dispatcher on resources that live outside the
+		// current servlet context. For a CMS site you should put the file store (all resources)
+		// under the /WEB-INF/jsp directory. Perhaps something like /WEB-INF/jsp/cms/sites/{storeName}
+		
+		/*
+		
+		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
+			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
+		}	
+		storeName = storeName.trim();
+		String relPath = buildRelativePathSegment(list);
+		logger.info("File Download: storeName=" + storeName + ", relPath=" + relPath);
+		
+		FileMetaResource fileMeta = null;
+		try {
+			fileMeta = fileSystemService.getFileMetaResource(storeName, relPath, false);
+		} catch (ServiceException e) {
+			handleError("Error downloading file, failed to get file resource with binary data, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		Store store = fileMeta.getStore();
+		java.nio.file.Path pathToFile = fileSystemUtil.buildPath(store, fileMeta);
+		
+		//RequestDispatcher requestDispatcher = request.getRequestDispatcher(forwardPath);
+		
+		*/
+		
+	}
+	
+	private String buildRelativePathSegment(List<PathSegment> list){
+		
+		StringBuffer relativePath = new StringBuffer();
+		for(PathSegment ps : list){
+			relativePath.append(File.separator + ps.getPath().trim());
+		}
+		
+		return fileSystemUtil.cleanRelativePath(relativePath.toString());
 		
 	}
 	
