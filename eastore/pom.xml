@@ -21,6 +21,7 @@
   		<version.apache.cxf>3.1.10</version.apache.cxf>
   		<version.apache.tika>1.14</version.apache.tika>
   		<version.apache.commons.io>2.5</version.apache.commons.io>
+  		<version.apache.commons.codec>1.10</version.apache.commons.codec>
   		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
 		<version.gson>2.8.0</version.gson>
 		<version.jodatime>2.9.7</version.jodatime>
@@ -175,6 +176,13 @@
 		    <artifactId>commons-io</artifactId>
 		    <version>${version.apache.commons.io}</version>
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+		<dependency>
+		    <groupId>commons-codec</groupId>
+		    <artifactId>commons-codec</artifactId>
+		    <version>${version.apache.commons.codec}</version>
+		</dependency>		
 		
 		<!-- aspect oriented programming (AOP) utility library which allows us to profile method execution times -->
 		<!-- https://mvnrepository.com/artifact/com.jcabi/jcabi-aspects -->

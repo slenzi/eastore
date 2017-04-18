@@ -3,7 +3,7 @@ package org.eamrf.eastore.core.concurrent;
 import java.util.concurrent.ExecutorService;
 
 import org.eamrf.concurrent.task.QueuedTaskManager;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 
 /**
  * Maps a store to its QueuedTaskManager

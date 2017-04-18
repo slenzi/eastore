@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.repository.oracle.ecoguser.eastore;
+package org.eamrf.repository.jdbc.oracle.ecoguser.eastore;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;

@@ -18,6 +18,8 @@ import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemJsonResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.StoreApplication;
 import org.eamrf.eastore.web.jaxrs.core.rs.TestResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.TreeResource;
+import org.eamrf.eastore.web.jaxrs.core.security.EAAuthRequestHandler;
+import org.eamrf.web.rs.exception.WebServiceExceptionMapper;
 import org.slf4j.Logger;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -93,7 +95,11 @@ public class CxfConfig {
 					
 			// Add providers
 			factory.setProviders(
-					Arrays.<Object> asList( getJsonProvider() )
+					Arrays.<Object> asList(
+							getJsonProvider(),
+							getEAAuthRequestHandler(),
+							getExceptionMapper()
+							)
 					);
 			
 			return factory.create();
@@ -135,6 +141,21 @@ public class CxfConfig {
 	    public JacksonJsonProvider getJsonProvider() {
 	        return new JacksonJsonProvider();
 	    }
+		
+		@Bean
+		public EAAuthRequestHandler getEAAuthRequestHandler(){
+			return new EAAuthRequestHandler();
+		}
+		
+		/**
+		 * Maps our WebServiceException to http response codes.
+		 * 
+		 * @return
+		 */
+		@Bean
+		public WebServiceExceptionMapper getExceptionMapper(){
+			return new WebServiceExceptionMapper();
+		}		
 	
 	};	
 	

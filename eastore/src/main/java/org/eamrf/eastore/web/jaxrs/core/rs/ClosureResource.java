@@ -18,7 +18,7 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.ClosureService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;

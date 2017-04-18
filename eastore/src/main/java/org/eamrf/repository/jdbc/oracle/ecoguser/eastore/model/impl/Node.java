@@ -1,4 +1,4 @@
-package org.eamrf.repository.oracle.ecoguser.eastore.model;
+package org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl;
 
 import java.io.Serializable;
 import java.sql.Timestamp;

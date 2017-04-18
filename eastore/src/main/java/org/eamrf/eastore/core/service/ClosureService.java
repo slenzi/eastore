@@ -4,8 +4,8 @@ import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.repository.oracle.ecoguser.eastore.ClosureRepository;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.ClosureRepository;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

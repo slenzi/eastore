@@ -1,4 +1,4 @@
-package org.eamrf.repository.oracle.ecoguser.eastore.model;
+package org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl;
 
 /**
  * Model for file metadata. All data for a file except for the binary data.

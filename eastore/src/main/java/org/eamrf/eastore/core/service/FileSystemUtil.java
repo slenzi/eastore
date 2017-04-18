@@ -4,9 +4,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.springframework.stereotype.Service;
 
 /**

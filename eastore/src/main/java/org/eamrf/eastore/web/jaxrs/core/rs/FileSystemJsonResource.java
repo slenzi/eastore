@@ -15,8 +15,8 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -92,7 +92,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/resource/{storeName}/{relPath:.+}")
+	@Path("/resource/path/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public PathResource getPathResourceByPath(
 			@PathParam("storeName") String storeName,

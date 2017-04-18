@@ -1,4 +1,4 @@
-package org.eamrf.repository.oracle.ecoguser.eastore;
+package org.eamrf.repository.jdbc.oracle.ecoguser.eastore;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -15,13 +15,13 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemUtil;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.BinaryResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.DirectoryResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.FileMetaResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.PathResource;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.ResourceType;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.BinaryResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;

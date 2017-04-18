@@ -14,7 +14,7 @@ import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
-import org.eamrf.repository.oracle.ecoguser.eastore.model.Node;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
