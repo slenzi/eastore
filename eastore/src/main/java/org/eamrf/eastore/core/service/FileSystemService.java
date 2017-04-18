@@ -211,9 +211,14 @@ public class FileSystemService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws ServiceException {
+	public Store addStore(String storeName, String storeDesc, Path storePath, 
+			String rootDirName, Long maxFileSizeDb) throws ServiceException {
 		
-		Store store = null;
+		Store store = getStoreByName(storeName);
+		if(store != null){
+			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
+		}
+		
 		try {
 			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
 		} catch (Exception e) {
@@ -336,6 +341,8 @@ public class FileSystemService {
 	
 	/**
 	 * Refreshes the binary data in the database (data from the file on disk is copied to eas_binary_resource)
+	 * Data will only be copied to the database if the file size is less than or equal to the allowed
+	 * maximum value for the store. 
 	 * 
 	 * @param fileMetaResource
 	 * @throws ServiceException
@@ -344,7 +351,12 @@ public class FileSystemService {
 	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
 		final Store store = getStore(fileMetaResource);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
+		
+		// check max file size allowed by store
+		if(fileMetaResource.getFileSize() > store.getMaxFileSizeBytes()){
+			return;
+		}
 		
 		class Task extends AbstractQueuedTask<Void> {
 

@@ -580,6 +580,50 @@ public class FileSystemActionResource extends BaseResourceHandler {
     }
     
     /**
+     * Create a new store
+     * 
+     * @param storeName - store name must be unique. an exception will be thrown if a store with
+     * the provided name already exists.
+     * @param storeDesc - store description
+     * @param storePath - store path on the local file system. This application must have read/write
+     * permission to create the directory.
+     * @param maxFileSizeBytes - max file size in bytes allowed by the store for file storage in the
+     * database in blob format (file will still be saved to the local file system.)
+     * @param rootDirName - directory name for the root directory for the store.
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/createStore")
+    public Store createStore(
+    		@QueryParam("storeName") String storeName,
+    		@QueryParam("storeDesc") String storeDesc,
+    		@QueryParam("storePath") String storePath,
+    		@QueryParam("maxFileSizeBytes") Long maxFileSizeBytes,
+    		@QueryParam("rootDirName") String rootDirName) throws WebServiceException {
+    	
+    	if(maxFileSizeBytes == null || StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc)
+    			|| StringUtil.isNullEmpty(storePath) || StringUtil.isNullEmpty(rootDirName)){
+    		
+    		handleError("Missing required params. Please check, storeName, storeDesc, storePath, "
+    				+ "maxFileSizeBytes, and/or rootDirName values.", WebExceptionType.CODE_IO_ERROR);
+    		
+    	}
+    	
+    	Store store = null;
+    	try {
+			store = fileSystemService.addStore(storeName, storeDesc, 
+					Paths.get(storePath), rootDirName, maxFileSizeBytes);
+		} catch (ServiceException e) {
+			handleError("Error creating new store, name=" + storeName + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return store;
+    	
+    }
+    
+    /**
      * Fetch a string value from the multipart body
      * 
      * @param key - the attribute name from the request

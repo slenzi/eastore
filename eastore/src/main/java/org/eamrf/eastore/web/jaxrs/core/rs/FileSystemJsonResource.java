@@ -94,7 +94,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	@GET
 	@Path("/resource/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public PathResource getPathResourceByName(
+	public PathResource getPathResourceByPath(
 			@PathParam("storeName") String storeName,
 			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
 		
@@ -129,6 +129,45 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	}
 	
 	/**
+	 * Fetch the store's root directory path resource
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/resource/storeName/{storeName}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public PathResource getPathResourceForStore(@PathParam("storeName") String storeName) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(storeName)){
+			handleError("Missing storeName parameter", WebExceptionType.CODE_IO_ERROR);
+		}
+		storeName = storeName.trim();
+		
+		logger.info("Get Store: storeName=" + storeName);
+		
+		Store store = null;
+		try {
+			store = fileSystemService.getStoreByName(storeName);
+		} catch (ServiceException e) {
+			handleError("Error fetching store, storeName=" + storeName + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getPathResource(store.getNodeId());
+		} catch (ServiceException e) {
+			handleError("Error fetching path resource, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}		
+		
+		return resource;
+		
+	}	
+	
+	/**
 	 * Fetch the parent of a resource, or null if the resource is a root node and
 	 * has no parent.
 	 * 
@@ -140,7 +179,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	@GET
 	@Path("/parent/resource/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public PathResource getParentPathResource(
+	public PathResource getParentPathResourceById(
 			@PathParam("nodeId") Long nodeId) throws WebServiceException {
 		
 		if( nodeId == null ){
@@ -170,7 +209,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	@GET
 	@Path("/child/resource/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<PathResource> getChildPathResource(
+	public List<PathResource> getChildPathResourceById(
 			@PathParam("nodeId") Long nodeId) throws WebServiceException {
 		
 		if( nodeId == null ){
