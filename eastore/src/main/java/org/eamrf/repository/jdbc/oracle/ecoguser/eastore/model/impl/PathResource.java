@@ -19,6 +19,9 @@ public class PathResource extends Node implements Serializable {
 	private String relativePath = null; // path to resource relative to the store directory.
 	private Store store = null;
 	
+	// optional description field...
+	private String desc = null;
+	
 	public PathResource() {
 		
 	}
@@ -63,11 +66,20 @@ public class PathResource extends Node implements Serializable {
 		this.store = store;
 	}
 
+	public String getDesc() {
+		return desc;
+	}
+
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+
 	@Override
 	public String toString() {
 		return PathResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", childId=" + getChildNodeId()
 				+ ", name=" + getNodeName() + ", dtCreated=" + getDateCreated() + ", dtUpdated=" + getDateUpdated()
 				+ ", pathName=" + getPathName() + ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
-				+ ", storeId=" + getStoreId() + ", haveStoreObj=" + ((store != null) ? true : false) + "]";
+				+ ", storeId=" + getStoreId() + ", haveStoreObj=" + ((store != null) ? true : false)
+				+ ", haveDesc=" + ((desc != null) ? true : false) + "]";
 	}	
 }

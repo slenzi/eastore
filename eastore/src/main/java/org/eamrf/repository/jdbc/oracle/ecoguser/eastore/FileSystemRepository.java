@@ -15,6 +15,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemUtil;
+import org.eamrf.repository.jdbc.SpringJdbcUtil;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.BinaryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.support.AbstractLobCreatingPreparedStatementCallback;
 import org.springframework.jdbc.support.lob.DefaultLobHandler;
@@ -63,7 +65,7 @@ public class FileSystemRepository {
     private final String SQL_PATH_RESOURCE_COMMON =
 			"select " +
 			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
+			"r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
 			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
 			"from eas_closure c " +
@@ -105,6 +107,7 @@ public class FileSystemRepository {
 		r.setRelativePath(rs.getString("relative_path"));
 		r.setResourceType( type );
 		r.setStoreId(rs.getLong("store_id"));
+		r.setDesc(rs.getString("path_desc"));
 
 		Store s = new Store();
 		s.setId(rs.getLong("store_id"));
@@ -139,7 +142,26 @@ public class FileSystemRepository {
 			"select store_id, store_name, store_description, store_path, node_id, "
 			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
 			+ "where store_id = ?";
+
+		final RowMapper<Store> storeRowMapper = (rs, i) -> {
+			Store s = new Store();
+			s.setId(rs.getLong("store_id"));
+			s.setName(rs.getString("store_name"));
+			s.setDescription(rs.getString("store_description"));
+			s.setPath(Paths.get(rs.getString("store_path")));
+			s.setNodeId(rs.getLong("node_id"));
+			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+			s.setDateCreated(rs.getTimestamp("creation_date"));
+			s.setDateUpdated(rs.getTimestamp("updated_date"));
+			return s;
+		};
+		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
+		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeId });
+		
+		/* this version throws a EmptyResultDataAccessException if no data is returned.
+		 * we simply want to return null without any exception
+		 * 
 		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
 			Store s = new Store();
 			s.setId(rs.getLong("store_id"));
@@ -151,7 +173,8 @@ public class FileSystemRepository {
 			s.setDateCreated(rs.getTimestamp("creation_date"));
 			s.setDateUpdated(rs.getTimestamp("updated_date"));
 			return s;			
-		}, new Object[] { storeId });		
+		}, new Object[] { storeId });
+		*/		
 		
 	}
 	
@@ -170,6 +193,25 @@ public class FileSystemRepository {
 			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
 			+ "where lower(store_name) = ?";
 		
+		final RowMapper<Store> storeRowMapper = (rs, i) -> {
+			Store s = new Store();
+			s.setId(rs.getLong("store_id"));
+			s.setName(rs.getString("store_name"));
+			s.setDescription(rs.getString("store_description"));
+			s.setPath(Paths.get(rs.getString("store_path")));
+			s.setNodeId(rs.getLong("node_id"));
+			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+			s.setDateCreated(rs.getTimestamp("creation_date"));
+			s.setDateUpdated(rs.getTimestamp("updated_date"));
+			return s;
+		};
+		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
+		
+		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });
+		
+		/* this version throws a EmptyResultDataAccessException if no data is returned.
+		 * we simply want to return null without any exception
+		 * 
 		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
 			Store s = new Store();
 			s.setId(rs.getLong("store_id"));
@@ -181,7 +223,8 @@ public class FileSystemRepository {
 			s.setDateCreated(rs.getTimestamp("creation_date"));
 			s.setDateUpdated(rs.getTimestamp("updated_date"));
 			return s;			
-		}, new Object[] { storeName });		
+		}, new Object[] { storeName });
+		*/	
 		
 	}	
 	
@@ -232,19 +275,6 @@ public class FileSystemRepository {
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
 		
 		String sql =
-			/*
-			"select " +
-			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
-			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
-			"from eas_closure c " +
-			"inner join eas_node n on c.child_node_id = n.node_id " + 
-			"inner join eas_path_resource r on n.node_id = r.node_id " +
-			"inner join eas_store s on r.store_id = s.store_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " + 
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
-			*/
 			SQL_PATH_RESOURCE_COMMON +
 			"where c.parent_node_id = ? " +
 			"order by c.depth, n.node_name";
@@ -272,19 +302,6 @@ public class FileSystemRepository {
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
 
 		String sql =
-			/*
-			"select " +
-			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " + 
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
-			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
-			"from eas_closure c " +
-			"inner join eas_node n on c.child_node_id = n.node_id " +
-			"inner join eas_path_resource r on n.node_id = r.node_id " +
-			"inner join eas_store s on r.store_id = s.store_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " +
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
-			*/
 			SQL_PATH_RESOURCE_COMMON +
 			"where c.parent_node_id = ? and c.depth <= ? " +
 			"order by c.depth, n.node_name";
@@ -314,7 +331,7 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
@@ -359,7 +376,7 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
@@ -587,6 +604,7 @@ public class FileSystemRepository {
 		resource.setPathName(fileName);
 		resource.setParentNodeId(newNode.getParentNodeId());
 		resource.setRelativePath(fileRelPathString);
+		resource.setDesc(null); // TODO - change method to pass in optional description?
 		resource.setStoreId(store.getId());
 		((FileMetaResource)resource).setFileSize(fileSizeBytes);
 		((FileMetaResource)resource).setMimeType(fileMimeType);
@@ -594,9 +612,9 @@ public class FileSystemRepository {
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
-				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
-				"values (?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
-				resource.getResourceType().getTypeString(), resource.getRelativePath());
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
+				"values (?, ?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
+				resource.getResourceType().getTypeString(), resource.getRelativePath(), resource.getDesc());
 		
 		// add entry to eas_file_meta_resource
 		jdbcTemplate.update(
@@ -671,8 +689,8 @@ public class FileSystemRepository {
 				currFileRes.getFileSize(), currFileRes.getMimeType(), currFileRes.getNodeId());
 			
 		// eas_path_resource to account for differences in uppercase/lowercase of file name
-		jdbcTemplate.update("update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?",
-				currFileRes.getPathName(), currFileRes.getRelativePath(), currFileRes.getNodeId());			
+		jdbcTemplate.update("update eas_path_resource set path_name = ?, relative_path = ?, path_desc = ? where node_id = ?",
+				currFileRes.getPathName(), currFileRes.getRelativePath(), currFileRes.getDesc(), currFileRes.getNodeId());			
 		
 		// update eas_node
 		closureRepository.updateNodeMeta(currFileRes);
@@ -739,13 +757,14 @@ public class FileSystemRepository {
 		resource.setPathName(name);
 		resource.setParentNodeId(newNode.getParentNodeId());
 		resource.setRelativePath(dirRelPathString);
+		resource.setDesc(null); // TODO - possibly change method to pass in optional description?
 		resource.setStoreId(store.getId());
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
-				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
-				"values (?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
-				resource.getResourceType().getTypeString(), resource.getRelativePath());		
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
+				"values (?, ?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
+				resource.getResourceType().getTypeString(), resource.getRelativePath(), resource.getDesc());		
 		
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(
@@ -796,13 +815,14 @@ public class FileSystemRepository {
 		dirResource.setPathName(name);
 		dirResource.setParentNodeId(newNode.getParentNodeId());
 		dirResource.setRelativePath(dirRelPathString);
+		dirResource.setDesc("Root directory for store");
 		dirResource.setStoreId(storeId);
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
-				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path) " +
-				"values (?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
-				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath());		
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
+				"values (?, ?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
+				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath(), dirResource.getDesc());		
 		
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(
@@ -935,19 +955,6 @@ public class FileSystemRepository {
 	public PathResource getPathResource(String storeName, String relativePath) throws Exception {
 		
 		String sql =
-			/*
-			"select " +
-			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
-			"r.path_name, r.relative_path, r.store_id, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
-			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date, c.depth " +
-			"from eas_closure c " +
-			"inner join eas_node n on c.child_node_id = n.node_id " +  
-			"inner join eas_path_resource r on n.node_id = r.node_id " +
-			"inner join eas_store s on r.store_id = s.store_id " +
-			"left join eas_directory_resource dr on r.node_id = dr.node_id " +  
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id " +
-			*/
 			SQL_PATH_RESOURCE_COMMON +
 			"where lower(s.store_name) = ? and lower(r.relative_path) = ? and c.depth = 0 " +
 			"order by c.depth, n.node_name";

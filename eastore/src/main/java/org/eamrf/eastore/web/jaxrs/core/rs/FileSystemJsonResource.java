@@ -199,11 +199,69 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	}
 	
 	/**
+	 * Fetch the parent of a resource, or null if the resource is a root node and
+	 * has no parent.
+	 * 
+	 * @param storeName - store that the resource is located in
+	 * @param relPath - relative path of a resource in the store. this method will return it's parent resource,
+	 * or null if the resource has no parent.
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/parent/resource/path/{storeName}/{relPath:.+}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public PathResource getParentPathResourceByPath(
+			@PathParam("storeName") String storeName,
+			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
+			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
+		}
+		StringBuffer relativePath = new StringBuffer();
+		for(PathSegment ps : list){
+			relativePath.append(File.separator + ps.getPath().trim());
+		}
+		
+		storeName = storeName.trim();
+		String relPath = relativePath.toString().replace("\\", "/");
+		
+		logger.info("Get PathResouce: storeName=" + storeName + ", relPath=" + relPath);
+		
+		// fetch the resource
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getPathResource(storeName, relPath);
+		} catch (ServiceException e) {
+			handleError("Error fetching path resource, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		if(resource == null){
+			handleError("Returned PathResource object was null. storeName=" + storeName + 
+					", relPath=" + relPath, WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		// fetch it's parent
+		PathResource parentResource = null;
+		try {
+			parentResource = fileSystemService.getParentPathResource(resource.getNodeId());
+		} catch (ServiceException e) {
+			handleError("Error fetching parent path resource for node " + 
+					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return parentResource;
+		
+	}
+	
+	/**
 	 * Fetch all the first-level children for the resource
 	 * 
 	 * @param nodeId - id of the child node. the parent will be returned, or null
 	 * if the node is a root node and has no parent.
-	 * @return The parent resource, or null if the node is a root node and has no parent
+	 * @return A list of all the first-level resources under the node
 	 * @throws WebServiceException
 	 */
 	@GET
@@ -226,7 +284,64 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		return children;
 		
-	}	
+	}
+	
+	/**
+	 * Fetch all the first-level children for the resource
+	 * 
+	 * @param storeName - name of the store that the resources reside under
+	 * @param relPath - relative path of a resource within the store. this method will fetch all the first-level
+	 * children under that resource.
+	 * @return A list of all the first-level resources under the node
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/child/resource/path/{storeName}/{relPath:.+}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<PathResource> getChildPathResourceByPath(
+			@PathParam("storeName") String storeName,
+			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
+			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
+		}
+		StringBuffer relativePath = new StringBuffer();
+		for(PathSegment ps : list){
+			relativePath.append(File.separator + ps.getPath().trim());
+		}
+		
+		storeName = storeName.trim();
+		String relPath = relativePath.toString().replace("\\", "/");
+		
+		logger.info("Get PathResouce: storeName=" + storeName + ", relPath=" + relPath);
+		
+		// fetch the resource
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getPathResource(storeName, relPath);
+		} catch (ServiceException e) {
+			handleError("Error fetching path resource, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		if(resource == null){
+			handleError("Returned PathResource object was null. storeName=" + storeName + 
+					", relPath=" + relPath, WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		// fetch all the first-level resources under the resource
+		List<PathResource> children = null;
+		try {
+			children = fileSystemService.getChildPathResource(resource.getNodeId());
+		} catch (ServiceException e) {
+			handleError("Error fetching child path resources for node " + 
+					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return children;
+		
+	}
 	
 	/**
 	 * Fetch store by name
