@@ -594,6 +594,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      */
     @POST
     @Path("/createStore")
+    @Produces(MediaType.APPLICATION_JSON)
     public Store createStore(
     		@QueryParam("storeName") String storeName,
     		@QueryParam("storeDesc") String storeDesc,
