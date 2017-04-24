@@ -557,6 +557,36 @@ public class FileSystemActionResource extends BaseResourceHandler {
     }
     
     /**
+     * Rename path resource. Will throw exception if there already exists a resource with
+     * the name.
+     * 
+     * @param nodeId
+     * @param newName
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/rename")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response renameResource(
+    		@QueryParam("nodeId") Long nodeId,
+    		@QueryParam("newName") String newName) throws WebServiceException {
+    	
+    	if(nodeId == null || newName == null){
+    		handleError("Missing nodeId, and/or newName params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileSystemService.renamePathResource(nodeId, newName);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }    
+    
+    /**
      * Create the test store
      * 
      * @return

@@ -57,7 +57,10 @@ public class FileSystemService {
     private FileSystemRepository fileSystemRepository;
     
     @Autowired
-    private PathResourceTreeService treeService;
+    private PathResourceTreeService pathResTreeService;
+    
+    @Autowired
+    private PathResourceTreeUtil pathResTreeUtil;
     
     @Autowired
     private TaskManagerProvider taskManagerProvider;
@@ -337,7 +340,31 @@ public class FileSystemService {
 		
 		return fileMetaResource;		
 		
-	}	
+	}
+	
+	/**
+	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
+	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
+	 * the tree to rename the directory, and update the relative path data for all resources
+	 * under the directory.
+	 * 
+	 * @param nodeId
+	 * @param newName
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void renamePathResource(Long nodeId, String newName) throws ServiceException {
+		
+		PathResource resource = getPathResource(nodeId);
+		
+		try {
+			fileSystemRepository.renamePathResource(resource, newName);
+		} catch (Exception e) {
+			throw new ServiceException("Error renaming path resource, nodeId=" + nodeId + 
+					", newName=" + newName + ", " + e.getMessage(), e);
+		}
+		
+	}
 	
 	/**
 	 * Refreshes the binary data in the database (data from the file on disk is copied to eas_binary_resource)
@@ -462,9 +489,9 @@ public class FileSystemService {
 				getLogger().info("Deleting Tree:");
 				
 				// build a tree that we can walk
-				final Tree<PathResource> tree = treeService.buildPathResourceTree(dirResource.getNodeId());				
+				final Tree<PathResource> tree = pathResTreeService.buildPathResourceTree(dirResource.getNodeId());				
 				
-				treeService.logTree(tree);
+				pathResTreeUtil.logTree(tree);
 				
 				try {
 					
@@ -655,12 +682,22 @@ public class FileSystemService {
 	@MethodTimer
 	public PathResource getParentPathResource(Long nodeId) throws ServiceException {
 		
-		Tree<PathResource> tree = treeService.buildParentPathResourceTree(nodeId, 1);
+		/*
+		Tree<PathResource> tree = pathResTreeService.buildParentPathResourceTree(nodeId, 1);
 		
 		PathResource resource = tree.getRootNode().getData();
 		if(resource.getNodeId().equals(nodeId) && resource.getParentNodeId().equals(0L)){
 			// this is a root node with no parent
 			return null;
+		}
+		return resource;
+		*/
+		
+		PathResource resource = null;
+		try {
+			resource = fileSystemRepository.getParentPathResource(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Error fetching parent resource for nodeId=" + nodeId + ", " + e.getMessage(), e);
 		}
 		return resource;
 		
@@ -676,7 +713,8 @@ public class FileSystemService {
 	@MethodTimer
 	public List<PathResource> getChildPathResource(Long nodeId) throws ServiceException {
 		
-		Tree<PathResource> tree = treeService.buildPathResourceTree(nodeId, 1);
+		/*
+		Tree<PathResource> tree = pathResTreeService.buildPathResourceTree(nodeId, 1);
 		
 		if(tree.getRootNode().hasChildren()){
 			List<PathResource> children = tree.getRootNode().getChildren().stream()
@@ -686,6 +724,15 @@ public class FileSystemService {
 		}else{
 			return new ArrayList<PathResource>();
 		}
+		*/
+		
+		List<PathResource> resources = null;
+		try {
+			resources = fileSystemRepository.getChildPathResource(nodeId);
+		} catch (Exception e) {
+			throw new ServiceException("Error fetching first-level child resources for nodeId=" + nodeId + ", " + e.getMessage(), e);
+		}
+		return resources;
 		
 	}	
 	
@@ -905,7 +952,7 @@ public class FileSystemService {
 		final Store fromStore = getStore(fromDir);
 		final Store toStore = getStore(fromDir);
 
-		final Tree<PathResource> fromTree = treeService.buildPathResourceTree(copyDirNodeId);
+		final Tree<PathResource> fromTree = pathResTreeService.buildPathResourceTree(copyDirNodeId);
 		
 		copyDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting);
 		
@@ -1088,7 +1135,7 @@ public class FileSystemService {
 					destDirId + " because directory " + destDirId + " is a child of directory " + moveDirId + ".");
 		}
 
-		final Tree<PathResource> fromTree = treeService.buildPathResourceTree(dirToMove.getNodeId());
+		final Tree<PathResource> fromTree = pathResTreeService.buildPathResourceTree(dirToMove.getNodeId());
 		
 		DirectoryResource toDir = getDirectoryResource(destDirId);
 		final Store fromStore = getStore(dirToMove);

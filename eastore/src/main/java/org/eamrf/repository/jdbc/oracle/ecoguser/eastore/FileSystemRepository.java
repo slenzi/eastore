@@ -7,7 +7,9 @@ import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
@@ -15,6 +17,11 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemUtil;
+import org.eamrf.eastore.core.service.PathResourceTreeUtil;
+import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNode;
+import org.eamrf.eastore.core.tree.Trees;
+import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.jdbc.SpringJdbcUtil;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.BinaryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
@@ -59,7 +66,10 @@ public class FileSystemRepository {
     private ClosureRepository closureRepository;
     
     @Autowired
-    private FileSystemUtil fileSystemUtil;    
+    private FileSystemUtil fileSystemUtil;
+    
+    @Autowired
+    private PathResourceTreeUtil pathResTreeUtil;
     
     // common query element used by several methods below
     private final String SQL_PATH_RESOURCE_COMMON =
@@ -493,6 +503,187 @@ public class FileSystemRepository {
 	}
 	
 	/**
+	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
+	 * rename the file. If the path resource is a DirectoryResource then we rename the directory,
+	 * and update the relative path data for all resources under the directory.
+	 * 
+	 * @param resource - the resource to rename
+	 * @param newName - new name for the resource
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public void renamePathResource(PathResource resource, String newName) throws Exception {	
+		
+		//String oldName = resource.getPathName();
+		//String oldRelPath = resource.getRelativePath();
+		//String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
+		//newRelPath = newRelPath + newName;
+		
+		if(resource.getResourceType() == ResourceType.FILE){
+			
+			// get parent dir, and check if resource with the new name already exists.
+			PathResource parentDir = getParentPathResource(resource.getNodeId());
+			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.FILE)){
+				throw new Exception("Cannot rename file resource " + resource.getNodeId() + " to " + newName + 
+						", the directory in which the resource exists already contains a resource with that name.");
+			}
+			
+			_renameFileResource((FileMetaResource)resource, newName);
+			
+		}else if(resource.getResourceType() == ResourceType.DIRECTORY){		
+			
+			/*
+			// check if user is trying to rename a root directory
+			if(resource.getParentNodeId().equals(0L)){
+				throw new Exception("Cannot rename a root directory of a store. Resource nodeId=" + resource.getNodeId());
+			}
+			
+			// get parent dir, and check if resource with the new name already exists.
+			PathResource parentDir = getParentPathResource(resource.getNodeId());			
+			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.DIRECTORY)){
+				throw new Exception("Cannot rename directory resource " + resource.getNodeId() + " to " + newName + 
+						", the directory in which the resource exists already contains a resource with that name.");
+			}
+			*/
+			
+			_renameDirectory((DirectoryResource)resource, newName);
+			
+		}else{
+			throw new Exception("Cannot rename resource, unknown resource type '" + 
+					resource.getResourceType().getTypeString() + "'");
+		}
+		
+	}
+	
+	/**
+	 * Helper method for renaming file
+	 * 
+	 * @param resource
+	 * @param newName
+	 * @throws Exception
+	 */
+	private void _renameFileResource(FileMetaResource resource, String newName) throws Exception {
+		
+		String oldName = resource.getPathName();
+		String oldRelPath = resource.getRelativePath();
+		String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
+		newRelPath = newRelPath + newName;
+		
+		// rename data in EAS_PATH_RESOURCE
+		jdbcTemplate.update(
+				"update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?", 
+				newName, newRelPath, resource.getNodeId());
+		
+		// update EAS_NODE
+		jdbcTemplate.update(
+				"update eas_node set node_name = ?, updated_date = ? where node_id = ?", 
+				newName, DateUtil.getCurrentTime(), resource.getNodeId());
+		
+		// rename file on local file system
+		Store store = resource.getStore();
+		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path newPath = Paths.get(store.getPath() + newRelPath);			
+		FileUtil.moveFile(oldPath, newPath);		
+		
+	}
+	
+	/**
+	 * Helper method for renaming a directory
+	 * 
+	 * @param resource
+	 * @param newName
+	 * @throws Exception
+	 */
+	private void _renameDirectory(DirectoryResource resource, String newName) throws Exception {
+		
+		List<PathResource> resTree = getPathResourceTree(resource.getNodeId());
+		Tree<PathResource> tree = pathResTreeUtil.buildPathResourceTree(resTree, resource.getNodeId());
+		
+		TreeNode<PathResource> rootNode = tree.getRootNode();
+		
+		logger.info("before rename");
+		pathResTreeUtil.logPreOrderTraversal(tree);	
+		
+		//
+		// walk tree and update in-memory values on our models
+		//
+		Trees.walkTree(tree, (treeNode) ->{
+			
+			if(!treeNode.hasParent()){
+				
+				//
+				// rename root node, and update relative path
+				//
+				PathResource resourceToRename = treeNode.getData();
+				String oldName = resourceToRename.getPathName();
+				String oldRelPath = resourceToRename.getRelativePath();
+				String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
+				newRelPath = newRelPath + newName;
+				resourceToRename.setPathName(newName);
+				resourceToRename.setRelativePath(newRelPath);
+				resourceToRename.setDateUpdated(DateUtil.getCurrentTime());
+				
+			}else{
+				
+				//
+				// update relative paths of child nodes
+				//
+				PathResource resToUpdate = treeNode.getData();
+				PathResource parentResource = treeNode.getParent().getData();
+				String parentRelPath = parentResource.getRelativePath();
+				String resourceName = resToUpdate.getPathName();
+				String newRelPath = parentRelPath + "/" + resourceName;
+				resToUpdate.setRelativePath(newRelPath);
+				
+			}
+			
+		}, WalkOption.PRE_ORDER_TRAVERSAL);
+		
+		//
+		// walk tree and update database
+		//
+		Trees.walkTree(tree, (treeNode) ->{
+			
+			PathResource resourceToUpdate = treeNode.getData();
+			
+			// rename data in EAS_PATH_RESOURCE
+			jdbcTemplate.update(
+					"update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?", 
+					resourceToUpdate.getPathName(), resourceToUpdate.getRelativePath(), resourceToUpdate.getNodeId());
+			
+			
+			if(!treeNode.hasParent()){
+				
+				// update EAS_NODE, and make sure to update the updated date for the root node
+				jdbcTemplate.update(
+						"update eas_node set node_name = ?, updated_date = ? where node_id = ?", 
+						resourceToUpdate.getPathName(), DateUtil.getCurrentTime(), resourceToUpdate.getNodeId());
+				
+			}else{
+				
+				// no need to update the updated date for any of the children
+				jdbcTemplate.update(
+						"update eas_node set node_name = ? where node_id = ?", 
+						resourceToUpdate.getPathName(), resourceToUpdate.getNodeId());				
+				
+			}
+			
+		}, WalkOption.PRE_ORDER_TRAVERSAL);
+		
+		logger.info("after rename");
+		pathResTreeUtil.logPreOrderTraversal(tree);		
+		
+		//
+		// rename directory on local file system
+		//
+		Store store = resource.getStore();
+		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
+		Path newPath = Paths.get(store.getPath() + tree.getRootNode().getData().getRelativePath());		
+		FileUtil.moveFile(oldPath, newPath);
+		
+	}
+	
+	/**
 	 * Refreshes the data in eas_binary_resource (or adds a new entry) for the file
 	 * 
 	 * @param fileMetaResource
@@ -872,35 +1063,6 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Fetch the child resource for the directory (first level only) with the matching name, of the specified type.
-	 * 
-	 * @param dirNodeId
-	 * @param name
-	 * @param type
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
-		
-		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
-		if(childResources != null && childResources.size() > 0){
-			for(PathResource pr : childResources){
-				if(pr.getParentNodeId().equals(dirNodeId)
-						&& pr.getResourceType() == type
-						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
-					
-					return pr;
-					
-				}
-			}
-		}
-		
-		return null;
-		
-	}
-	
-	/**
 	 * Returns true if node 'dirNodeB' is a child node (at any depth) of node 'dirNodeA'
 	 * 
 	 * @param dirNodeA
@@ -961,6 +1123,86 @@ public class FileSystemRepository {
 			
 			return jdbcTemplate.queryForObject(sql, resourcePathRowMapper,
 					new Object[] { storeName.toLowerCase(), relativePath.toLowerCase() });		
+		
+	}
+	
+	/**
+	 * Fetch the parent path resource for the specified node. If the node is a root node, and
+	 * has no parent, then null will be returned.
+	 * 
+	 * @param nodeId
+	 * @throws Exception
+	 */
+	public PathResource getParentPathResource(Long nodeId) throws Exception {
+		
+		List<PathResource> resources = getParentPathResourceTree(nodeId, 1);
+		
+		if(resources == null || resources.size() == 0){
+			throw new ServiceException("No bottom-up PathResource tree for nodeId=" + nodeId + 
+					". Returned list was null or empty.");
+		}
+		
+		Tree<PathResource> tree = pathResTreeUtil.buildParentPathResourceTree(resources);
+		
+		PathResource resource = tree.getRootNode().getData();
+		if(resource.getNodeId().equals(nodeId) && resource.getParentNodeId().equals(0L)){
+			// this is a root node with no parent
+			return null;
+		}
+		
+		return resource;		
+		
+	}
+	
+	/**
+	 * Fetch the first level children for the path resource.
+	 * 
+	 * @param nodeId - id of the resource. All first level children will be returned
+	 * @return All the first-level children, or an empty list of the node has no children
+	 */	
+	public List<PathResource> getChildPathResource(Long nodeId) throws Exception {
+		
+		List<PathResource> resources = getPathResourceTree(nodeId, 1);
+		
+		Tree<PathResource> tree = pathResTreeUtil.buildPathResourceTree(resources, nodeId);
+		
+		if(tree.getRootNode().hasChildren()){
+			List<PathResource> children = tree.getRootNode().getChildren().stream()
+					.map(n -> n.getData())
+					.collect(Collectors.toCollection(ArrayList::new));
+			return children;
+		}else{
+			return new ArrayList<PathResource>();
+		}
+		
+	}
+	
+	/**
+	 * Fetch the child resource for the directory (first level only) with the matching name, of the specified type.
+	 * 
+	 * @param dirNodeId
+	 * @param name
+	 * @param type
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+		
+		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
+		if(childResources != null && childResources.size() > 0){
+			for(PathResource pr : childResources){
+				if(pr.getParentNodeId().equals(dirNodeId)
+						&& pr.getResourceType() == type
+						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+					
+					return pr;
+					
+				}
+			}
+		}
+		
+		return null;
 		
 	}	
 	

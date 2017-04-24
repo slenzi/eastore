@@ -48,6 +48,10 @@ public class TreeNode<N> {
 	public TreeNode<N> getParent() {
 		return parent;
 	}
+	
+	public boolean hasParent(){
+		return parent != null ? true : false;
+	}
 
 	public void addChildNode(TreeNode<N> child) {
 		if(child == null){
