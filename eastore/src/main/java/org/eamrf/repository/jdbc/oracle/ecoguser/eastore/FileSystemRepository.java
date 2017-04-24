@@ -167,24 +167,7 @@ public class FileSystemRepository {
 		};
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
-		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeId });
-		
-		/* this version throws a EmptyResultDataAccessException if no data is returned.
-		 * we simply want to return null without any exception
-		 * 
-		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-			Store s = new Store();
-			s.setId(rs.getLong("store_id"));
-			s.setName(rs.getString("store_name"));
-			s.setDescription(rs.getString("store_description"));
-			s.setPath(Paths.get(rs.getString("store_path")));
-			s.setNodeId(rs.getLong("node_id"));
-			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-			s.setDateCreated(rs.getTimestamp("creation_date"));
-			s.setDateUpdated(rs.getTimestamp("updated_date"));
-			return s;			
-		}, new Object[] { storeId });
-		*/		
+		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeId });		
 		
 	}
 	
@@ -217,24 +200,7 @@ public class FileSystemRepository {
 		};
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
-		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });
-		
-		/* this version throws a EmptyResultDataAccessException if no data is returned.
-		 * we simply want to return null without any exception
-		 * 
-		return (Store)jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-			Store s = new Store();
-			s.setId(rs.getLong("store_id"));
-			s.setName(rs.getString("store_name"));
-			s.setDescription(rs.getString("store_description"));
-			s.setPath(Paths.get(rs.getString("store_path")));
-			s.setNodeId(rs.getLong("node_id"));
-			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-			s.setDateCreated(rs.getTimestamp("creation_date"));
-			s.setDateUpdated(rs.getTimestamp("updated_date"));
-			return s;			
-		}, new Object[] { storeName });
-		*/	
+		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });	
 		
 	}	
 	
@@ -512,12 +478,7 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public void renamePathResource(PathResource resource, String newName) throws Exception {	
-		
-		//String oldName = resource.getPathName();
-		//String oldRelPath = resource.getRelativePath();
-		//String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
-		//newRelPath = newRelPath + newName;
+	public void renamePathResource(PathResource resource, String newName) throws Exception {
 		
 		if(resource.getResourceType() == ResourceType.FILE){
 			
@@ -530,21 +491,7 @@ public class FileSystemRepository {
 			
 			_renameFileResource((FileMetaResource)resource, newName);
 			
-		}else if(resource.getResourceType() == ResourceType.DIRECTORY){		
-			
-			/*
-			// check if user is trying to rename a root directory
-			if(resource.getParentNodeId().equals(0L)){
-				throw new Exception("Cannot rename a root directory of a store. Resource nodeId=" + resource.getNodeId());
-			}
-			
-			// get parent dir, and check if resource with the new name already exists.
-			PathResource parentDir = getParentPathResource(resource.getNodeId());			
-			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.DIRECTORY)){
-				throw new Exception("Cannot rename directory resource " + resource.getNodeId() + " to " + newName + 
-						", the directory in which the resource exists already contains a resource with that name.");
-			}
-			*/
+		}else if(resource.getResourceType() == ResourceType.DIRECTORY){
 			
 			_renameDirectory((DirectoryResource)resource, newName);
 			
@@ -601,19 +548,15 @@ public class FileSystemRepository {
 		
 		TreeNode<PathResource> rootNode = tree.getRootNode();
 		
-		logger.info("before rename");
-		pathResTreeUtil.logPreOrderTraversal(tree);	
+		//logger.info("before rename");
+		//pathResTreeUtil.logPreOrderTraversal(tree);	
 		
-		//
 		// walk tree and update in-memory values on our models
-		//
 		Trees.walkTree(tree, (treeNode) ->{
 			
 			if(!treeNode.hasParent()){
 				
-				//
 				// rename root node, and update relative path
-				//
 				PathResource resourceToRename = treeNode.getData();
 				String oldName = resourceToRename.getPathName();
 				String oldRelPath = resourceToRename.getRelativePath();
@@ -625,9 +568,7 @@ public class FileSystemRepository {
 				
 			}else{
 				
-				//
 				// update relative paths of child nodes
-				//
 				PathResource resToUpdate = treeNode.getData();
 				PathResource parentResource = treeNode.getParent().getData();
 				String parentRelPath = parentResource.getRelativePath();
@@ -639,9 +580,7 @@ public class FileSystemRepository {
 			
 		}, WalkOption.PRE_ORDER_TRAVERSAL);
 		
-		//
 		// walk tree and update database
-		//
 		Trees.walkTree(tree, (treeNode) ->{
 			
 			PathResource resourceToUpdate = treeNode.getData();
@@ -670,12 +609,10 @@ public class FileSystemRepository {
 			
 		}, WalkOption.PRE_ORDER_TRAVERSAL);
 		
-		logger.info("after rename");
-		pathResTreeUtil.logPreOrderTraversal(tree);		
+		//logger.info("after rename");
+		//pathResTreeUtil.logPreOrderTraversal(tree);		
 		
-		//
 		// rename directory on local file system
-		//
 		Store store = resource.getStore();
 		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
 		Path newPath = Paths.get(store.getPath() + tree.getRootNode().getData().getRelativePath());		
