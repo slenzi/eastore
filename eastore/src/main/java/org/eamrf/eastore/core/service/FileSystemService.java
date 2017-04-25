@@ -86,7 +86,13 @@ public class FileSystemService {
 		try {
 			stores = getStores();
 		} catch (ServiceException e) {
-			logger.error("Failed to fetch list of stores. Cannot initialize task managers.");
+			logger.error("Failed to fetch list of stores. Cannot initialize task managers. " + e.getMessage(), e);
+			return;
+		}
+		
+		if(stores == null){
+			logger.warn("No stores found when initializing File System Service...");
+			return;
 		}
 		
 		for(Store store : stores){
