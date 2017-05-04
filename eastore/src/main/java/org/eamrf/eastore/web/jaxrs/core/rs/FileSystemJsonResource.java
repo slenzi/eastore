@@ -10,7 +10,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.PathSegment;
-import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
@@ -321,7 +320,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		storeName = storeName.trim();
 		String relPath = relativePath.toString().replace("\\", "/");
 		
-		logger.info("Get PathResouce: storeName=" + storeName + ", relPath=" + relPath);
+		logger.info("Get Child PathResouces: storeName=" + storeName + ", relPath=" + relPath);
 		
 		// fetch the resource
 		PathResource resource = null;
@@ -416,6 +415,8 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		storeName = storeName.trim();
 		String relPath = relativePath.toString().replace("\\", "/");
+		
+		logger.info("Getting breadcrumb: storeName=" + storeName + ", relPath=" + relPath);
 		
 		// fetch the resource
 		PathResource resource = null;
