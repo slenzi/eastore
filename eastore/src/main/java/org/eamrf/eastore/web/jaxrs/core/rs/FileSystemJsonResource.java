@@ -1,6 +1,7 @@
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.ws.rs.GET;
@@ -9,11 +10,15 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.PathSegment;
+import javax.ws.rs.core.Response;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.FileSystemService;
+import org.eamrf.eastore.core.service.PathResourceTreeService;
+import org.eamrf.eastore.core.tree.Tree;
+import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
@@ -39,7 +44,10 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     private Logger logger;
     
     @Autowired
-    private FileSystemService fileSystemService;    
+    private FileSystemService fileSystemService;
+    
+    @Autowired
+    private PathResourceTreeService pathResourceTreeService;
 	
 	public FileSystemJsonResource() {
 		
@@ -341,6 +349,51 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		return children;
 		
+	}
+	
+	/**
+	 * Fetch all the parent tree (bottom-up) information for a specific node. This info can be use
+	 * to build a link of bread crumbs, allowing a user to navigate back up the tree to
+	 * the root node.
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/breadcrumb/{nodeId}")
+	@Produces(MediaType.APPLICATION_JSON)	
+    public List<PathResource> getBreadcrumb(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    	
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for nodeId => " + nodeId, WebExceptionType.CODE_IO_ERROR);
+    	}
+
+    	List<PathResource> crumbs = new ArrayList<PathResource>();
+    	
+    	buildCrumbs(tree.getRootNode(), crumbs);
+    	
+    	return crumbs;
+    	
+    }
+	
+	private void buildCrumbs(TreeNode<PathResource> node, List<PathResource> crumbs){
+		crumbs.add(node.getData());
+		if(node.hasChildren()){
+			// building a parent tree, so there should only be one child
+			buildCrumbs(node.getChildren().get(0), crumbs);
+		}
 	}
 	
 	/**
