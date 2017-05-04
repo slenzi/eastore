@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.eamrf</groupId>
 	<artifactId>eastore</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<packaging>jar</packaging>
 	<name>EA Store</name>
 	<description>ECOG-ACRIN Hierarchical File Store</description>
