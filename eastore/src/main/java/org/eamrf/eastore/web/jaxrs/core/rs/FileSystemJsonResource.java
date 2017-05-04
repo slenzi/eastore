@@ -361,9 +361,9 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/breadcrumb/{nodeId}")
+	@Path("/breadcrumb/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)	
-    public List<PathResource> getBreadcrumb(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<PathResource> getBreadcrumbByNodeId(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -387,6 +387,63 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     	return crumbs;
     	
     }
+	
+	/**
+	 * Fetch all the parent tree (bottom-up) information for a specific node. This info can be use
+	 * to build a link of bread crumbs, allowing a user to navigate back up the tree to
+	 * the root node.
+	 * 
+	 * @param storeName - name of the store that the resources resides under
+	 * @param relPath - relative path of a resource within the store. this method will fetch all parents (bottom-up)
+	 * all the way to the root node.
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/breadcrumb/path/{storeName}/{relPath:.+}")
+	@Produces(MediaType.APPLICATION_JSON)	
+    public List<PathResource> getBreadcrumbByPath(
+    		@PathParam("storeName") String storeName,
+			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+    	
+		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
+			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
+		}
+		StringBuffer relativePath = new StringBuffer();
+		for(PathSegment ps : list){
+			relativePath.append(File.separator + ps.getPath().trim());
+		}
+		
+		storeName = storeName.trim();
+		String relPath = relativePath.toString().replace("\\", "/");
+		
+		// fetch the resource
+		PathResource resource = null;
+		try {
+			resource = fileSystemService.getPathResource(storeName, relPath);
+		} catch (ServiceException e) {
+			handleError("Error fetching path resource, " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}		
+    	
+    	Tree<PathResource> tree = null;
+    	try {
+    		tree = pathResourceTreeService.buildParentPathResourceTree(resource.getNodeId());
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	if(tree == null){
+    		handleError("Tree object was null for nodeId => " + resource.getNodeId(), WebExceptionType.CODE_IO_ERROR);
+    	}
+
+    	List<PathResource> crumbs = new ArrayList<PathResource>();
+    	
+    	buildCrumbs(tree.getRootNode(), crumbs);
+    	
+    	return crumbs;
+    	
+    }	
 	
 	private void buildCrumbs(TreeNode<PathResource> node, List<PathResource> crumbs){
 		crumbs.add(node.getData());
