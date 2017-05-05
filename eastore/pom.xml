@@ -5,7 +5,7 @@
 	
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.eamrf</groupId>
-	<artifactId>eastore</artifactId>
+	<artifactId>eastore-rs-service</artifactId>
 	<version>0.0.1</version>
 	<packaging>jar</packaging>
 	<name>EA Store</name>
