@@ -24,6 +24,8 @@ public class Store implements Serializable {
 	private Long maxFileSizeBytes = 52428800L; // default to 50 megabytes
 	private Timestamp dateCreated = null;
 	private Timestamp dateUpdated = null;
+	
+	private DirectoryResource rootDir = null;
 
 	public Store() {
 		
@@ -91,6 +93,14 @@ public class Store implements Serializable {
 
 	public void setDateUpdated(Timestamp dateUpdated) {
 		this.dateUpdated = dateUpdated;
+	}
+
+	public DirectoryResource getRootDir() {
+		return rootDir;
+	}
+
+	public void setRootDir(DirectoryResource rootDir) {
+		this.rootDir = rootDir;
 	}
 
 	@Override

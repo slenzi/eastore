@@ -83,7 +83,18 @@ public class FileSystemRepository {
 			"inner join eas_path_resource r on n.node_id = r.node_id " +
 			"inner join eas_store s on r.store_id = s.store_id " +
 			"left join eas_directory_resource dr on r.node_id = dr.node_id " +  
-			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id ";    		
+			"left join eas_file_meta_resource fmr on r.node_id = fmr.node_id ";
+    
+    private final String SQL_STORES_COMMON =
+    		"select " +
+    		"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id, " +
+    		"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date, " +
+    		"r.path_name, r.path_type, r.relative_path, r.path_desc, n.node_name, " +
+    		"n.creation_date as node_creation_date, n.updated_date as node_updated_date, n.parent_node_id " +
+    		"from eas_store s " +
+    		"inner join eas_path_resource r on r.node_id = s.node_id " +
+    		"inner join eas_directory_resource dr on r.node_id = dr.node_id " +
+    		"inner join eas_node n on n.node_id = r.node_id";  		
 	
     /**
      * Maps results from query to PathResource objects
@@ -132,7 +143,43 @@ public class FileSystemRepository {
 		r.setStore(s);
 		
 		return r;
-	};    
+	};
+	
+    /**
+     * Maps results from query to Store objects
+     */
+	private final RowMapper<Store> storeRowMapper = (rs, rowNum) -> {
+		
+		Store s = new Store();
+		
+		s.setId(rs.getLong("store_id"));
+		s.setName(rs.getString("store_name"));
+		s.setDescription(rs.getString("store_description"));
+		s.setPath(Paths.get(rs.getString("store_path")));
+		s.setNodeId(rs.getLong("node_id"));
+		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		s.setDateCreated(rs.getTimestamp("store_creation_date"));
+		s.setDateUpdated(rs.getTimestamp("store_updated_date"));
+		
+		ResourceType type = ResourceType.getFromString(rs.getString("path_type"));
+		
+		DirectoryResource r = new DirectoryResource();
+		r.setNodeId(rs.getLong("node_id"));
+		r.setParentNodeId(rs.getLong("parent_node_id"));
+		//r.setChildNodeId(rs.getLong("child_node_id")); // don't have this value
+		r.setDateCreated(rs.getTimestamp("node_creation_date"));
+		r.setDateUpdated(rs.getTimestamp("Node_updated_date"));
+		r.setPathName(rs.getString("path_name"));
+		r.setRelativePath(rs.getString("relative_path"));
+		r.setResourceType( type );
+		r.setStoreId(rs.getLong("store_id"));
+		r.setDesc(rs.getString("path_desc"));
+		
+		s.setRootDir(r);
+		
+		return s;
+		
+	};	
     
 	public FileSystemRepository() {
 		
@@ -148,23 +195,26 @@ public class FileSystemRepository {
 	@MethodTimer
 	public Store getStoreById(Long storeId) throws Exception {
 		
-		String sql =
-			"select store_id, store_name, store_description, store_path, node_id, "
-			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
-			+ "where store_id = ?";
+		String sql = SQL_STORES_COMMON + " where s.store_id = ?";
+		
+		//String sql =
+		//	"select store_id, store_name, store_description, store_path, node_id, "
+		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store "
+		//	+ "where store_id = ?";
 
-		final RowMapper<Store> storeRowMapper = (rs, i) -> {
-			Store s = new Store();
-			s.setId(rs.getLong("store_id"));
-			s.setName(rs.getString("store_name"));
-			s.setDescription(rs.getString("store_description"));
-			s.setPath(Paths.get(rs.getString("store_path")));
-			s.setNodeId(rs.getLong("node_id"));
-			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-			s.setDateCreated(rs.getTimestamp("creation_date"));
-			s.setDateUpdated(rs.getTimestamp("updated_date"));
-			return s;
-		};
+		//final RowMapper<Store> storeRowMapper = (rs, i) -> {
+		//	Store s = new Store();
+		//	s.setId(rs.getLong("store_id"));
+		//	s.setName(rs.getString("store_name"));
+		//	s.setDescription(rs.getString("store_description"));
+		//	s.setPath(Paths.get(rs.getString("store_path")));
+		//	s.setNodeId(rs.getLong("node_id"));
+		//	s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		//	s.setDateCreated(rs.getTimestamp("creation_date"));
+		//	s.setDateUpdated(rs.getTimestamp("updated_date"));
+		//	return s;
+		//};
+		
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
 		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeId });		
@@ -181,23 +231,26 @@ public class FileSystemRepository {
 	@MethodTimer
 	public Store getStoreByName(String storeName) throws Exception {
 		
-		String sql =
-			"select store_id, store_name, store_description, store_path, node_id, "
-			+ "max_file_size_in_db, creation_date, updated_date from eas_store "
-			+ "where lower(store_name) = ?";
+		String sql = SQL_STORES_COMMON + " where lower(s.store_name) = ?";
 		
-		final RowMapper<Store> storeRowMapper = (rs, i) -> {
-			Store s = new Store();
-			s.setId(rs.getLong("store_id"));
-			s.setName(rs.getString("store_name"));
-			s.setDescription(rs.getString("store_description"));
-			s.setPath(Paths.get(rs.getString("store_path")));
-			s.setNodeId(rs.getLong("node_id"));
-			s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-			s.setDateCreated(rs.getTimestamp("creation_date"));
-			s.setDateUpdated(rs.getTimestamp("updated_date"));
-			return s;
-		};
+		//String sql =
+		//	"select store_id, store_name, store_description, store_path, node_id, "
+		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store "
+		//	+ "where lower(store_name) = ?";
+		
+		//final RowMapper<Store> storeRowMapper = (rs, i) -> {
+		//	Store s = new Store();
+		//	s.setId(rs.getLong("store_id"));
+		//	s.setName(rs.getString("store_name"));
+		//	s.setDescription(rs.getString("store_description"));
+		//	s.setPath(Paths.get(rs.getString("store_path")));
+		//	s.setNodeId(rs.getLong("node_id"));
+		//	s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		//	s.setDateCreated(rs.getTimestamp("creation_date"));
+		//	s.setDateUpdated(rs.getTimestamp("updated_date"));
+		//	return s;
+		//};
+		
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
 		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });	
@@ -213,23 +266,27 @@ public class FileSystemRepository {
 	@MethodTimer
 	public List<Store> getStores() throws Exception {
 		
-		String sql =
-			"select store_id, store_name, store_description, store_path, node_id, "
-			+ "max_file_size_in_db, creation_date, updated_date from eas_store";
+		String sql = SQL_STORES_COMMON;
 		
-		List<Store> stores = jdbcTemplate.query(
-			sql, (rs, rowNum) -> {
-				Store s = new Store();
-				s.setId(rs.getLong("store_id"));
-				s.setName(rs.getString("store_name"));
-				s.setDescription(rs.getString("store_description"));
-				s.setPath(Paths.get(rs.getString("store_path")));
-				s.setNodeId(rs.getLong("node_id"));
-				s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-				s.setDateCreated(rs.getTimestamp("creation_date"));
-				s.setDateUpdated(rs.getTimestamp("updated_date"));
-				return s;
-			});
+		//String sql =
+		//	"select store_id, store_name, store_description, store_path, node_id, "
+		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store";
+		
+		//List<Store> stores = jdbcTemplate.query(
+		//	sql, (rs, rowNum) -> {
+		//		Store s = new Store();
+		//		s.setId(rs.getLong("store_id"));
+		//		s.setName(rs.getString("store_name"));
+		//		s.setDescription(rs.getString("store_description"));
+		//		s.setPath(Paths.get(rs.getString("store_path")));
+		//		s.setNodeId(rs.getLong("node_id"));
+		//		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		//		s.setDateCreated(rs.getTimestamp("creation_date"));
+		//		s.setDateUpdated(rs.getTimestamp("updated_date"));
+		//		return s;
+		//	});
+		
+		List<Store> stores = jdbcTemplate.query(sql, storeRowMapper);			
 		
 		return stores;
 		
