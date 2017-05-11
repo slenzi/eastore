@@ -425,7 +425,12 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
-		}		
+		}
+		if(resource == null){
+			handleError("Error fetching path resource, returned object was null. "
+					+ "storeName=" + storeName + ", relPath=" + relPath, 
+					WebExceptionType.CODE_IO_ERROR);			
+		}
     	
     	Tree<PathResource> tree = null;
     	try {

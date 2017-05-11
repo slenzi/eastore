@@ -197,24 +197,6 @@ public class FileSystemRepository {
 		
 		String sql = SQL_STORES_COMMON + " where s.store_id = ?";
 		
-		//String sql =
-		//	"select store_id, store_name, store_description, store_path, node_id, "
-		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store "
-		//	+ "where store_id = ?";
-
-		//final RowMapper<Store> storeRowMapper = (rs, i) -> {
-		//	Store s = new Store();
-		//	s.setId(rs.getLong("store_id"));
-		//	s.setName(rs.getString("store_name"));
-		//	s.setDescription(rs.getString("store_description"));
-		//	s.setPath(Paths.get(rs.getString("store_path")));
-		//	s.setNodeId(rs.getLong("node_id"));
-		//	s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-		//	s.setDateCreated(rs.getTimestamp("creation_date"));
-		//	s.setDateUpdated(rs.getTimestamp("updated_date"));
-		//	return s;
-		//};
-		
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
 		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeId });		
@@ -233,24 +215,6 @@ public class FileSystemRepository {
 		
 		String sql = SQL_STORES_COMMON + " where lower(s.store_name) = ?";
 		
-		//String sql =
-		//	"select store_id, store_name, store_description, store_path, node_id, "
-		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store "
-		//	+ "where lower(store_name) = ?";
-		
-		//final RowMapper<Store> storeRowMapper = (rs, i) -> {
-		//	Store s = new Store();
-		//	s.setId(rs.getLong("store_id"));
-		//	s.setName(rs.getString("store_name"));
-		//	s.setDescription(rs.getString("store_description"));
-		//	s.setPath(Paths.get(rs.getString("store_path")));
-		//	s.setNodeId(rs.getLong("node_id"));
-		//	s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-		//	s.setDateCreated(rs.getTimestamp("creation_date"));
-		//	s.setDateUpdated(rs.getTimestamp("updated_date"));
-		//	return s;
-		//};
-		
 		final ResultSetExtractor<Store> storeResultExtractor = SpringJdbcUtil.getSingletonExtractor(storeRowMapper);
 		
 		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });	
@@ -267,24 +231,6 @@ public class FileSystemRepository {
 	public List<Store> getStores() throws Exception {
 		
 		String sql = SQL_STORES_COMMON;
-		
-		//String sql =
-		//	"select store_id, store_name, store_description, store_path, node_id, "
-		//	+ "max_file_size_in_db, creation_date, updated_date from eas_store";
-		
-		//List<Store> stores = jdbcTemplate.query(
-		//	sql, (rs, rowNum) -> {
-		//		Store s = new Store();
-		//		s.setId(rs.getLong("store_id"));
-		//		s.setName(rs.getString("store_name"));
-		//		s.setDescription(rs.getString("store_description"));
-		//		s.setPath(Paths.get(rs.getString("store_path")));
-		//		s.setNodeId(rs.getLong("node_id"));
-		//		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
-		//		s.setDateCreated(rs.getTimestamp("creation_date"));
-		//		s.setDateUpdated(rs.getTimestamp("updated_date"));
-		//		return s;
-		//	});
 		
 		List<Store> stores = jdbcTemplate.query(sql, storeRowMapper);			
 		
@@ -434,6 +380,248 @@ public class FileSystemRepository {
 		return resources;
 		
 	}
+	
+	/**
+	 * Fetch a path resource. Every resource has a unique node id.
+	 * 
+	 * Will not include data from eas_binary_resource for FileMetaResource objects.
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public PathResource getPathResource(Long nodeId) throws Exception {
+		
+		//List<PathResource> childResources = getPathResourceTree(nodeId, 0);
+		//if(childResources == null){
+		//	throw new Exception("No PathResource found for node id => " + nodeId);
+		//}else if(childResources.size() != 1){
+		//	// should never get here...
+		//	throw new Exception("Expected 1 PathResource for node id => " + nodeId + ", but fetched " + childResources.size());
+		//}
+		//return childResources.get(0);
+		
+		String sql =
+				SQL_PATH_RESOURCE_COMMON +
+				"where c.parent_node_id = ? and c.depth <= ? " +
+				"order by c.depth, n.node_name";
+		
+		final ResultSetExtractor<PathResource> pathResultExtractor = SpringJdbcUtil.getSingletonExtractor(resourcePathRowMapper);
+		
+		return jdbcTemplate.query(sql, pathResultExtractor, new Object[] { nodeId, new Integer(0) });
+		
+	}
+	
+	/**
+	 * Fetch a path resource by store and relative path.
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @return
+	 * @throws Exception
+	 */
+	public PathResource getPathResource(String storeName, String relativePath) throws Exception {
+		
+		String sql =
+			SQL_PATH_RESOURCE_COMMON +
+			"where lower(s.store_name) = ? and lower(r.relative_path) = ? and c.depth = 0 " +
+			"order by c.depth, n.node_name";
+			
+		//return jdbcTemplate.queryForObject(sql, resourcePathRowMapper,
+		//		new Object[] { storeName.toLowerCase(), relativePath.toLowerCase() });
+		
+		final ResultSetExtractor<PathResource> pathResultExtractor = SpringJdbcUtil.getSingletonExtractor(resourcePathRowMapper);
+		
+		return jdbcTemplate.query(sql, pathResultExtractor, new Object[] { storeName.toLowerCase(), relativePath.toLowerCase() });			
+		
+	}
+	
+	/**
+	 * Fetch the parent path resource for the specified node. If the node is a root node, and
+	 * has no parent, then null will be returned.
+	 * 
+	 * @param nodeId
+	 * @throws Exception
+	 */
+	public PathResource getParentPathResource(Long nodeId) throws Exception {
+		
+		List<PathResource> resources = getParentPathResourceTree(nodeId, 1);
+		
+		if(resources == null || resources.size() == 0){
+			throw new ServiceException("No bottom-up PathResource tree for nodeId=" + nodeId + 
+					". Returned list was null or empty.");
+		}
+		
+		Tree<PathResource> tree = pathResTreeUtil.buildParentPathResourceTree(resources);
+		
+		PathResource resource = tree.getRootNode().getData();
+		if(resource.getNodeId().equals(nodeId) && resource.getParentNodeId().equals(0L)){
+			// this is a root node with no parent
+			return null;
+		}
+		
+		return resource;		
+		
+	}
+	
+	/**
+	 * Fetch the first level children for the path resource.
+	 * 
+	 * @param nodeId - id of the resource. All first level children will be returned
+	 * @return All the first-level children, or an empty list of the node has no children
+	 */	
+	public List<PathResource> getChildPathResource(Long nodeId) throws Exception {
+		
+		List<PathResource> resources = getPathResourceTree(nodeId, 1);
+		
+		Tree<PathResource> tree = pathResTreeUtil.buildPathResourceTree(resources, nodeId);
+		
+		if(tree.getRootNode().hasChildren()){
+			List<PathResource> children = tree.getRootNode().getChildren().stream()
+					.map(n -> n.getData())
+					.collect(Collectors.toCollection(ArrayList::new));
+			return children;
+		}else{
+			return new ArrayList<PathResource>();
+		}
+		
+	}
+	
+	/**
+	 * Fetch the child resource for the directory (first level only) with the matching name, of the specified type.
+	 * 
+	 * @param dirNodeId
+	 * @param name
+	 * @param type
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+		
+		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
+		if(childResources != null && childResources.size() > 0){
+			for(PathResource pr : childResources){
+				if(pr.getParentNodeId().equals(dirNodeId)
+						&& pr.getResourceType() == type
+						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+					
+					return pr;
+					
+				}
+			}
+		}
+		
+		return null;
+		
+	}
+	
+	/**
+	 * Fetch a DirectoryResource
+	 * 
+	 * @param nodeId
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public DirectoryResource getDirectory(Long nodeId) throws Exception {
+		
+		PathResource resource = getPathResource(nodeId);
+		if(resource == null){
+			throw new Exception("Failed to get directory by id, no path resource for nodeId=" + nodeId + ". Returned object was null.");
+		}
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new Exception("Error fetching directory resource, nodeId => " + nodeId + " is not a directory resource.");
+		}
+		
+	}
+	
+	/**
+	 * Fetch a DirectoryResource
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @return
+	 * @throws Exception
+	 */
+	public DirectoryResource getDirectory(String storeName, String relativePath) throws Exception {
+		
+		PathResource resource = getPathResource(storeName, relativePath);
+		if(resource == null){
+			throw new Exception("Failed to get directory by store name and resource relative path, "
+					+ "returned object was null. storeName=" + storeName + ", relativePath=" + relativePath);
+		}
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new Exception("Error fetching directory resource, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", is not a directory resource.");
+		}
+		
+	}	
+	
+	/**
+	 * Fetch a FileMetaResource
+	 * 
+	 * @param nodeId - file node Id
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public FileMetaResource getFileMetaResource(Long nodeId, boolean includeBinary) throws Exception {
+		
+		PathResource resource = getPathResource(nodeId);
+		if(resource == null){
+			throw new Exception("Failed to get file meta resource by node id, returned object was null. "
+					+ "nodeId=" + nodeId + ", includeBinary=" + includeBinary);
+		}
+		if(resource.getResourceType() == ResourceType.FILE){
+			FileMetaResource fileMeta = (FileMetaResource)resource;
+			if(includeBinary){
+				fileMeta = populateWithBinaryData(fileMeta);
+			}
+			return fileMeta;
+		}else{
+			throw new Exception("Error fetching file meta resource for nodeId=" + nodeId + 
+					". Path resource is not a file meta resource.");
+		}
+		
+	}
+	
+	/**
+	 * Fetch a FileMetaResource
+	 * 
+	 * @param storeName - the store name
+	 * @param relativePath - the relative path within the store
+	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
+	 * @return
+	 * @throws Exception
+	 */
+	@MethodTimer
+	public FileMetaResource getFileMetaResource(String storeName, String relativePath, boolean includeBinary) throws Exception {
+		
+		PathResource resource = getPathResource(storeName, relativePath);
+		if(resource == null){
+			throw new Exception("Failed to get file meta resource by store name and resource relative path, returned object was null. "
+					+ "storeName=" + storeName + ", relativePath=" + relativePath + ", includeBinary=" + includeBinary);
+		}
+		if(resource.getResourceType() == ResourceType.FILE){
+			FileMetaResource fileMeta = (FileMetaResource)resource;
+			if(includeBinary){
+				fileMeta = populateWithBinaryData(fileMeta);
+			}
+			return fileMeta;
+		}else{
+			throw new Exception("Error fetching file meta resource, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", includeBinary=" + includeBinary + 
+					". Path resource is not a file meta resource.");
+		}
+		
+	}	
 	
 	/**
 	 * Create a new store
@@ -1077,182 +1265,6 @@ public class FileSystemRepository {
 	}	
 	
 	/**
-	 * Fetch a path resource. Every resource has a unique node id.
-	 * 
-	 * Will not include data from eas_binary_resource for FileMetaResource objects.
-	 * 
-	 * @param nodeId
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public PathResource getPathResource(Long nodeId) throws Exception {
-		
-		List<PathResource> childResources = getPathResourceTree(nodeId, 0);
-		if(childResources == null){
-			throw new Exception("No PathResource found for node id => " + nodeId);
-		}else if(childResources.size() != 1){
-			// should never get here...
-			throw new Exception("Expected 1 PathResource for node id => " + nodeId + ", but fetched " + childResources.size());
-		}
-		
-		return childResources.get(0);
-		
-	}
-	
-	/**
-	 * Fetch a path resource by store and relative path.
-	 * 
-	 * @param storeName - the store name
-	 * @param relativePath - the relative path within the store
-	 * @return
-	 * @throws Exception
-	 */
-	public PathResource getPathResource(String storeName, String relativePath) throws Exception {
-		
-		String sql =
-			SQL_PATH_RESOURCE_COMMON +
-			"where lower(s.store_name) = ? and lower(r.relative_path) = ? and c.depth = 0 " +
-			"order by c.depth, n.node_name";
-			
-			return jdbcTemplate.queryForObject(sql, resourcePathRowMapper,
-					new Object[] { storeName.toLowerCase(), relativePath.toLowerCase() });		
-		
-	}
-	
-	/**
-	 * Fetch the parent path resource for the specified node. If the node is a root node, and
-	 * has no parent, then null will be returned.
-	 * 
-	 * @param nodeId
-	 * @throws Exception
-	 */
-	public PathResource getParentPathResource(Long nodeId) throws Exception {
-		
-		List<PathResource> resources = getParentPathResourceTree(nodeId, 1);
-		
-		if(resources == null || resources.size() == 0){
-			throw new ServiceException("No bottom-up PathResource tree for nodeId=" + nodeId + 
-					". Returned list was null or empty.");
-		}
-		
-		Tree<PathResource> tree = pathResTreeUtil.buildParentPathResourceTree(resources);
-		
-		PathResource resource = tree.getRootNode().getData();
-		if(resource.getNodeId().equals(nodeId) && resource.getParentNodeId().equals(0L)){
-			// this is a root node with no parent
-			return null;
-		}
-		
-		return resource;		
-		
-	}
-	
-	/**
-	 * Fetch the first level children for the path resource.
-	 * 
-	 * @param nodeId - id of the resource. All first level children will be returned
-	 * @return All the first-level children, or an empty list of the node has no children
-	 */	
-	public List<PathResource> getChildPathResource(Long nodeId) throws Exception {
-		
-		List<PathResource> resources = getPathResourceTree(nodeId, 1);
-		
-		Tree<PathResource> tree = pathResTreeUtil.buildPathResourceTree(resources, nodeId);
-		
-		if(tree.getRootNode().hasChildren()){
-			List<PathResource> children = tree.getRootNode().getChildren().stream()
-					.map(n -> n.getData())
-					.collect(Collectors.toCollection(ArrayList::new));
-			return children;
-		}else{
-			return new ArrayList<PathResource>();
-		}
-		
-	}
-	
-	/**
-	 * Fetch the child resource for the directory (first level only) with the matching name, of the specified type.
-	 * 
-	 * @param dirNodeId
-	 * @param name
-	 * @param type
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
-		
-		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
-		if(childResources != null && childResources.size() > 0){
-			for(PathResource pr : childResources){
-				if(pr.getParentNodeId().equals(dirNodeId)
-						&& pr.getResourceType() == type
-						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
-					
-					return pr;
-					
-				}
-			}
-		}
-		
-		return null;
-		
-	}	
-	
-	/**
-	 * Fetch a FileMetaResource
-	 * 
-	 * @param nodeId - file node Id
-	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public FileMetaResource getFileMetaResource(Long nodeId, boolean includeBinary) throws Exception {
-		
-		PathResource resource = getPathResource(nodeId);
-		if(resource.getResourceType() == ResourceType.FILE){
-			FileMetaResource fileMeta = (FileMetaResource)resource;
-			if(includeBinary){
-				fileMeta = populateWithBinaryData(fileMeta);
-			}
-			return fileMeta;
-		}else{
-			throw new Exception("Error fetching file meta resource for nodeId=" + nodeId + 
-					". Path resource is not a file meta resource.");
-		}
-		
-	}
-	
-	/**
-	 * Fetch a FileMetaResource
-	 * 
-	 * @param storeName - the store name
-	 * @param relativePath - the relative path within the store
-	 * @param includeBinary - pass true to include the binary data for the file, pass false not to.
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public FileMetaResource getFileMetaResource(String storeName, String relativePath, boolean includeBinary) throws Exception {
-		
-		PathResource resource = getPathResource(storeName, relativePath);
-		if(resource.getResourceType() == ResourceType.FILE){
-			FileMetaResource fileMeta = (FileMetaResource)resource;
-			if(includeBinary){
-				fileMeta = populateWithBinaryData(fileMeta);
-			}
-			return fileMeta;
-		}else{
-			throw new Exception("Error fetching file meta resource, storeName=" + storeName + 
-					", relativePath=" + relativePath + ", includeBinary=" + includeBinary + 
-					". Path resource is not a file meta resource.");
-		}
-		
-	}	
-	
-	/**
 	 * Adds a BinaryResource object to the FileMetaResource with either the byte[] data from
 	 * the database (if it exists) or from the local file system.
 	 * 
@@ -1314,45 +1326,6 @@ public class FileSystemRepository {
 			
 			return resource;
 			
-		}
-		
-	}	
-	
-	/**
-	 * Fetch a DirectoryResource
-	 * 
-	 * @param nodeId
-	 * @return
-	 * @throws Exception
-	 */
-	@MethodTimer
-	public DirectoryResource getDirectory(Long nodeId) throws Exception {
-		
-		PathResource resource = getPathResource(nodeId);
-		if(resource.getResourceType() == ResourceType.DIRECTORY){
-			return (DirectoryResource)resource;
-		}else{
-			throw new Exception("Error fetching directory resource. Node id => " + nodeId + " is not a directory resource.");
-		}
-		
-	}
-	
-	/**
-	 * Fetch a DirectoryResource
-	 * 
-	 * @param storeName - the store name
-	 * @param relativePath - the relative path within the store
-	 * @return
-	 * @throws Exception
-	 */
-	public DirectoryResource getDirectory(String storeName, String relativePath) throws Exception {
-		
-		PathResource resource = getPathResource(storeName, relativePath);
-		if(resource.getResourceType() == ResourceType.DIRECTORY){
-			return (DirectoryResource)resource;
-		}else{
-			throw new Exception("Error fetching directory resource, storeName=" + storeName + 
-					", relativePath=" + relativePath + ", is not a directory resource.");
 		}
 		
 	}	
