@@ -87,50 +87,6 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	}
 	
 	/**
-	 * Create a new store
-	 * 
-	 * @param dirNodeId
-	 * @param name
-	 * @return
-	 * @throws WebServiceException
-	 */
-	@GET
-	@Path("/addStore")
-	@Produces(MediaType.APPLICATION_JSON)
-    public Store addStore(
-    		@QueryParam("storeName") String storeName,
-    		@QueryParam("storeDesc") String storeDesc,
-    		@QueryParam("storePath") String storePath,
-    		@QueryParam("rootDirName") String rootDirName,
-    		@QueryParam("maxFileSizeDb") Long maxFileSizeDb) throws WebServiceException {
-    	
-		if(StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc) || StringUtil.isNullEmpty(storePath) ||
-				StringUtil.isNullEmpty(rootDirName) || maxFileSizeDb == null || maxFileSizeDb < 0){
-			
-			handleError("Missing required params. Plese check values for storeName, storeDesc, "
-					+ "storePath, rootDirName, and maxFileSizeDb", WebExceptionType.CODE_IO_ERROR);
-			
-		}
-		
-		java.nio.file.Path newStorePath = null;
-		try {
-			newStorePath = Paths.get(storePath);
-		} catch (Exception e) {
-			handleError("Error converting String '" + storePath + "' to java.nio.file.Path: " + e.getMessage(), 
-					WebExceptionType.CODE_IO_ERROR, e);
-		}
-		
-		Store store = null;
-    	try {
-			store = fileSystemService.addStore(storeName, storeDesc, newStorePath, rootDirName, maxFileSizeDb);
-		} catch (ServiceException e) {
-			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
-		}
-    	return store;
-    	
-    }
-	
-	/**
 	 * Download a file by it's file node ID.
 	 * 
 	 * @return
@@ -345,26 +301,30 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     }
     
-	/**
-	 * Add a file...
-	 * 
-	 * @return
-	 * @throws WebServiceException
-	 */
+    /**
+     * Add a directory
+     * 
+     * @param dirNodeId - id of parent directory. New directory will be created under the parent.
+     * @param name - name for new directory
+     * @param desc - description for new directory
+     * @return
+     * @throws WebServiceException
+     */
     @GET
-    @Path("/addDirectory/{dirNodeId}/name/{name}")
+    @Path("/addDirectory")
     @Produces(MediaType.APPLICATION_JSON)
     public DirectoryResource addDirectory(
-    		@PathParam("dirNodeId") Long dirNodeId,
-    		@PathParam("name") String name) throws WebServiceException {
+    		@QueryParam("dirNodeId") Long dirNodeId,
+    		@QueryParam("name") String name,
+    		@QueryParam("desc") String desc) throws WebServiceException {
     	
     	if(dirNodeId == null || StringUtil.isNullEmpty(name)){
-    		handleError("Missing dirNodeId, and/or name params.", WebExceptionType.CODE_IO_ERROR);
+    		handleError("Missing 'dirNodeId', 'name', and/or 'desc' params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	DirectoryResource dirResource = null;
     	try {
-    		dirResource = fileSystemService.addDirectory(dirNodeId, name);
+    		dirResource = fileSystemService.addDirectory(dirNodeId, name, desc);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -373,6 +333,54 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	return dirResource;
     	
     }
+    
+    /**
+     * Create a new store
+     * 
+     * @param storeName - store name must be unique. an exception will be thrown if a store with
+     * the provided name already exists.
+     * @param storeDesc - store description
+     * @param storePath - store path on the local file system. This application must have read/write
+     * permission to create the directory.
+     * @param maxFileSizeBytes - max file size in bytes allowed by the store for file storage in the
+     * database in blob format (file will still be saved to the local file system.)
+     * @param rootDirName - directory name for the root directory for the store.
+     * @param rootDirDesc - description for the root directory
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/addStore")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Store addStore(
+    		@QueryParam("storeName") String storeName,
+    		@QueryParam("storeDesc") String storeDesc,
+    		@QueryParam("storePath") String storePath,
+    		@QueryParam("maxFileSizeBytes") Long maxFileSizeBytes,
+    		@QueryParam("rootDirName") String rootDirName,
+    		@QueryParam("rootDirDesc") String rootDirDesc) throws WebServiceException {
+    	
+    	if(maxFileSizeBytes == null || StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc)
+    			|| StringUtil.isNullEmpty(storePath) || StringUtil.isNullEmpty(rootDirName) ||
+    			StringUtil.isNullEmpty(rootDirDesc)){
+    		
+    		handleError("Missing required params. Please check, storeName, storeDesc, storePath, "
+    				+ "maxFileSizeBytes, rootDirName, and/or rootDirDesc values.", WebExceptionType.CODE_IO_ERROR);
+    		
+    	}
+    	
+    	Store store = null;
+    	try {
+			store = fileSystemService.addStore(storeName, storeDesc, 
+					Paths.get(storePath), rootDirName, rootDirDesc, maxFileSizeBytes);
+		} catch (ServiceException e) {
+			handleError("Error creating new store, name=" + storeName + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return store;
+    	
+    }    
     
     /**
      * Delete a file
@@ -605,51 +613,6 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		}
     	
     	return testStore;
-    	
-    }
-    
-    /**
-     * Create a new store
-     * 
-     * @param storeName - store name must be unique. an exception will be thrown if a store with
-     * the provided name already exists.
-     * @param storeDesc - store description
-     * @param storePath - store path on the local file system. This application must have read/write
-     * permission to create the directory.
-     * @param maxFileSizeBytes - max file size in bytes allowed by the store for file storage in the
-     * database in blob format (file will still be saved to the local file system.)
-     * @param rootDirName - directory name for the root directory for the store.
-     * @return
-     * @throws WebServiceException
-     */
-    @POST
-    @Path("/createStore")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Store createStore(
-    		@QueryParam("storeName") String storeName,
-    		@QueryParam("storeDesc") String storeDesc,
-    		@QueryParam("storePath") String storePath,
-    		@QueryParam("maxFileSizeBytes") Long maxFileSizeBytes,
-    		@QueryParam("rootDirName") String rootDirName) throws WebServiceException {
-    	
-    	if(maxFileSizeBytes == null || StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc)
-    			|| StringUtil.isNullEmpty(storePath) || StringUtil.isNullEmpty(rootDirName)){
-    		
-    		handleError("Missing required params. Please check, storeName, storeDesc, storePath, "
-    				+ "maxFileSizeBytes, and/or rootDirName values.", WebExceptionType.CODE_IO_ERROR);
-    		
-    	}
-    	
-    	Store store = null;
-    	try {
-			store = fileSystemService.addStore(storeName, storeDesc, 
-					Paths.get(storePath), rootDirName, maxFileSizeBytes);
-		} catch (ServiceException e) {
-			handleError("Error creating new store, name=" + storeName + ", " + 
-					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
-		}
-    	
-    	return store;
     	
     }
     

@@ -226,13 +226,14 @@ public class FileSystemService {
 	 * @param storeDesc
 	 * @param storePath
 	 * @param rootDirName
+	 * @param rootDirDesc
 	 * @param maxFileSizeDb
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
 	public Store addStore(String storeName, String storeDesc, Path storePath, 
-			String rootDirName, Long maxFileSizeDb) throws ServiceException {
+			String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws ServiceException {
 		
 		Store store = getStoreByName(storeName);
 		if(store != null){
@@ -240,7 +241,7 @@ public class FileSystemService {
 		}
 		
 		try {
-			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, maxFileSizeDb);
+			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, rootDirDesc, maxFileSizeDb);
 		} catch (Exception e) {
 			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
 		}
@@ -1010,15 +1011,16 @@ public class FileSystemService {
 	 * 
 	 * @param dirNodeId - id of parent directory
 	 * @param name - Name of new directory which will be created under the parent directory
+	 * @param desc - Description for new directory
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(Long dirNodeId, String name) throws ServiceException {
+	public DirectoryResource addDirectory(Long dirNodeId, String name, String desc) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
 		
-		return addDirectory(dirRes, name);
+		return addDirectory(dirRes, name, desc);
 		
 	}
 	
@@ -1026,12 +1028,13 @@ public class FileSystemService {
 	 * Add new directory.
 	 * 
 	 * @param parentDir - The parent directory
-	 * @param name - Name of new directory which will be created under the parent directory
+	 * @param name - Name for new directory which will be created under the parent directory
+	 * @param desc - Description for new directory
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(DirectoryResource parentDir, String name) throws ServiceException {
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc) throws ServiceException {
 		
 		final Store store = getStore(parentDir);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
@@ -1044,7 +1047,7 @@ public class FileSystemService {
 				DirectoryResource dirResource = null;
 				try {
 					// TODO, pass parentDir rather than just it's node ID.
-					dirResource = fileSystemRepository.addDirectory(parentDir.getNodeId(), name);
+					dirResource = fileSystemRepository.addDirectory(parentDir.getNodeId(), name, desc);
 				} catch (Exception e) {
 					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
 				}
@@ -1218,7 +1221,7 @@ public class FileSystemService {
 			return (DirectoryResource) existingChildDir;
 		}else{
 			// create new directory
-			return addDirectory(toDir, dirToCopy.getPathName());
+			return addDirectory(toDir, dirToCopy.getPathName(), dirToCopy.getDesc());
 		}
 		
 	}
@@ -1486,6 +1489,7 @@ public class FileSystemService {
 		String testStorePath = fileSystemUtil.cleanFullPath(appProps.getProperty("store.test.path"));
 		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
 		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
+		String testStoreRootDirDesc = appProps.getProperty("store.test.root.dir.desc");
 		
 		Long maxBytes = 0L;
 		try {
@@ -1494,17 +1498,18 @@ public class FileSystemService {
 			throw new ServiceException("Error parsing store.test.max.file.size.bytes to long. " + e.getMessage(), e);
 		}
 		
-		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), testStoreRootDirName, maxBytes);
+		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), 
+				testStoreRootDirName, testStoreRootDirDesc, maxBytes);
 		
-		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more");
-		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other");
-			DirectoryResource dirThings = addDirectory(dirOther, "things");
-			DirectoryResource dirFoo = addDirectory(dirOther, "foo");
-				DirectoryResource dirCats = addDirectory(dirFoo, "cats");
-				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs");
-					DirectoryResource dirBig = addDirectory(dirDogs, "big");
-					DirectoryResource dirSmall = addDirectory(dirDogs, "small");
-						DirectoryResource dirPics = addDirectory(dirSmall, "pics");		
+		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc");
+		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc");
+			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc");
+			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc");
+				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc");
+				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc");
+					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc");
+					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc");
+						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc");		
 		
 		return store;
 	

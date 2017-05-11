@@ -630,12 +630,13 @@ public class FileSystemRepository {
 	 * @param storeDesc
 	 * @param storePath
 	 * @param rootDirName
+	 * @param rootDirDesc
 	 * @param maxFileSizeDb
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, Long maxFileSizeDb) throws Exception {
+	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws Exception {
 	
 		Long storeId = getNextStoreId();
 		Long rootNodeId = closureRepository.getNextNodeId();
@@ -659,7 +660,7 @@ public class FileSystemRepository {
 		}		
 		
 		// add root directory for store
-		addRootDirectory(storeId, storePath, rootNodeId, rootDirName);
+		DirectoryResource rootDir = addRootDirectory(storeId, storePath, rootNodeId, rootDirName, rootDirDesc);
 		
 		Store store = new Store();
 		store.setId(storeId);
@@ -670,6 +671,7 @@ public class FileSystemRepository {
 		store.setDateCreated(dtNow);
 		store.setDateUpdated(dtNow);
 		store.setMaxFileSizeBytes(maxFileSizeDb);
+		store.setRootDir(rootDir);
 		
 		return store;
 		
@@ -1094,12 +1096,13 @@ public class FileSystemRepository {
 	 * Add a directory node.
 	 * 
 	 * @param parentDirNodeId - Id of parent directory node.
-	 * @param name - name of new directory node.
+	 * @param name - name for new directory node.
+	 * @param desc - description for new directory
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(Long parentDirNodeId, String name) throws Exception {
+	public DirectoryResource addDirectory(Long parentDirNodeId, String name, String desc) throws Exception {
 		
 		// make sure parentDirNodeId is actually of a directory path resource type
 		DirectoryResource parentDirectory = getDirectory(parentDirNodeId);
@@ -1130,7 +1133,7 @@ public class FileSystemRepository {
 		resource.setPathName(name);
 		resource.setParentNodeId(newNode.getParentNodeId());
 		resource.setRelativePath(dirRelPathString);
-		resource.setDesc(null); // TODO - possibly change method to pass in optional description?
+		resource.setDesc(desc);
 		resource.setStoreId(store.getId());
 		
 		// add entry to eas_path_resource
@@ -1165,10 +1168,11 @@ public class FileSystemRepository {
 	 * @param storePath - path for the store
 	 * @param rootNodeId - id of store's root directory node
 	 * @param name - path name of store's root directory node
+	 * @param desc - description for directory
 	 * @return
 	 * @throws Exception
 	 */
-	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name) throws Exception {
+	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name, String desc) throws Exception {
 		
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
@@ -1188,7 +1192,7 @@ public class FileSystemRepository {
 		dirResource.setPathName(name);
 		dirResource.setParentNodeId(newNode.getParentNodeId());
 		dirResource.setRelativePath(dirRelPathString);
-		dirResource.setDesc("Root directory for store");
+		dirResource.setDesc(desc);
 		dirResource.setStoreId(storeId);
 		
 		// add entry to eas_path_resource
