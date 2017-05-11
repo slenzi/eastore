@@ -266,7 +266,13 @@ public class FileSystemService {
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
+	 * 
+	 * @deprecated - We want to create a new "addFile" method that does not block. It will create a task (A) which
+	 * adds the file meta data to the database. Task (A) will not block so the "addFile" method will return quickly.
+	 * Task (A) will spawn a task (B) which goes back and updates the binary data in the database.
+	 * 
 	 */
+	/*
 	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
@@ -275,6 +281,7 @@ public class FileSystemService {
 		return addFileWithoutBinary(dirRes, filePath, replaceExisting);
 		
 	}
+	*/
 	
 	/**
 	 * Adds a new file, but does not add the binary data to eas_binary_resource
@@ -286,7 +293,13 @@ public class FileSystemService {
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown. 
 	 * @return
 	 * @throws ServiceException
+	 * 
+	 * @deprecated - We want to create a new "addFile" method that does not block. It will create a task (A) which
+	 * adds the file meta data to the database. Task (A) will not block so the "addFile" method will return quickly.
+	 * Task (A) will spawn a task (B) which goes back and updates the binary data in the database.
+	 * 
 	 */
+	/*
 	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(
 			String storeName, String dirRelPath, Path filePath, boolean replaceExisting) throws ServiceException {
@@ -295,7 +308,8 @@ public class FileSystemService {
 		
 		return addFileWithoutBinary(dirResource, filePath, replaceExisting);
 		
-	}	
+	}
+	*/	
 	
 	/**
 	 * Adds a new file, but does not add the binary data to eas_binary_resource
@@ -306,7 +320,13 @@ public class FileSystemService {
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
 	 * @return
 	 * @throws ServiceException
+	 * 
+	 * @deprecated - We want to create a new "addFile" method that does not block. It will create a task (A) which
+	 * adds the file meta data to the database. Task (A) will not block so the "addFile" method will return quickly.
+	 * Task (A) will spawn a task (B) which goes back and updates the binary data in the database.
+	 * 
 	 */
+	/*
 	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(
 			DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
@@ -319,6 +339,8 @@ public class FileSystemService {
 			@Override
 			public FileMetaResource doWork() throws ServiceException {
 
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
+				
 				FileMetaResource fileMetaResource = null;
 				try {
 					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirRes, filePath, replaceExisting);
@@ -326,6 +348,9 @@ public class FileSystemService {
 					throw new ServiceException("Error adding new file => " + filePath.toString() + 
 							", to directory => " + dirRes.getNodeId() + ", replaceExisting => " + replaceExisting, e);
 				}
+				
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
+				
 				return fileMetaResource;				
 				
 			}
@@ -345,6 +370,127 @@ public class FileSystemService {
 		FileMetaResource fileMetaResource = task.get(); // block until finished
 		
 		return fileMetaResource;		
+		
+	}
+	*/
+	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database
+	 * 
+	 * @param dirNodeId - id of directory where file will be added
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(Long dirNodeId, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
+		
+		return addFile(dirRes, filePath, replaceExisting);
+		
+	}
+	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database
+	 * 
+	 * @param storeName - name of the store
+	 * @param dirRelPath - relative path of directory resource within the store
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(String storeName, String dirRelPath, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		DirectoryResource dirResource = getDirectoryResource(storeName, dirRelPath);
+		
+		return addFile(dirResource, filePath, replaceExisting);		
+		
+	}
+	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database
+	 * 
+	 * @param dirRes - directory where file will be added
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		final Store store = getStore(dirRes);
+		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		
+		//
+		// parent task adds file meta data to database, spawns child task for refreshing binary data
+		// in the database, then returns quickly. We must wait (block) for this parent task to complete.
+		//
+		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
+			public FileMetaResource doWork() throws ServiceException {
+				
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
+				FileMetaResource fileMetaResource = null;
+				try {
+					fileMetaResource = fileSystemRepository.addFileWithoutBinary(dirRes, filePath, replaceExisting);
+				} catch (Exception e) {
+					throw new ServiceException("Error adding new file => " + filePath.toString() + 
+							", to directory => " + dirRes.getNodeId() + ", replaceExisting => " + replaceExisting, e);
+				}
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
+				
+				//
+				// child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
+				//
+				final FileMetaResource finalFileMetaResource = fileMetaResource;
+				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
+					public Void doWork() throws ServiceException {
+
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(START)");
+						try {
+							fileSystemRepository.refreshBinaryDataInDatabase(finalFileMetaResource);
+						} catch (Exception e) {
+							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
+									+ "for file resource node => " + finalFileMetaResource.getNodeId(), e);
+						}
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(END)");
+						return null;				
+						
+					}
+					public Logger getLogger() {
+						return logger;
+					}
+				}
+				
+				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
+				refreshTask.setName("Refresh binary data in DB [" + fileMetaResource.toString() + "]");
+				taskManager.addTask(refreshTask);				
+				
+				return fileMetaResource;				
+			}
+			public Logger getLogger() {
+				return logger;
+			}
+		};
+		
+		AddFileTask addTask = new AddFileTask();
+		addTask.setName("Add File Without Binary [dirNodeId=" + dirRes.getNodeId() + ", filePath=" + filePath + 
+				", replaceExisting=" + replaceExisting + "]");
+		taskManager.addTask(addTask);
+		
+		FileMetaResource fileMetaResource = addTask.get(); // block until finished
+		
+		return fileMetaResource;
 		
 	}
 	
@@ -396,12 +542,17 @@ public class FileSystemService {
 			@Override
 			public Void doWork() throws ServiceException {
 
+				logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileMetaResource.getRelativePath() + "(START)");
+				
 				try {
 					fileSystemRepository.refreshBinaryDataInDatabase(fileMetaResource);
 				} catch (Exception e) {
 					throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 							+ "for file resource node => " + fileMetaResource.getNodeId(), e);
 				}
+				
+				logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileMetaResource.getRelativePath() + "(END)");
+				
 				return null;				
 				
 			}
@@ -919,9 +1070,12 @@ public class FileSystemService {
 					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
 		}
 		
-		FileMetaResource fileMeta = addFileWithoutBinary(toDir, sourceFilePath, replaceExisting);
+		//FileMetaResource fileMeta = addFileWithoutBinary(toDir, sourceFilePath, replaceExisting);
+		FileMetaResource fileMeta = addFile(toDir, sourceFilePath, replaceExisting);
 		
-		refreshBinaryDataInDatabase(fileMeta); // TODO - currently does not block
+		// The new "addFile" method we now use above also takes care of adding/refreshing the binary
+		// data in the database, so we no longer need to call it separately
+		//refreshBinaryDataInDatabase(fileMeta); // TODO - currently does not block
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
 		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.
@@ -1217,17 +1371,21 @@ public class FileSystemService {
 				// add file meta
 				FileMetaResource fileMetaResource = null;
 				try {
-					fileMetaResource = addFileWithoutBinary(dirNodeId, pathToFile, replaceExisting);
+					//fileMetaResource = addFileWithoutBinary(dirNodeId, pathToFile, replaceExisting);
+					fileMetaResource = addFile(dirNodeId, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
 				}
 				
+				// The new "addFile" method we now call above also takes care of adding/refreshing the binary
+				// data in the database, so we no longer need to call that method separately 
+				//
 				// go back and add binary to db
-				try {
-					refreshBinaryDataInDatabase(fileMetaResource);
-				} catch (ServiceException e) {
-					throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
-				}
+				//try {
+				//	refreshBinaryDataInDatabase(fileMetaResource);
+				//} catch (ServiceException e) {
+				//	throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
+				//}
 					
 			});
 		
@@ -1264,18 +1422,22 @@ public class FileSystemService {
 				// add file meta
 				FileMetaResource fileMetaResource = null;
 				try {
-					fileMetaResource = addFileWithoutBinary(storeName, dirRelPath, pathToFile, replaceExisting);
+					//fileMetaResource = addFileWithoutBinary(storeName, dirRelPath, pathToFile, replaceExisting);
+					fileMetaResource = addFile(storeName, dirRelPath, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 
 							dirRelPath + "', under store name '" + storeName + "'.", e);
 				}
 				
+				// The new "addFile" method we now call above also takes care of adding/refreshing the binary
+				// data in the database, so we no longer need to call that method separately 
+				//
 				// go back and add binary to db
-				try {
-					refreshBinaryDataInDatabase(fileMetaResource);
-				} catch (ServiceException e) {
-					throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
-				}
+				//try {
+				//	refreshBinaryDataInDatabase(fileMetaResource);
+				//} catch (ServiceException e) {
+				//	throw new RuntimeException("Error adding binary data to db for FileMetaResource with node id => " + fileMetaResource.getNodeId(), e);
+				//}
 					
 			});		
 		
