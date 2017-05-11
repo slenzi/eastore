@@ -76,7 +76,10 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * Create a QueuedTaskManager for each store. Any SQL update operations are queued per store.
+	 * Create queued task managers for all stores. Any SQL update operations are queued per store.
+	 * 
+	 * Each store gets two task managers, one manager for tasks that involve adding binary data
+	 * to the database, and one manager for everything else.
 	 */
 	@PostConstruct
 	public void init(){
@@ -97,13 +100,21 @@ public class FileSystemService {
 		
 		for(Store store : stores){
 			
-			logger.info("Creating queued task manager for store [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+			logger.info("Creating queued task managers for store [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 			
-			QueuedTaskManager manager = taskManagerProvider.createQueuedTaskManager();
-			manager.setManagerName("Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-			ExecutorService executor = Executors.newSingleThreadExecutor();
-			manager.startTaskManager(executor);
-			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, manager);
+			QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
+			QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
+			
+			generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+			binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+			
+			ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
+			ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
+			
+			generalManager.startTaskManager(generalExecutor);
+			binaryManager.startTaskManager(binaryExecutor);
+			
+			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
 			storeTaskManagerMap.put(store, mapEntry);
 			
 		}
@@ -234,11 +245,19 @@ public class FileSystemService {
 			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
 		}
 		
-		QueuedTaskManager manager = taskManagerProvider.createQueuedTaskManager();
-		manager.setManagerName("Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-		ExecutorService executor = Executors.newSingleThreadExecutor();
-		manager.startTaskManager(executor);
-		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, manager);
+		QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
+		QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
+		
+		generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		
+		ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
+		ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
+		
+		generalManager.startTaskManager(generalExecutor);
+		binaryManager.startTaskManager(binaryExecutor);
+		
+		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
 		storeTaskManagerMap.put(store, mapEntry);		
 		
 		return store;
@@ -246,17 +265,30 @@ public class FileSystemService {
 	}
 	
 	/**
-	 * Fetch the queued task manager for the store;
+	 * Fetch the general queued task manager for the store;
 	 * 
 	 * @param store
 	 * @return
 	 */
-	private QueuedTaskManager getTaskManagerForStore(Store store){
+	private QueuedTaskManager getGeneralTaskManagerForStore(Store store){
 		
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
-		return map.getTaskManager();
+		return map.getGeneralTaskManager();
 		
 	}
+	
+	/**
+	 * Fetch the binary queued task manager for the store;
+	 * 
+	 * @param store
+	 * @return
+	 */
+	private QueuedTaskManager getBinaryTaskManagerForStore(Store store){
+		
+		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
+		return map.getBinaryTaskManager();
+		
+	}	
 	
 	/**
 	 * Adds a new file, but does not add the binary data to eas_binary_resource
@@ -430,7 +462,8 @@ public class FileSystemService {
 	public FileMetaResource addFile(DirectoryResource dirRes, Path filePath, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(dirRes);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
+		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);
 		
 		//
 		// parent task adds file meta data to database, spawns child task for refreshing binary data
@@ -472,9 +505,10 @@ public class FileSystemService {
 					}
 				}
 				
+				// add to binary task manager (not general task manager)
 				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
 				refreshTask.setName("Refresh binary data in DB [" + fileMetaResource.toString() + "]");
-				taskManager.addTask(refreshTask);				
+				binaryTaskManager.addTask(refreshTask);				
 				
 				return fileMetaResource;				
 			}
@@ -486,7 +520,7 @@ public class FileSystemService {
 		AddFileTask addTask = new AddFileTask();
 		addTask.setName("Add File Without Binary [dirNodeId=" + dirRes.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
-		taskManager.addTask(addTask);
+		generalTaskManager.addTask(addTask);
 		
 		FileMetaResource fileMetaResource = addTask.get(); // block until finished
 		
@@ -526,12 +560,11 @@ public class FileSystemService {
 	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
-	/*
 	@MethodTimer
 	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
 		final Store store = getStore(fileMetaResource);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
+		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);
 		
 		// check max file size allowed by store
 		if(fileMetaResource.getFileSize() > store.getMaxFileSizeBytes()){
@@ -567,14 +600,9 @@ public class FileSystemService {
 		
 		Task task = new Task();
 		task.setName("Refresh binary data in DB [" + fileMetaResource.toString() + "]");
-		taskManager.addTask(task);
-		
-		// TODO - do we actually want to wait for this to finish? It definitely needs to be queued!
-		
-		//FileMetaResource updatedResource = task.get(); // block until finished
+		binaryTaskManager.addTask(task);
 
 	}
-	*/
 	
 	/**
 	 * Remove the file, from database and disk. No undo.
@@ -587,7 +615,7 @@ public class FileSystemService {
 		
 		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId, false);
 		final Store store = getStore(fileMetaResource);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<Void> {
 
@@ -638,7 +666,7 @@ public class FileSystemService {
 		}
 		
 		final Store store = getStore(dirResource);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
 
@@ -1006,7 +1034,7 @@ public class FileSystemService {
 	public DirectoryResource addDirectory(DirectoryResource parentDir, String name) throws ServiceException {
 		
 		final Store store = getStore(parentDir);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);		
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<DirectoryResource> {
 
@@ -1224,7 +1252,7 @@ public class FileSystemService {
 	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting) throws ServiceException {
 		
 		final Store store = getStore(destDir);
-		final QueuedTaskManager taskManager = getTaskManagerForStore(store);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
 

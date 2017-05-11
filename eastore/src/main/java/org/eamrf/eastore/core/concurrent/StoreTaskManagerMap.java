@@ -1,7 +1,5 @@
 package org.eamrf.eastore.core.concurrent;
 
-import java.util.concurrent.ExecutorService;
-
 import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 
@@ -13,32 +11,42 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 public class StoreTaskManagerMap {
 
 	private Store store = null;
-	private QueuedTaskManager taskManager = null;
+	private QueuedTaskManager generalTaskManager = null;
+	private QueuedTaskManager binaryTaskManager = null;
 	
 	public StoreTaskManagerMap() {
 		
 	}
 
-	public StoreTaskManagerMap(Store store, QueuedTaskManager taskManager) {
+	public StoreTaskManagerMap(Store store, QueuedTaskManager generalTaskManager, QueuedTaskManager binaryTaskManager) {
 		super();
 		this.store = store;
-		this.taskManager = taskManager;
+		this.generalTaskManager = generalTaskManager;
+		this.binaryTaskManager = binaryTaskManager;
 	}
 
 	public Store getStore() {
 		return store;
 	}
-
-	public QueuedTaskManager getTaskManager() {
-		return taskManager;
-	}
-
+	
 	public void setStore(Store store) {
 		this.store = store;
+	}	
+
+	public QueuedTaskManager getGeneralTaskManager() {
+		return generalTaskManager;
 	}
 
-	public void setTaskManager(QueuedTaskManager taskManager) {
-		this.taskManager = taskManager;
+	public void setGeneralTaskManager(QueuedTaskManager generalTaskManager) {
+		this.generalTaskManager = generalTaskManager;
+	}
+
+	public QueuedTaskManager getBinaryTaskManager() {
+		return binaryTaskManager;
+	}
+
+	public void setBinaryTaskManager(QueuedTaskManager binaryTaskManager) {
+		this.binaryTaskManager = binaryTaskManager;
 	}
 
 }
