@@ -526,6 +526,7 @@ public class FileSystemService {
 	 * @param fileMetaResource
 	 * @throws ServiceException
 	 */
+	/*
 	@MethodTimer
 	public void refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws ServiceException {
 		
@@ -573,6 +574,7 @@ public class FileSystemService {
 		//FileMetaResource updatedResource = task.get(); // block until finished
 
 	}
+	*/
 	
 	/**
 	 * Remove the file, from database and disk. No undo.
