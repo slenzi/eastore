@@ -16,17 +16,24 @@
   		<version.jdk>1.8</version.jdk>
   		
   		<version.junit>4.12</version.junit>
-		<version.spring.boot.starter>1.5.2.RELEASE</version.spring.boot.starter>
-		<version.spring>4.3.7.RELEASE</version.spring>  		
-  		<version.apache.cxf>3.1.10</version.apache.cxf>
+		<version.spring.boot.starter>1.5.3.RELEASE</version.spring.boot.starter> <!-- was 1.5.2.RELEASE -->
+		<version.spring>4.3.8.RELEASE</version.spring> <!-- was 4.3.7.RELEASE -->		
+  		<version.apache.cxf>3.1.11</version.apache.cxf> <!-- was 3.1.10 -->
   		<version.apache.tika>1.14</version.apache.tika>
   		<version.apache.commons.io>2.5</version.apache.commons.io>
   		<version.apache.commons.codec>1.10</version.apache.commons.codec>
-  		<version.jackson.json.provider>2.8.7</version.jackson.json.provider>
+  		<version.jackson.json.provider>2.8.8</version.jackson.json.provider> <!-- was 2.8.7 -->
 		<version.gson>2.8.0</version.gson>
-		<version.jodatime>2.9.7</version.jodatime>
+		<version.jodatime>2.9.9</version.jodatime> <!-- was 2.9.7 -->
 		<version.javax.mail>1.5.6</version.javax.mail>
-		<version.javax.mail.api>1.5.6</version.javax.mail.api>  
+		<version.javax.mail.api>1.5.6</version.javax.mail.api>
+		
+		<!-- for spring mvc (error page) -->
+		<!--
+		<version.javax.servlet.jsp-api>2.3.1</version.javax.servlet.jsp-api>
+		<version.javax.servlet.jstl-api>1.2</version.javax.servlet.jstl-api>
+		-->
+		 
 		<version.hikaricp>2.6.1</version.hikaricp>
 		
 		<!-- for code time weaving (used by spring aop) -->
@@ -104,8 +111,26 @@
 		    <groupId>javax.mail</groupId>
 		    <artifactId>javax.mail-api</artifactId>
 		    <version>${version.javax.mail.api}</version>
-		</dependency>	
-	
+		</dependency>
+			
+		<!-- https://mvnrepository.com/artifact/javax.servlet.jsp/javax.servlet.jsp-api -->
+		<!--
+		<dependency>
+		    <groupId>javax.servlet.jsp</groupId>
+		    <artifactId>javax.servlet.jsp-api</artifactId>
+		    <version>${version.javax.servlet.jsp-api}</version>
+		</dependency>
+		-->
+		
+		<!-- https://mvnrepository.com/artifact/javax.servlet.jsp.jstl/jstl-api -->
+		<!--
+		<dependency>
+		    <groupId>javax.servlet.jsp.jstl</groupId>
+		    <artifactId>jstl-api</artifactId>
+		    <version>${version.javax.servlet.jstl-api}</version>
+		</dependency>
+		-->
+			
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
@@ -145,7 +170,21 @@
 		    <version>${version.spring}</version>
 		    <scope>test</scope>
 		</dependency>
-			
+		
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-websocket -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-websocket</artifactId>
+		    <version>${version.spring}</version>
+		</dependency>
+				
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-messaging -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-messaging</artifactId>
+		    <version>${version.spring}</version>
+		</dependency>
+		
 		<!-- jax-rs web services -->	
 		<!-- https://mvnrepository.com/artifact/org.apache.cxf/cxf-rt-frontend-jaxrs -->
 		<dependency>
