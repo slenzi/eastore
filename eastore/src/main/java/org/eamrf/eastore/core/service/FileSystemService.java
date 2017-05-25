@@ -530,6 +530,73 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * Add new directory
+	 * 
+	 * @param dirNodeId - id of parent directory
+	 * @param name - Name of new directory which will be created under the parent directory
+	 * @param desc - Description for new directory
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource addDirectory(Long dirNodeId, String name, String desc) throws ServiceException {
+		
+		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
+		
+		return addDirectory(dirRes, name, desc);
+		
+	}
+	
+	/**
+	 * Add new directory.
+	 * 
+	 * @param parentDir - The parent directory
+	 * @param name - Name for new directory which will be created under the parent directory
+	 * @param desc - Description for new directory
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc) throws ServiceException {
+		
+		final Store store = getStore(parentDir);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
+		
+		class Task extends AbstractQueuedTask<DirectoryResource> {
+
+			@Override
+			public DirectoryResource doWork() throws ServiceException {
+
+				DirectoryResource dirResource = null;
+				try {
+					// TODO, pass parentDir rather than just it's node ID.
+					dirResource = fileSystemRepository.addDirectory(parentDir.getNodeId(), name, desc);
+				} catch (Exception e) {
+					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
+				}
+				return dirResource;				
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+			
+		}
+		
+		Task task = new Task();
+		task.setName("Add directory [dirNodeId=" + parentDir.getNodeId() + ", name=" + name + "]");
+		taskManager.addTask(task);
+		
+		DirectoryResource newDir = task.get(); // block until complete
+		
+		return newDir;
+		
+	}	
+	
+	/**
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
 	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
 	 * the tree to rename the directory, and update the relative path data for all resources
@@ -1004,73 +1071,6 @@ public class FileSystemService {
 					", relativePath=" + relativePath, e);
 		}
 		return resource;
-	}	
-	
-	/**
-	 * Add new directory
-	 * 
-	 * @param dirNodeId - id of parent directory
-	 * @param name - Name of new directory which will be created under the parent directory
-	 * @param desc - Description for new directory
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource addDirectory(Long dirNodeId, String name, String desc) throws ServiceException {
-		
-		final DirectoryResource dirRes = getDirectoryResource(dirNodeId);
-		
-		return addDirectory(dirRes, name, desc);
-		
-	}
-	
-	/**
-	 * Add new directory.
-	 * 
-	 * @param parentDir - The parent directory
-	 * @param name - Name for new directory which will be created under the parent directory
-	 * @param desc - Description for new directory
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc) throws ServiceException {
-		
-		final Store store = getStore(parentDir);
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
-		
-		class Task extends AbstractQueuedTask<DirectoryResource> {
-
-			@Override
-			public DirectoryResource doWork() throws ServiceException {
-
-				DirectoryResource dirResource = null;
-				try {
-					// TODO, pass parentDir rather than just it's node ID.
-					dirResource = fileSystemRepository.addDirectory(parentDir.getNodeId(), name, desc);
-				} catch (Exception e) {
-					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
-				}
-				return dirResource;				
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-			
-			
-		}
-		
-		Task task = new Task();
-		task.setName("Add directory [dirNodeId=" + parentDir.getNodeId() + ", name=" + name + "]");
-		taskManager.addTask(task);
-		
-		DirectoryResource newDir = task.get(); // block until complete
-		
-		return newDir;
-		
 	}	
 	
 	/**
