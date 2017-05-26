@@ -48,7 +48,7 @@ public class TestMessageService {
 			
 			while(true){
 				
-				logger.info("Sending message...");
+				//logger.info("Sending message...");
 				
 				LocalDate nowDate = LocalDate.now();
 				LocalTime nowTime = LocalTime.now();
