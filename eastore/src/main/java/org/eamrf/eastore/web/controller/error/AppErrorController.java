@@ -15,9 +15,9 @@ import org.springframework.boot.autoconfigure.web.ErrorAttributes;
 import org.springframework.boot.autoconfigure.web.ErrorController;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.servlet.ModelAndView;
 
 /**
  * Error handling controller
@@ -42,12 +42,17 @@ public class AppErrorController implements ErrorController {
 
 	}
 	
+	/**
+	 * Error handler mapped to /error
+	 * 
+	 * @param request
+	 * @param response
+	 * @return
+	 */
     @RequestMapping(value = ERROR_PATH)
-    public ModelAndView errorHtml(HttpServletRequest request, HttpServletResponse response) {
+    public @ResponseBody Map<String, Object> errorHtml(HttpServletRequest request, HttpServletResponse response) {
     	
     	logger.info(AppErrorController.class.getSimpleName() + ".errorHtml(...) called");
-    	
-        //return new ModelAndView("/errors/error", getErrorAttributes(request, false));
     	
     	Map<String, Object> errorAtts = getErrorAttributes(request, true);
     	
@@ -60,12 +65,17 @@ public class AppErrorController implements ErrorController {
     	
     	logger.error(buf.toString());
     	
-    	ModelAndView model = new ModelAndView("error/error_page");
-    	
-    	return model;
+    	return errorAtts;
         
     }
     
+    /**
+     * Fetch all error attributes from request
+     * 
+     * @param request
+     * @param includeStackTrace
+     * @return
+     */
     private Map<String, Object> getErrorAttributes(HttpServletRequest request, boolean includeStackTrace) {
     	
     	logger.info(AppErrorController.class.getSimpleName() + ".getErrorAttributes(...) called");

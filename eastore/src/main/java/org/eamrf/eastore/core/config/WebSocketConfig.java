@@ -52,8 +52,9 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		TomcatRequestUpgradeStrategy tomcatStrategy = new TomcatRequestUpgradeStrategy();
 		DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler(tomcatStrategy);		
 		
-		
-		registry.addEndpoint("/hello")
+		// URL will be, http://localhost:45001/eastore/stomp-service/info
+		// (replace 45001 with whatever 'server.port' value you specified in the build properties file)
+		registry.addEndpoint("/stomp-service")
 			.setAllowedOrigins("*") // allow access from all origins for now
 			.setHandshakeHandler(handshakeHandler)
 			.withSockJS();

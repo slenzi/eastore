@@ -13,7 +13,9 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.view.JstlView;
 
 /**
- * Spring MVC configuration.
+ * Spring MVC configuration (this is not really needed, but I added it anyway...)
+ * 
+ * By using this we do get to use org.eamrf.eastore.web.controller.error.AppErrorController which is mapped to /error
  * 
  * Component scanning notes:
  * -- org.eamrf.eastore.web.controller : base controllers package
