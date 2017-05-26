@@ -3,13 +3,11 @@ package org.eamrf.eastore.core.service;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -21,6 +19,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.messaging.ResourceChangeService;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
@@ -67,6 +66,9 @@ public class FileSystemService {
     
     @Autowired
     private FileSystemUtil fileSystemUtil;
+    
+    @Autowired
+    private ResourceChangeService resChangeService;
     
     // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
@@ -524,6 +526,9 @@ public class FileSystemService {
 		generalTaskManager.addTask(addTask);
 		
 		FileMetaResource fileMetaResource = addTask.get(); // block until finished
+		
+		// broadcast directory contents changed event
+		resChangeService.directoryContentsChanged(dirRes.getNodeId());
 		
 		return fileMetaResource;
 		

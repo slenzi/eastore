@@ -8,8 +8,12 @@ import java.io.Serializable;
 import org.springframework.stereotype.Component;
 
 /**
+ * A sample message class use in conjunction with org.eamrf.eastore.core.messaging.TestMessageService
+ * to test the initial setup of web socket support.
+ * 
+ * @see org.eamrf.eastore.core.messaging.TestMessageService
+ * 
  * @author slenzi
- *
  */
 @Component
 public class ReplyMessage implements Serializable {

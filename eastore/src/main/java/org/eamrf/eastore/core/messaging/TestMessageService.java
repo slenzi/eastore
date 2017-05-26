@@ -17,7 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Sample messaging service.
+ * Sample messaging service which writes a test message every 10 seconds to /topic/test
  * 
  * Currently enabled!
  * Currently disabled (uncomment @PostConstruct and @PreDestroy to re-enable))
@@ -35,7 +35,7 @@ public class TestMessageService {
     
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     
-    private final String messageDestination = "/topic/tests";
+    private final String messageDestination = "/topic/test";
 	
 	public TestMessageService() {
 
