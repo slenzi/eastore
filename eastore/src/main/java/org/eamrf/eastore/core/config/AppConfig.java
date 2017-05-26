@@ -23,11 +23,22 @@ import org.springframework.context.annotation.Import;
 		}
 	)
 	@Import({
-		PropertyConfig.class
-		,TomcatConfig.class
-		,CxfConfig.class
-		,WebSocketConfig.class
+		PropertyConfig.class,
+		CorsConfig.class,
+		TomcatConfig.class,
+		CxfConfig.class,
+		WebSocketConfig.class
 	})
 public class AppConfig {
 
+	// PropertyConfig - configure managed properties
+	
+	// CorsConfig - configure cross-origin resource sharing permissions
+	
+	// TomcatConfig - configure embedded tomcat container
+	
+	// CxfConfig - configure our jax-rs RESTful services
+	
+	// WebSocketConfig - configure websocket stomp message with sockjs
+	
 }

@@ -30,8 +30,8 @@ public class TomcatConfig {
 	}
 	
 	/**
-	 * Configure embedded tomcat container with AJP/1.3 connector on port 8200. This will allow
-	 * us to proxy connections via Apache & mod proxy.
+	 * Configure embedded tomcat container with AJP/1.3 connector on some port (set in properties file).
+	 * This will allow us to proxy connections via Apache & mod proxy.
 	 * 
 	 * @return
 	 */
