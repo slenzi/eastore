@@ -3,7 +3,11 @@ package org.eamrf.core.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class CollectionUtil {
 
@@ -69,6 +73,56 @@ public abstract class CollectionUtil {
 	        }
 	    }
 	    return master;
+	}
+	
+	/**
+	 * Convert a collection of T to a map of collections of T, grouping T by some attribute.
+	 * 
+	 * Example usage
+	 * 
+	 * List<Thing> myList = new ArrayList<Thing>();
+	 * 
+	 * Map<Integer, Collection<Thing>> myMap = CollectionUtil.convert(myList, (t) -> { 
+	 * 	 return t.getSomeAttribute();
+	 * }, LinkedList<Thing>::new);
+	 * 		
+	 * CollectionUtil.printMap(myMap);
+	 * 
+	 * @param c - the collection to be converted
+	 * @param function - a function that acts on elements T to fetch an attribute R to be used as a key in the resulting map.
+	 * @param supplier - supplier for supplying a new empty collection of T
+	 * @return
+	 */
+	public static <R, T> Map<R, Collection<T>> convert(Collection<T> c, Function<T, R> function, Supplier<Collection<T>> supplier) {
+		if(c == null || c.size() == 0) {
+			return null;
+		}
+		Map<R, Collection<T>> map = new HashMap<R, Collection<T>>();
+		for(T t : c) {
+			R attr = function.apply(t);
+			if(map.containsKey(attr)) {
+				map.get(attr).add(t);
+			}else {
+				Collection<T> newc = supplier.get();
+				newc.add(t);
+				map.put(attr, newc);
+			}
+		}
+		return map;
+	}	
+	
+	/**
+	 * Generic function for printing a map of collections
+	 * 
+	 * @param map
+	 */
+	public static <K, V> void printMap(Map<K, Collection<V>> map) {
+		for(K k : map.keySet()) {
+			System.out.println(k);
+			for(V v : map.get(k)) {
+				System.out.println(v);
+			}
+		}
 	}	
 	
 }
