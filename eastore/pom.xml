@@ -50,11 +50,19 @@
   	
 	<profiles>
 	
-		<!-- deployment on lenzi's personal mac -->
+		<!-- deployment on lenzi's personal mac, using development database -->
 		<profile>
-			<id>lenzi.mac</id>
+			<id>lenzi.mac.development</id>
 			<properties>
-				<property.file>lenzi.mac.properties</property.file>
+				<property.file>lenzi.mac.development.properties</property.file>
+			</properties>
+		</profile>
+		
+		<!-- deployment on lenzi's personal mac, using production database -->
+		<profile>
+			<id>lenzi.mac.production</id>
+			<properties>
+				<property.file>lenzi.mac.production.properties</property.file>
 			</properties>
 		</profile>
 	
