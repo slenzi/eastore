@@ -14,13 +14,35 @@ public class PathResource extends Node implements Serializable {
 
 	private static final long serialVersionUID = -9025005355249576232L;
 	
+	// the id of the store that this resource exists under
 	private Long storeId = -1L;
+	
+	// the type of resource (file, directory, etc...)
 	private ResourceType resourceType = null;
-	private String relativePath = null; // path to resource relative to the store directory.
+	
+	// path to resource relative to the store directory.
+	private String relativePath = null;
+	
+	// the store that this resource exists under
 	private Store store = null;
 	
 	// optional description field...
 	private String desc = null;
+	
+	//
+	// TODO - add fields for access control
+	//
+	// read & write access
+	//
+	// WRITE_GROUPS - comma delimited field of gatekeeper groups
+	// READ_GROUPS - comma delimited field of gatekeeper groups
+	//
+	// Directory Resource:
+	// if user is a member of any WRITE_GROUP then they can upload & overwrite files in the directory
+	// if user is a member of any READ_GROUP then they view/download files in the directory
+	//
+	// File Resources:
+	// 
 	
 	public PathResource() {
 		

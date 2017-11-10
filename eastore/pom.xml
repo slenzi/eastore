@@ -44,7 +44,10 @@
 		-->
   		
 		<!-- artifactory dependencies -->
-		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>  		
+		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>
+		
+		<!-- ecog-acrin dependencies -->
+		<version.gatekeeper>1.0.0.RC2</version.gatekeeper>		 		
   		
   	</properties>
   	
@@ -260,7 +263,20 @@
 		    <groupId>com.oracle</groupId>
 		    <artifactId>ojdbc6</artifactId>
 		    <version>${version.oracle.jdbc}</version>
-		</dependency>		
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.eamrf</groupId>
+		    <artifactId>gatekeeper-client</artifactId>
+		    <version>${version.gatekeeper}</version>
+			<!-- exclude transitive dependencies -->
+			<exclusions>
+		        <exclusion>
+		            <groupId>*</groupId>
+		            <artifactId>*</artifactId>
+		        </exclusion>		                
+    		</exclusions>		    
+		</dependency>				
 	
 	</dependencies>
 	
