@@ -16,6 +16,7 @@ import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
@@ -236,6 +237,16 @@ public class FileSystemService {
 	@MethodTimer
 	public Store addStore(String storeName, String storeDesc, Path storePath, 
 			String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws ServiceException {
+		
+		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc) || storePath == null || maxFileSizeDb == null){
+			throw new ServiceException("Missing required parameter for creating a new store.");
+		}
+		
+		// store name and root dir name are used for the directory names. some environments are case insensitive
+		// so we make everything lowercase
+		// storePath should all be lowercase as well...
+		storeName = storeName.toLowerCase();
+		rootDirName = rootDirName.toLowerCase();
 		
 		Store store = getStoreByName(storeName);
 		if(store != null){

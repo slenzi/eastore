@@ -369,6 +369,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     		
     	}
     	
+    	// needs to be lowercase
+    	storePath = storePath.toLowerCase();
+    	
     	Store store = null;
     	try {
 			store = fileSystemService.addStore(storeName, storeDesc, 

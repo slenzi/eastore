@@ -48,5 +48,20 @@ public abstract class StringUtil {
 		}
 		return false;
 	}
+	
+	/**
+	 * Return true if any strings are null or empty
+	 * 
+	 * @param strings
+	 * @return
+	 */
+	public static boolean isAnyNullEmpty(String ...strings){
+		for(String s : strings){
+			if(isNullEmpty(s)){
+				return true;
+			}
+		}
+		return false;
+	}
 
 }
