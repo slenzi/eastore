@@ -21,6 +21,8 @@ import org.springframework.web.servlet.view.JstlView;
  * -- org.eamrf.eastore.web.controller : base controllers package
  * -- org.eamrf.core.logging : custom LoggerBeanPostProccessor which enables us to inject a logger using @InjectLogger annotation.
  * 
+ * @deprecated - No longer used after converting to spring boot. There is no UI for this project.
+ * 
  * @author slenzi
  */
 @Configuration

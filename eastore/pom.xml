@@ -13,6 +13,17 @@
   
   	<properties>
   	
+  		<!--
+  		Define main Spring Boot application class.
+  		
+  		This project has multiple spring boot apps with a main() function so we have to define
+  		which one is the primary when starting the application. If there were only one then we
+  		wouldn't need this property.
+  		
+  		See spring-boot-maven-plugin below, where we use this prop
+  		-->
+  		<spring.boot.mainclass>org.eamrf.eastore.core.app.EAStoreServiceApp</spring.boot.mainclass>
+  	
   		<version.jdk>1.8</version.jdk>
   		
   		<version.junit>4.12</version.junit>
@@ -428,6 +439,9 @@
 						<goals>
 							<goal>repackage</goal>
 						</goals>
+				        <configuration>
+				          <mainClass>${spring.boot.mainclass}</mainClass>
+				        </configuration>
 					</execution>
 				</executions>				
 			</plugin>									
