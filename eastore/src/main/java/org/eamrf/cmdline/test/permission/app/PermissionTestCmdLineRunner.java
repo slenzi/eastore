@@ -132,16 +132,24 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 	}
 
+	/**
+	 * Use read & write groups from the node, or their parent node, to determine read & write permissions for the user.
+	 * 
+	 * If the node doesn't have a read or write group, and access is ALLOW, then user has permission.
+	 * 
+	 * If the node doesn't have a read or write group, and access is DENY, then use the read & write groups from
+	 * the last parent that had one. Nodes that don't have read & write permissions inherit the
+     * permissions from their parent.
+	 * 
+	 * @param userId
+	 * @param access
+	 * @param node
+	 * @param readGroup
+	 * @param writeGroup
+	 */
 	private void setPermissionBits(Integer userId, Access access, TreeNode<MyNode> node, List<Integer> readGroup, List<Integer> writeGroup) {
 		
 		MyNode mynode = node.getData();
-		
-		logger.info("Setting read permssion bit for node " + mynode.toString());
-		
-		// use read & write groups from the node to determine read & write permissions for the user.
-		// if the node doesn't have a read or write group then use the read & write groups from
-		// the last parent that had one. nodes that don't have read & write permissions inherit the
-		// permissions from their parent.
 		
 		// set read bit
 		if(mynode.getReadMembers() != null && mynode.getReadMembers().size() > 0) {
@@ -174,25 +182,7 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 				}				
 			}
 		}		
-		
-		
-		
-		/*
-		if(mynode.getReadMembers() != null && mynode.getReadMembers().size() > 0) {
-			readGroup = mynode.getReadMembers();
-		}
-		if(mynode.getWriteMembers() != null && mynode.getWriteMembers().size() > 0) {
-			writeGroup = mynode.getWriteMembers();
-		}
-		if(readGroup != null && readGroup.size() > 0 && readGroup.contains(userId)) {
-			mynode.setCanRead(true);
-		}
-		if(writeGroup != null && writeGroup.size() > 0 && writeGroup.contains(userId)) {
-			mynode.setCanWrite(true);
-		}
-		*/
-			
-		
+
 		// set permission bit for children
 		if (node.hasChildren()) {
 			for (TreeNode<MyNode> childNode : node.getChildren()) {
