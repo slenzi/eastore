@@ -4,6 +4,10 @@
 package org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * Model which contains common data elements for any resource in our file system.
@@ -29,20 +33,9 @@ public class PathResource extends Node implements Serializable {
 	// optional description field...
 	private String desc = null;
 	
-	//
-	// TODO - add fields for access control
-	//
-	// read & write access
-	//
-	// WRITE_GROUPS - comma delimited field of gatekeeper groups
-	// READ_GROUPS - comma delimited field of gatekeeper groups
-	//
-	// Directory Resource:
-	// if user is a member of any WRITE_GROUP then they can upload & overwrite files in the directory
-	// if user is a member of any READ_GROUP then they view/download files in the directory
-	//
-	// File Resources:
-	// 
+	private String readGroup1 = null;
+	
+	private String writeGroup1 = null;
 	
 	public PathResource() {
 		
@@ -96,12 +89,54 @@ public class PathResource extends Node implements Serializable {
 		this.desc = desc;
 	}
 
+	public String getReadGroup1() {
+		return readGroup1;
+	}
+
+	public void setReadGroup1(String readGroup1) {
+		this.readGroup1 = readGroup1;
+	}
+
+	public String getWriteGroup1() {
+		return writeGroup1;
+	}
+
+	public void setWriteGroup1(String writeGroup1) {
+		this.writeGroup1 = writeGroup1;
+	}
+	
+	/**
+	 * Convenience method to return all read groups for the resource. This will
+	 * be useful down the road if we add more than one read group to the resource. 
+	 * 
+	 * @return
+	 */
+	public HashSet<String> getReadGroups(){
+		HashSet<String> readGroups = new HashSet<String>();
+		if(readGroup1 != null)
+			readGroups.add(readGroup1);
+		return readGroups;
+	}
+	
+	/**
+	 * Convenience method to return all write groups for the resource. This will
+	 * be useful down the road if we add more than one write group to the resource. 
+	 * 
+	 * @return
+	 */	
+	public HashSet<String> getWriteGroups(){
+		HashSet<String> writeGroups = new HashSet<String>();
+		if(writeGroup1 != null)
+			writeGroups.add(writeGroup1);
+		return writeGroups;
+	}	
+
 	@Override
 	public String toString() {
 		return PathResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", childId=" + getChildNodeId()
 				+ ", name=" + getNodeName() + ", dtCreated=" + getDateCreated() + ", dtUpdated=" + getDateUpdated()
 				+ ", pathName=" + getPathName() + ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
 				+ ", storeId=" + getStoreId() + ", haveStoreObj=" + ((store != null) ? true : false)
-				+ ", haveDesc=" + ((desc != null) ? true : false) + "]";
+				+ ", haveDesc=" + ((desc != null) ? true : false) + ", readGroups=" + getReadGroups() + ", writeGroups=" + getWriteGroups() + "]";
 	}	
 }

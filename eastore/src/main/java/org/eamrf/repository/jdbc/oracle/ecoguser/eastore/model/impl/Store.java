@@ -15,6 +15,33 @@ import java.sql.Timestamp;
 public class Store implements Serializable {
 
 	private static final long serialVersionUID = 2510915862464361107L;
+	
+	public static enum AccessRule {
+		
+		ALLOW("ALLOW"),
+		
+		DENY("DENY");
+		
+		private final String rule;
+		
+		private AccessRule(final String rule) {
+			this.rule = rule;
+		}
+		
+		public static AccessRule fromString(String rule) {
+			if(rule != null && rule.toUpperCase().trim().equals(AccessRule.ALLOW.toString())) {
+				return AccessRule.ALLOW;
+			}else {
+				return AccessRule.DENY;
+			}
+		}
+
+		@Override
+		public String toString() {
+			return rule;
+		}
+			
+	}
 
 	private Long id = -1L;
 	private String name = null;
@@ -22,6 +49,7 @@ public class Store implements Serializable {
 	private Path path = null;
 	private Long nodeId = -1L;
 	private Long maxFileSizeBytes = 52428800L; // default to 50 megabytes
+	private AccessRule accessRule = AccessRule.DENY;
 	private Timestamp dateCreated = null;
 	private Timestamp dateUpdated = null;
 	
@@ -87,6 +115,14 @@ public class Store implements Serializable {
 		this.maxFileSizeBytes = maxFileSizeBytes;
 	}
 
+	public AccessRule getAccessRule() {
+		return accessRule;
+	}
+
+	public void setAccessRule(AccessRule accessRule) {
+		this.accessRule = accessRule;
+	}
+
 	public void setDateCreated(Timestamp dateCreated) {
 		this.dateCreated = dateCreated;
 	}
@@ -131,7 +167,7 @@ public class Store implements Serializable {
 	@Override
 	public String toString() {
 		return Store.class.getSimpleName() + " [id=" + id + ", name=" + name + ", description=" + description + ", path=" + path + ", nodeId="
-				+ nodeId + ", maxFileSizeBytes=" + maxFileSizeBytes + ", dateCreated=" + dateCreated + ", dateUpdated="
+				+ nodeId + ", maxFileSizeBytes=" + maxFileSizeBytes + ", accessRule=" + accessRule + ", dateCreated=" + dateCreated + ", dateUpdated="
 				+ dateUpdated + "]";
 	}
 

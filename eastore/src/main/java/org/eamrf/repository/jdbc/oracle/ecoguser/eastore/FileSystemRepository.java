@@ -30,6 +30,7 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -75,9 +76,10 @@ public class FileSystemRepository {
     private final String SQL_PATH_RESOURCE_COMMON =
 			"select " +
 			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
-			"r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
+			"r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
 			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
+			"s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
 			"from eas_closure c " +
 			"inner join eas_node n on c.child_node_id = n.node_id " +  
 			"inner join eas_path_resource r on n.node_id = r.node_id " +
@@ -88,8 +90,8 @@ public class FileSystemRepository {
     private final String SQL_STORES_COMMON =
     		"select " +
     		"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id, " +
-    		"s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date, " +
-    		"r.path_name, r.path_type, r.relative_path, r.path_desc, n.node_name, " +
+    		"s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date, " +
+    		"r.path_name, r.path_type, r.relative_path, r.path_desc, r.read_group_1, r.write_group_1, n.node_name, " +
     		"n.creation_date as node_creation_date, n.updated_date as node_updated_date, n.parent_node_id " +
     		"from eas_store s " +
     		"inner join eas_path_resource r on r.node_id = s.node_id " +
@@ -129,12 +131,16 @@ public class FileSystemRepository {
 		r.setResourceType( type );
 		r.setStoreId(rs.getLong("store_id"));
 		r.setDesc(rs.getString("path_desc"));
+		r.setReadGroup1(rs.getString("read_group_1"));
+		r.setWriteGroup1(rs.getString("write_group_1"));
 
+		
 		Store s = new Store();
 		s.setId(rs.getLong("store_id"));
 		s.setName(rs.getString("store_name"));
 		s.setDescription(rs.getString("store_description"));
 		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		s.setAccessRule(AccessRule.fromString(rs.getString("access_rule")));
 		s.setPath(Paths.get(rs.getString("store_path")));
 		s.setNodeId(rs.getLong("store_root_node_id"));
 		s.setDateCreated(rs.getTimestamp("store_creation_date"));
@@ -158,6 +164,7 @@ public class FileSystemRepository {
 		s.setPath(Paths.get(rs.getString("store_path")));
 		s.setNodeId(rs.getLong("node_id"));
 		s.setMaxFileSizeBytes(rs.getLong("max_file_size_in_db"));
+		s.setAccessRule(AccessRule.fromString(rs.getString("access_rule")));
 		s.setDateCreated(rs.getTimestamp("store_creation_date"));
 		s.setDateUpdated(rs.getTimestamp("store_updated_date"));
 		
@@ -174,6 +181,8 @@ public class FileSystemRepository {
 		r.setResourceType( type );
 		r.setStoreId(rs.getLong("store_id"));
 		r.setDesc(rs.getString("path_desc"));
+		r.setReadGroup1(rs.getString("read_group_1"));
+		r.setWriteGroup1(rs.getString("write_group_1"));		
 		
 		s.setRootDir(r);
 		
@@ -310,9 +319,10 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"  fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
+			"  s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
 			"  eas_node n2 inner join " +  
 			"  (  " +
@@ -355,9 +365,10 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"  fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
-			"  s.max_file_size_in_db, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
+			"  s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
 			"from " +
 			"  eas_node n2 inner join " +  
 			"  (  " +
@@ -637,7 +648,7 @@ public class FileSystemRepository {
 	 */
 	@MethodTimer
 	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws Exception {
-	
+		
 		Long storeId = getNextStoreId();
 		Long rootNodeId = closureRepository.getNextNodeId();
 		
@@ -660,6 +671,7 @@ public class FileSystemRepository {
 		}		
 		
 		// add root directory for store
+		// TODO - pass in read group 1, and write group 1, or user can always add permissions later
 		DirectoryResource rootDir = addRootDirectory(storeId, storePath, rootNodeId, rootDirName, rootDirDesc);
 		
 		Store store = new Store();
@@ -672,6 +684,7 @@ public class FileSystemRepository {
 		store.setDateUpdated(dtNow);
 		store.setMaxFileSizeBytes(maxFileSizeDb);
 		store.setRootDir(rootDir);
+		// TODO - pass in access rule. store defaults to DENY
 		
 		return store;
 		
@@ -762,6 +775,8 @@ public class FileSystemRepository {
 		String oldRelPath = resource.getRelativePath();
 		String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
 		newRelPath = newRelPath + newName;
+		
+		// TODO - overwrite read & write groups?
 		
 		// rename data in EAS_PATH_RESOURCE
 		jdbcTemplate.update(
@@ -985,6 +1000,8 @@ public class FileSystemRepository {
 		((FileMetaResource)resource).setMimeType(fileMimeType);
 		((FileMetaResource)resource).setIsBinaryInDatabase(isBinaryInDb);
 		
+		// TODO - pass in read and write group? users can always set that data after upload
+		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
@@ -1136,6 +1153,8 @@ public class FileSystemRepository {
 		resource.setDesc(desc);
 		resource.setStoreId(store.getId());
 		
+		// TODO - pass in read and write group? User can always add that data after adding directory
+		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
@@ -1161,7 +1180,7 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Adds a root directory. This is a directory with no parent, and are the top most
+	 * Adds a root directory. This is a directory with no parent, and is the top most
 	 * directory for a store (the parent directory is the store directory.)
 	 * 
 	 * @param storeId - store id
@@ -1194,6 +1213,8 @@ public class FileSystemRepository {
 		dirResource.setRelativePath(dirRelPathString);
 		dirResource.setDesc(desc);
 		dirResource.setStoreId(storeId);
+		
+		// TODO - pass in read & write group? User can always set that afterwards.
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
@@ -1431,6 +1452,8 @@ public class FileSystemRepository {
 		String fileName = fileToMove.getPathName();
 		PathResource existingFile = getChildPathResource(destDir.getNodeId(), fileName, ResourceType.FILE);
 		boolean hasExisting = (existingFile != null) ? true : false;
+		
+		// TODO - check for write permission on resource being overwritten
 		
 		// replace existing file
 		if(hasExisting && replaceExisting){

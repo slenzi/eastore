@@ -50,6 +50,15 @@ create table EAS_PRUNE (
  * We use our tree structure to model a files sytem. This table contains
  * the common data elements for any type of resource in a file system. There
  * is a one-to-one relationship between this table and EAS_NODE.
+ * 
+ * NODE_ID - unique ID for the node
+ * STORE_ID - ID of the store that this node resides under
+ * PATH_NAME - The name of the path resource, i.e., file name or directory name
+ * PATH_TYPE - Specify the type of path resource, i.e. file or directory
+ * RELATIVE_PATH - Path of the resource relative to the store path
+ * PATH_DESC - optional description for the resource
+ * READ_GROUP_1 - optional read access group for controlling read access of the resource
+ * WRITE_GROUP_1 - optional write access group for controlling write (update) access to the resource
  */
 create table EAS_PATH_RESOURCE ( 
 	NODE_ID NUMBER(15,0) NOT NULL,
@@ -58,6 +67,8 @@ create table EAS_PATH_RESOURCE (
 	PATH_TYPE VARCHAR2(250) NOT NULL,
 	RELATIVE_PATH VARCHAR2(4000) NOT NULL,
 	PATH_DESC VARCHAR2(4000),
+	READ_GROUP_1 VARCHAR2(100),
+	WRITE_GROUP_1 VARCHAR2(100),
 	PRIMARY KEY (NODE_ID) 
 );
 
@@ -105,8 +116,9 @@ create table EAS_STORE (
 	STORE_PATH VARCHAR2(2000) NOT NULL,
 	NODE_ID NUMBER(15,0) NOT NULL,
 	MAX_FILE_SIZE_IN_DB NUMBER(15,0) DEFAULT 26214400 NOT NULL,
+	ACCESS_RULE VARCHAR2(25) NOT NULL DEFAULT 'DENY',
 	CREATION_DATE date NOT NULL, 
-	UPDATED_DATE date NOT NULL, 	
+	UPDATED_DATE date NOT NULL,	
 	PRIMARY KEY (STORE_ID) 
 );
 
