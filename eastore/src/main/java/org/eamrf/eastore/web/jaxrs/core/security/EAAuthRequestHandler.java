@@ -17,7 +17,7 @@ import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.message.Message;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.WsUserAuthService;
+import org.eamrf.eastore.core.service.security.WsUserAuthService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.ws.model.impl.WSService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.ws.model.impl.WSUser;
 import org.slf4j.Logger;

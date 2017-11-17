@@ -4,10 +4,7 @@
 package org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 
 /**
  * Model which contains common data elements for any resource in our file system.
@@ -33,9 +30,29 @@ public class PathResource extends Node implements Serializable {
 	// optional description field...
 	private String desc = null;
 	
+	
+	// ---------------------------------------------
+	// Begin permissions
+	// ---------------------------------------------
+	
+	// group for the 'canRead' access control bit
 	private String readGroup1 = null;
 	
+	// group for the 'canWrite' access control bit
 	private String writeGroup1 = null;
+	
+	// group for the 'canExecute' access control bit
+	private String executeGroup1 = null;
+	
+	// Access control bits. These will be set when user access is evaluated based on the read/write/execute groups.
+	private Boolean canRead = false;	// read file, or directory contents
+	private Boolean canWrite = false;	// write, update, delete file, add files to directory
+	private Boolean canExecute = false;	// administer file and directory properties, including access groups
+	
+	// ---------------------------------------------
+	// End permissions
+	// ---------------------------------------------
+	
 	
 	public PathResource() {
 		
@@ -105,6 +122,38 @@ public class PathResource extends Node implements Serializable {
 		this.writeGroup1 = writeGroup1;
 	}
 	
+	public String getExecuteGroup1() {
+		return executeGroup1;
+	}
+
+	public void setExecuteGroup1(String executeGroup1) {
+		this.executeGroup1 = executeGroup1;
+	}
+
+	public Boolean getCanRead() {
+		return canRead;
+	}
+
+	public void setCanRead(Boolean canRead) {
+		this.canRead = canRead;
+	}
+
+	public Boolean getCanWrite() {
+		return canWrite;
+	}
+
+	public void setCanWrite(Boolean canWrite) {
+		this.canWrite = canWrite;
+	}
+
+	public Boolean getCanExecute() {
+		return canExecute;
+	}
+
+	public void setCanExecute(Boolean canExecute) {
+		this.canExecute = canExecute;
+	}
+
 	/**
 	 * Convenience method to return all read groups for the resource. This will
 	 * be useful down the road if we add more than one read group to the resource. 
@@ -129,6 +178,19 @@ public class PathResource extends Node implements Serializable {
 		if(writeGroup1 != null)
 			writeGroups.add(writeGroup1);
 		return writeGroups;
+	}
+	
+	/**
+	 * Convenience method to return all execute groups for the resource. This will
+	 * be useful down the road if we add more than one execute group to the resource. 
+	 * 
+	 * @return
+	 */	
+	public HashSet<String> getExecuteGroups(){
+		HashSet<String> executeGroups = new HashSet<String>();
+		if(executeGroup1 != null)
+			executeGroups.add(executeGroup1);
+		return executeGroups;
 	}	
 
 	@Override
@@ -137,6 +199,7 @@ public class PathResource extends Node implements Serializable {
 				+ ", name=" + getNodeName() + ", dtCreated=" + getDateCreated() + ", dtUpdated=" + getDateUpdated()
 				+ ", pathName=" + getPathName() + ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
 				+ ", storeId=" + getStoreId() + ", haveStoreObj=" + ((store != null) ? true : false)
-				+ ", haveDesc=" + ((desc != null) ? true : false) + ", readGroups=" + getReadGroups() + ", writeGroups=" + getWriteGroups() + "]";
+				+ ", haveDesc=" + ((desc != null) ? true : false) + ", readGroups=" + getReadGroups() + ", writeGroups=" + getWriteGroups()
+				+ ", executeGroups=" + getExecuteGroups() + ", canRead=" + canRead + ", canWrite=" + canWrite + ", canExecute=" + canExecute + "]";
 	}	
 }

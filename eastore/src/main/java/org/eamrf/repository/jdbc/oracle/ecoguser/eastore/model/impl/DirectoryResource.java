@@ -25,7 +25,7 @@ public class DirectoryResource extends PathResource {
 		return DirectoryResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", childId=" + getChildNodeId()
 				+ ", name=" + getNodeName() + ", dtCreated=" + getDateCreated() + ", dtUpdated=" + getDateUpdated()
 				+ ", pathName=" + getPathName() + ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
-				+ ", storeId=" + getStoreId() + "]";
+				+ ", storeId=" + getStoreId() + ", canRead=" + getCanRead() + ", canWrite=" + getCanWrite() + ", canExecute=" + getCanExecute() + "]";
 	}	
 
 }

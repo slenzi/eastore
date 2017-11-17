@@ -18,8 +18,12 @@ public class Store implements Serializable {
 	
 	public static enum AccessRule {
 		
+		// nodes with no read/write groups are by default open to everyone.
 		ALLOW("ALLOW"),
 		
+		// nodes with no read/write groups are by default closed to everyone.
+		// access will be inherited from their parent. If parent has no read/write
+		// group then access is denied.		
 		DENY("DENY");
 		
 		private final String rule;

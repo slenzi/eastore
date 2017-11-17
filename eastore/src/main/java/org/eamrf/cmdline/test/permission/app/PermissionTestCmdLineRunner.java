@@ -5,22 +5,14 @@ package org.eamrf.cmdline.test.permission.app;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Stack;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
-import org.eamrf.eastore.core.service.FileSystemService;
-import org.eamrf.eastore.core.service.NodeTreeService;
-import org.eamrf.eastore.core.service.PathResourceTreeService;
-import org.eamrf.eastore.core.service.PathResourceTreeUtil;
-import org.eamrf.eastore.core.tree.ToString;
+import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
+import org.eamrf.eastore.core.service.tree.file.permission.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
-import org.eamrf.eastore.core.tree.TreeNodeVisitor;
-import org.eamrf.eastore.core.tree.Trees.PrintOption;
-import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.slf4j.Logger;
@@ -41,14 +33,8 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
     @InjectLogger
     private Logger logger;
     
-    //@Autowired
-    //private NodeTreeService nodeTreeService;
-    
-    //@Autowired
-    //private PathResourceTreeUtil pathResourceTreUtil;
-    
-    //@Autowired
-    //private PathResourceTreeService pathResourceTreeService;
+    @Autowired
+    private SecurePathResourceTreeService securePathTreeService;
 	
 	public PermissionTestCmdLineRunner() {
 
@@ -62,7 +48,38 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		logger.info(PermissionTestCmdLineRunner.class.getName() + " running...");
 		
-		System.out.println("Here");
+		doPathResourceTest();
+		
+		//doMyNodeTest();
+		
+		System.exit(1);
+
+	}
+	
+	private void doPathResourceTest() {
+		
+		System.out.println("doPathResourceTest()");
+		
+		final long sampleStoreRootNodeId = 282L;
+		final long sampleStoreLeafNodeId = 289L;
+		
+		Tree<PathResource> tree1 = null;
+		Tree<PathResource> tree2 = null;
+		try {
+			tree1 = securePathTreeService.buildPathResourceTree(sampleStoreRootNodeId, "508941");
+			tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941");
+		} catch (ServiceException e) {
+			logger.error(e.getMessage());
+		}
+		
+		logger.info("Path resource tree:\n" + tree1.printTree((node) -> { return node.toString(); }) );
+		logger.info("Parent Path resource tree:\n" + tree2.printTree((node) -> { return node.toString(); }) );
+		
+	}
+	
+	private void doMyNodeTest() {
+		
+		System.out.println("doMyNodeTest()");
 		
 		//PathResource resource = fileSystemService.getPathResource(100L);
 		//Tree<PathResource> tree = pathResourceTreeService.buildPathResourceTree(100L);
@@ -89,14 +106,16 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		logger.info("Before setting permission bits:\n" + myTree.printTree((node) -> { return node.toString(); }) );
 		
-		setPermissionBits(4, myTree, Access.ALLOW);
+		try {
+			setPermissionBits(4, myTree, Access.ALLOW);
+		} catch (TreeNodeVisitException e) {
+			logger.error(e.getMessage());
+		}
 		
 		logger.info("After setting permission bits:\n" + myTree.printTree((node) -> { return node.toString(); }) );
 		
-		logger.info("Done with tests.");
+		logger.info("Done with tests.");		
 		
-		System.exit(1);
-
 	}
 	
 	private enum Access {

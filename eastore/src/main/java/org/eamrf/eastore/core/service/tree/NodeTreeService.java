@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.tree;
 
 import java.util.ArrayList;
 import java.util.HashMap;

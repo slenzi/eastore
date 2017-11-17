@@ -221,7 +221,14 @@
 		    <groupId>org.apache.cxf</groupId>
 		    <artifactId>cxf-rt-frontend-jaxrs</artifactId>
 		    <version>${version.apache.cxf}</version>
-		</dependency>		
+		</dependency>
+		
+		<!-- required by gatekeeper client -->
+		<dependency>
+		    <groupId>org.apache.cxf</groupId>
+		    <artifactId>cxf-rt-rs-client</artifactId>
+		    <version>${version.apache.cxf}</version>
+		</dependency>				
 		
 		<!-- json marshalling for jax-rs -->		
 		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider -->

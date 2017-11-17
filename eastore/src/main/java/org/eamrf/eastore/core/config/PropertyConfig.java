@@ -1,6 +1,6 @@
 package org.eamrf.eastore.core.config;
 
-import org.eamrf.eastore.core.constants.AppConstants;
+import org.eamrf.eastore.core.constants.ApplicationConstants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -12,7 +12,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
  * @author sal
  */
 @Configuration
-@PropertySource("classpath:" + AppConstants.APP_PROPERTIES_FILE)
+@PropertySource("classpath:" + ApplicationConstants.APP_PROPERTIES_FILE)
 public class PropertyConfig {
 
 	/**

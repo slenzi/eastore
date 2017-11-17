@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.tree.file;
 
 import java.io.File;
 import java.nio.file.Path;

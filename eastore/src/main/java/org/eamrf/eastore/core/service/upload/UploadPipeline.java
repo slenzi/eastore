@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.upload;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +18,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.service.tree.file.FileSystemService;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;

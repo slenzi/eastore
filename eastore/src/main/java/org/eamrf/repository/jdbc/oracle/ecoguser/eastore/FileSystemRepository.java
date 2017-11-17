@@ -16,8 +16,8 @@ import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.FileSystemUtil;
-import org.eamrf.eastore.core.service.PathResourceTreeUtil;
+import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
+import org.eamrf.eastore.core.service.tree.file.PathResourceTreeBuilder;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.Trees;
@@ -70,13 +70,13 @@ public class FileSystemRepository {
     private FileSystemUtil fileSystemUtil;
     
     @Autowired
-    private PathResourceTreeUtil pathResTreeUtil;
+    private PathResourceTreeBuilder pathResTreeUtil;
     
     // common query element used by several methods below
     private final String SQL_PATH_RESOURCE_COMMON =
 			"select " +
 			"n.node_id, n.parent_node_id, c.child_node_id, n.creation_date, n.updated_date, r.path_type, " +  
-			"r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, execute_group_1, " +
 			"fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " + 
 			"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +
@@ -91,7 +91,7 @@ public class FileSystemRepository {
     		"select " +
     		"s.store_id, s.store_name, s.store_description, s.store_path, s.node_id, " +
     		"s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date, " +
-    		"r.path_name, r.path_type, r.relative_path, r.path_desc, r.read_group_1, r.write_group_1, n.node_name, " +
+    		"r.path_name, r.path_type, r.relative_path, r.path_desc, r.read_group_1, r.write_group_1, execute_group_1, n.node_name, " +
     		"n.creation_date as node_creation_date, n.updated_date as node_updated_date, n.parent_node_id " +
     		"from eas_store s " +
     		"inner join eas_path_resource r on r.node_id = s.node_id " +
@@ -133,6 +133,7 @@ public class FileSystemRepository {
 		r.setDesc(rs.getString("path_desc"));
 		r.setReadGroup1(rs.getString("read_group_1"));
 		r.setWriteGroup1(rs.getString("write_group_1"));
+		r.setExecuteGroup1(rs.getString("execute_group_1"));
 
 		
 		Store s = new Store();
@@ -182,7 +183,8 @@ public class FileSystemRepository {
 		r.setStoreId(rs.getLong("store_id"));
 		r.setDesc(rs.getString("path_desc"));
 		r.setReadGroup1(rs.getString("read_group_1"));
-		r.setWriteGroup1(rs.getString("write_group_1"));		
+		r.setWriteGroup1(rs.getString("write_group_1"));
+		r.setExecuteGroup1(rs.getString("execute_group_1"));
 		
 		s.setRootDir(r);
 		
@@ -319,7 +321,7 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, execute_group_1, " +
 			"  fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"  s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  
@@ -365,7 +367,7 @@ public class FileSystemRepository {
 		String sql =
 			"select " +
 			"  n2.node_id, n2.parent_node_id, n2.node_id as child_node_id, n2.node_name, n2.creation_date, n2.updated_date, " + 
-			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, " +
+			"  r.path_type, r.path_name, r.relative_path, r.store_id, r.path_desc, r.read_group_1, r.write_group_1, execute_group_1, " +
 			"  fmr.mime_type, fmr.file_size, fmr.is_file_data_in_db, " +
 			"  s.store_id, s.store_name, s.store_description, s.store_path, s.node_id as store_root_node_id, " +
 			"  s.max_file_size_in_db, s.access_rule, s.creation_date as store_creation_date, s.updated_date as store_updated_date " +  

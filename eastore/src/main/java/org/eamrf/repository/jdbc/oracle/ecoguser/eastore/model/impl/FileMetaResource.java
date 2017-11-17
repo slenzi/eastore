@@ -57,7 +57,7 @@ public class FileMetaResource extends PathResource {
 				+ getDateCreated() + ", dtUpdated=" + getDateUpdated() + ", pathName=" + getPathName()
 				+ ", relPath=" + getRelativePath() + ", type=" + getResourceType().getTypeString()
 				+ ", storeId=" + getStoreId() + ", size=" + getFileSize() + ", mime=" + getMimeType() 
-				+ ", isBinInDb=" + isBinaryInDatabase + "]";
+				+ ", isBinInDb=" + isBinaryInDatabase + ", canRead=" + getCanRead() + ", canWrite=" + getCanWrite() + ", canExecute=" + getCanExecute() + "]";
 	}	
 	
 }

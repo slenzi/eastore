@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.security;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;

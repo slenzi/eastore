@@ -1,23 +1,20 @@
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.tree.file;
 
 import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
-import org.eamrf.eastore.core.tree.TreeNodeVisitException;
-import org.eamrf.eastore.core.tree.Trees;
-import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
+ * Service for building trees of PathResource objects.
+ * 
  * 
  * @author slenzi
- *
  */
 @Service
 public class PathResourceTreeService {
@@ -29,7 +26,7 @@ public class PathResourceTreeService {
     private FileSystemService fileSystemService;
     
     @Autowired
-    private PathResourceTreeUtil pathResourceUtil;
+    private PathResourceTreeBuilder pathResourceTreeBuilder;
 	
 	public PathResourceTreeService() {
 		
@@ -66,19 +63,19 @@ public class PathResourceTreeService {
 					". Returned list was null or empty.");
 		}
 		
-		return pathResourceUtil.buildPathResourceTree(resources, dirNodeId);		
+		return pathResourceTreeBuilder.buildPathResourceTree(resources, dirNodeId);		
 		
 	}
 	
 	/**
 	 * Build a bottom-up (leaf node to root node) tree of PathResource objects.
 	 * 
-	 * @param dirNodeId - Id of the dir node
+	 * @param nodeId - Id of the child node
 	 * @throws ServiceException
 	 */
-	public Tree<PathResource> buildParentPathResourceTree(Long dirNodeId) throws ServiceException {
+	public Tree<PathResource> buildParentPathResourceTree(Long nodeId) throws ServiceException {
 		
-		return buildParentPathResourceTree(dirNodeId, Integer.MAX_VALUE);
+		return buildParentPathResourceTree(nodeId, Integer.MAX_VALUE);
 		
 	}	
 	
@@ -86,21 +83,21 @@ public class PathResourceTreeService {
 	 * Build a bottom-up (leaf node to root node) tree of PathResource objects, but only up
 	 * to a specified number of levels.
 	 * 
-	 * @param nodeId
-	 * @param levels
+	 * @param nodeId - Id of the child node
+	 * @param levels - number of parent levels to include
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<PathResource> buildParentPathResourceTree(Long dirNodeId, int levels) throws ServiceException {
+	public Tree<PathResource> buildParentPathResourceTree(Long nodeId, int levels) throws ServiceException {
 		
-		List<PathResource> resources = fileSystemService.getParentPathResourceTree(dirNodeId, levels);
+		List<PathResource> resources = fileSystemService.getParentPathResourceTree(nodeId, levels);
 		
 		if(resources == null || resources.size() == 0){
-			throw new ServiceException("No bottom-up PathResource tree for dirNodeId " + dirNodeId + 
+			throw new ServiceException("No bottom-up PathResource tree for nodeId " + nodeId + 
 					". Returned list was null or empty.");
 		}
 		
-		return pathResourceUtil.buildParentPathResourceTree(resources);		
+		return pathResourceTreeBuilder.buildParentPathResourceTree(resources);		
 		
 	}	
 

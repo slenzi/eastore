@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.service;
+package org.eamrf.eastore.core.service.tree.file;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -60,7 +60,10 @@ public class FileSystemService {
     private PathResourceTreeService pathResTreeService;
     
     @Autowired
-    private PathResourceTreeUtil pathResTreeUtil;
+    private PathResourceTreeLogger pathResTreeLogger;
+    
+    @Autowired
+    private PathResourceTreeBuilder pathResTreeUtil;
     
     @Autowired
     private TaskManagerProvider taskManagerProvider;
@@ -762,7 +765,7 @@ public class FileSystemService {
 				// build a tree that we can walk
 				final Tree<PathResource> tree = pathResTreeService.buildPathResourceTree(dirResource.getNodeId());				
 				
-				pathResTreeUtil.logTree(tree);
+				pathResTreeLogger.logTree(tree);
 				
 				try {
 					

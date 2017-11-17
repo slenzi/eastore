@@ -7,7 +7,7 @@ package org.eamrf.eastore.core.constants;
  * @author slenzi
  *
  */
-public abstract class AppConstants {
+public abstract class ApplicationConstants {
 
 	public static final String APP_PROPERTIES_FILE = "application.properties";
 	

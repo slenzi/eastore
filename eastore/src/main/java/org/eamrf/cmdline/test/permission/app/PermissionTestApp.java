@@ -4,7 +4,7 @@
 package org.eamrf.cmdline.test.permission.app;
 
 import org.eamrf.cmdline.common.config.CmdLineWebSocketConfig;
-import org.eamrf.eastore.core.constants.AppConstants;
+import org.eamrf.eastore.core.constants.ApplicationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Controller;
 //@Configuration
 @SpringBootApplication
 @EnableAspectJAutoProxy
-@PropertySource("classpath:" + AppConstants.APP_PROPERTIES_FILE)
+@PropertySource("classpath:" + ApplicationConstants.APP_PROPERTIES_FILE)
 @ComponentScan(
 	basePackages = {
 		"org.eamrf.concurrent",

@@ -1,7 +1,7 @@
 package org.eamrf.eastore.web.jaxrs;
 
 import org.eamrf.core.util.Mailer;
-import org.eamrf.eastore.core.constants.AppConstants;
+import org.eamrf.eastore.core.constants.ApplicationConstants;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
@@ -65,10 +65,10 @@ public abstract class BaseResourceHandler {
 	}
 	
 	private void sendEmail(String message){
-		String mailServer = appProps.getProperty(AppConstants.PROP_NAME_MAIL_SERVER);
-		String mailTo = appProps.getProperty(AppConstants.PROP_NAME_MAIL_TO);
-		String mailFrom = appProps.getProperty(AppConstants.PROP_NAME_MAIL_FROM);
-		String mailSubject = appProps.getProperty(AppConstants.PROP_NAME_MAIL_SUBJECT);
+		String mailServer = appProps.getProperty(ApplicationConstants.PROP_NAME_MAIL_SERVER);
+		String mailTo = appProps.getProperty(ApplicationConstants.PROP_NAME_MAIL_TO);
+		String mailFrom = appProps.getProperty(ApplicationConstants.PROP_NAME_MAIL_FROM);
+		String mailSubject = appProps.getProperty(ApplicationConstants.PROP_NAME_MAIL_SUBJECT);
 		try {
 			mailer.send(mailServer, mailTo, mailFrom, mailSubject, message);
 		} catch (Exception e) {
