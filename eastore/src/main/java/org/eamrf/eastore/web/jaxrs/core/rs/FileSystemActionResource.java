@@ -34,7 +34,6 @@ import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.tree.file.FileSystemService;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
@@ -59,8 +58,12 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @InjectLogger
     private Logger logger;    
 	
-    @Autowired
-    private FileSystemService fileSystemService;
+    //
+    // everything from file system service gets moved into SecurePathResourceTreeService
+    //    
+    // @Autowired
+    //private SecureFileSystemService fileSystemService;
+    //private FileSystemService fileSystemService;
     
     @Autowired
     private FileSystemUtil fileSystemUtil;    

@@ -43,6 +43,8 @@ import org.springframework.stereotype.Service;
  * All operations which perform updates to the file system are added to a queue to be run one at a time.
  * 
  * @author slenzi
+ * 
+ * @deprecated - Gatekeeper security was added. Please use org.eamrf.eastore.core.service.tree.file.secure.SecureFileSystemService
  */
 @Service
 public class FileSystemService {

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.eastore.core.service.tree.file.permission;
+package org.eamrf.eastore.core.service.tree.file.secure;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,7 +102,7 @@ public class SecurePathResourceTreeBuilder {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<PathResource> buildParentPathResourceTree(List<PathResource> resources, String userId) throws ServiceException {
+	public Tree<PathResource> buildParentPathResourceTree(List<PathResource> resources, String userId, boolean reverse) throws ServiceException {
 		
 		Set<String> userGroupCodes = getUserGroupCodes(userId);
 		
@@ -139,9 +139,48 @@ public class SecurePathResourceTreeBuilder {
 		Tree<PathResource> tree = new Tree<PathResource>();
 		tree.setRootNode(rootNode);
 		
+		if(reverse) {
+			return reverseSingleChildTree(tree);
+		}
+		
 		return tree;		
 		
 	}
+	
+	/**
+	 * Given a tree where each node has only one child, reverse the tree so the leaf node
+	 * becomes the parent.
+	 * 
+	 * Essentially the same as reversing a doubly linked list
+	 * 
+	 * @param tree
+	 * @return
+	 */
+	private Tree<PathResource> reverseSingleChildTree(Tree<PathResource> tree) throws ServiceException {
+		
+		if(tree == null || tree.getRootNode() == null || tree.getRootNode().getChildCount() == 0) {
+			return null;
+		}
+		
+		TreeNode<PathResource> temp = null;
+		TreeNode<PathResource> curr = tree.getRootNode();
+		while(curr != null) {
+			if(curr.getChildCount() > 1) {
+				throw new ServiceException("Cannot reverse tree because node " + curr.getData().getNodeId() + " has more than one child.");
+			}
+			temp = curr.getParent();
+			curr.setParent(curr.getFirstChild());
+			curr.setChildren(null);
+			curr.addChildNode(temp);
+			curr = curr.getParent();
+		}
+		
+		Tree<PathResource> reverseTree = new Tree<PathResource>();
+		reverseTree.setRootNode(temp.getParent());
+		
+		return reverseTree;
+		
+	}	
 	
 	/**
 	 * Recursively iterate over map to all all children until there are no more children to add.
@@ -243,26 +282,6 @@ public class SecurePathResourceTreeBuilder {
 			
 		}
 		
-	}
-	
-	/**
-	 * Fetch users groups
-	 * 
-	 * @param userId - user id (ctep id)
-	 * @return A set of groups
-	 */
-	private Set<Group> getUserGroups(String userId) throws ServiceException {
-		
-		List<Group> groupList = getGatekeeperGroups(userId);
-		
-		Set<Group> groupSet = new HashSet<Group>();
-		if(!CollectionUtil.isEmpty(groupList)) {
-			for(Group group : groupList) {
-				groupSet.add(group);
-			}
-		}
-		
-		return groupSet;
 	}
 	
 	/**

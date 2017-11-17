@@ -13,8 +13,9 @@ import org.springframework.stereotype.Service;
 /**
  * Service for building trees of PathResource objects.
  * 
- * 
  * @author slenzi
+ * 
+ * @deprecated - Gatekeeper security was added. Please use org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService
  */
 @Service
 public class PathResourceTreeService {

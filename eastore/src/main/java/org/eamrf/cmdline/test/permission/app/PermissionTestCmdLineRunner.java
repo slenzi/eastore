@@ -9,7 +9,7 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
-import org.eamrf.eastore.core.service.tree.file.permission.SecurePathResourceTreeService;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
@@ -65,15 +65,18 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		Tree<PathResource> tree1 = null;
 		Tree<PathResource> tree2 = null;
+		Tree<PathResource> tree3 = null;
 		try {
 			tree1 = securePathTreeService.buildPathResourceTree(sampleStoreRootNodeId, "508941");
-			tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941");
+			tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", false);
+			tree3 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", true);
 		} catch (ServiceException e) {
 			logger.error(e.getMessage());
 		}
 		
 		logger.info("Path resource tree:\n" + tree1.printTree((node) -> { return node.toString(); }) );
 		logger.info("Parent Path resource tree:\n" + tree2.printTree((node) -> { return node.toString(); }) );
+		logger.info("Reveresed parent Path resource tree:\n" + tree3.printTree((node) -> { return node.toString(); }) );
 		
 	}
 	

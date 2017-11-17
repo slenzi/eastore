@@ -14,8 +14,7 @@ import javax.ws.rs.core.PathSegment;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.tree.file.FileSystemService;
-import org.eamrf.eastore.core.service.tree.file.PathResourceTreeService;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
@@ -42,11 +41,16 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     @InjectLogger
     private Logger logger;
     
-    @Autowired
-    private FileSystemService fileSystemService;
+    //
+    // everything from file system service gets moved into SecurePathResourceTreeService
+    //
+    //@Autowired
+    //private SecureFileSystemService fileSystemService;
+    //private FileSystemService fileSystemService;
     
     @Autowired
-    private PathResourceTreeService pathResourceTreeService;
+    private SecurePathResourceTreeService pathResourceTreeService;
+    //private PathResourceTreeService pathResourceTreeService;
 	
 	public FileSystemJsonResource() {
 		

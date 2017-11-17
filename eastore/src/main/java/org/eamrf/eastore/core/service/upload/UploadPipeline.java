@@ -19,6 +19,8 @@ import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.tree.file.FileSystemService;
+import org.eamrf.eastore.core.service.tree.file.secure.SecureFileSystemService;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -38,8 +40,15 @@ public class UploadPipeline {
     @Autowired
     private ManagedProperties appProps;
 	
-	@Autowired
-	private FileSystemService fileSystemService;
+    //
+    // everything from file system service gets moved into SecurePathResourceTreeService
+    //    
+	//@Autowired
+	//private SecureFileSystemService fileSystemService;
+	//private FileSystemService fileSystemService;
+    
+    @Autowired
+    private SecurePathResourceTreeService pathResourceTreeService;    
 	
 	public UploadPipeline() {
 		

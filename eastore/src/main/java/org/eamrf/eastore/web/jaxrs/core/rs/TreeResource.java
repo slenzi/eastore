@@ -19,8 +19,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.tree.NodeTreeService;
-import org.eamrf.eastore.core.service.tree.file.FileSystemService;
-import org.eamrf.eastore.core.service.tree.file.PathResourceTreeService;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.ToString;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
@@ -58,10 +57,15 @@ public class TreeResource extends BaseResourceHandler {
     private NodeTreeService nodeTreeService;
     
     @Autowired
-    private PathResourceTreeService pathResourceTreeService;
+    private SecurePathResourceTreeService pathResourceTreeService;
+    //private PathResourceTreeService pathResourceTreeService;
     
-    @Autowired
-    private FileSystemService fileSystemService;
+    //
+    // everything from file system service gets moved into SecurePathResourceTreeService
+    //     
+    //@Autowired
+    //private SecureFileSystemService fileSystemService;
+    //private FileSystemService fileSystemService;
     
     // basic toString() call on the Node
 	private class NodeToString implements ToString<Node>{

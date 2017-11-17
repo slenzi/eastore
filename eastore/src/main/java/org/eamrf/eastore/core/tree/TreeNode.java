@@ -108,6 +108,13 @@ public class TreeNode<N> {
 	public int getChildCount() {
 		return ((childList != null) ? childList.size() : 0);
 	}
+	
+	public TreeNode<N> getFirstChild(){
+		if(hasChildren()) {
+			return childList.get(0);
+		}
+		return null;
+	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
