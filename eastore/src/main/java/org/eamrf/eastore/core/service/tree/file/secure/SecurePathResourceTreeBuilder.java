@@ -18,6 +18,7 @@ import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.gatekeeper.web.service.jaxrs.client.GatekeeperRestClient;
 import org.eamrf.gatekeeper.web.service.jaxws.model.Group;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -49,18 +50,20 @@ public class SecurePathResourceTreeBuilder {
 	 * 
 	 * @param resources - all top-down PathResource data to build a tree. 
 	 * @param userId - User ID used to evaluate access permissions (e.g. CTEP ID). 
-	 * @param dirNodeId - the id of the root node of the tree.
+	 * @param dirResource - the directory resource that is the root of the tree we are building. The directory resource
+	 * should have its permissions evaluated (read, write, and execute bits) already set for the user. These bits are
+	 * needed in order to properly evaluate the permissions for all the child resources.
 	 * @return
 	 * @throws ServiceException
 	 */
-	public Tree<PathResource> buildPathResourceTree(List<PathResource> resources, String userId, Long dirNodeId) throws ServiceException {
+	public Tree<PathResource> buildPathResourceTree(List<PathResource> resources, String userId, DirectoryResource dirResource) throws ServiceException {
 		
 		Set<String> userGroupCodes = getUserGroupCodes(userId);
 
 		PathResource rootResource = null;
 		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
 		for(PathResource res : resources){
-			if(res.getChildNodeId().equals(dirNodeId)){
+			if(res.getChildNodeId().equals(dirResource.getNodeId())){
 				rootResource = res;
 			}
 			if(map.containsKey(res.getParentNodeId())){
@@ -81,9 +84,12 @@ public class SecurePathResourceTreeBuilder {
 				storeAccessRule,
 				userGroupCodes,
 				rootNode,
-				rootNode.getData().getReadGroups(),
-				rootNode.getData().getWriteGroups(),
-				rootNode.getData().getExecuteGroups(),
+				dirResource.getReadGroups(),
+				dirResource.getWriteGroups(),
+				dirResource.getExecuteGroups(),
+				dirResource.getCanRead(),
+				dirResource.getCanWrite(),
+				dirResource.getCanExecute(),
 				map);
 		
 		Tree<PathResource> tree = new Tree<PathResource>();
@@ -134,6 +140,9 @@ public class SecurePathResourceTreeBuilder {
 				rootNode.getData().getReadGroups(),
 				rootNode.getData().getWriteGroups(),
 				rootNode.getData().getExecuteGroups(),
+				false,
+				false,
+				false,
 				map);
 		
 		Tree<PathResource> tree = new Tree<PathResource>();
@@ -191,9 +200,9 @@ public class SecurePathResourceTreeBuilder {
 	 * @param storeAccessRule - Access rule for store
 	 * @param userGroupCodes - Users groups codes used to evaluate read, write, and execute permissions
 	 * @param treeNode - The current node in the tree from which we start
-	 * @param readGroups - The read groups from the tree node, or the ones from the last parent that had them
-	 * @param writeGroups - The write groups from the tree node, or the ones from the last parent that had them
-	 * @param executeGroups - The execute groups from the tree node, or the ones from the last parent that had them
+	 * @param lastReadGroups - The read groups from the tree node, or the ones from the last parent that had them
+	 * @param lastWriteGroups - The write groups from the tree node, or the ones from the last parent that had them
+	 * @param lastExecuteGroups - The execute groups from the tree node, or the ones from the last parent that had them
 	 * @param hashSet
 	 * @param hashSet2
 	 * @param map
@@ -202,67 +211,118 @@ public class SecurePathResourceTreeBuilder {
 			AccessRule storeAccessRule,
 			Set<String> userGroupCodes,
 			TreeNode<PathResource> treeNode,
-			HashSet<String> readGroups,
-			HashSet<String> writeGroups,
-			HashSet<String> executeGroups,
+			HashSet<String> lastReadGroups,
+			HashSet<String> lastWriteGroups,
+			HashSet<String> lastExecuteGroups,
+			Boolean lastReadBit,
+			Boolean lastWriteBit,
+			Boolean lastExecuteBit,
 			Map<Long, List<PathResource>> map) {
 		
 		PathResource resource = treeNode.getData();
 		
-		//
+		// -----------------------------------------------------------------
 		// set read bit
-		//
+		// -----------------------------------------------------------------
+		
+		// use read groups from resource
 		if(!CollectionUtil.isEmpty(resource.getReadGroups())) {
-			readGroups = resource.getReadGroups();
+			lastReadGroups = resource.getReadGroups();
 			// !Collections.disjoint(userGroups, readGroups)
-			if(readGroups.stream().anyMatch(userGroupCodes::contains)) {
+			if(lastReadGroups.stream().anyMatch(userGroupCodes::contains)) {
 				resource.setCanRead(true);
 			}
-		}else{
+		
+		// otherwise use last read groups or last read bit to determine access
+		}else{ 
+			
+			// automatically set read access to true of store access rule is set to 'allow'
 			if(storeAccessRule == AccessRule.ALLOW) {
 				resource.setCanRead(true);
+				
+			// store access rule is deny
 			}else{
-				if(!CollectionUtil.isEmpty(readGroups) && readGroups.stream().anyMatch(userGroupCodes::contains)) {
+				
+				// use last read groups to determine access if we have them
+				if(!CollectionUtil.isEmpty(lastReadGroups) && lastReadGroups.stream().anyMatch(userGroupCodes::contains)) {
 					resource.setCanRead(true);
+					
+				// otherwise use last read bit
+				}else{
+					if(lastReadBit){
+						resource.setCanRead(true);
+					}
 				}
 			}
 		}
 		
-		//
+		// -----------------------------------------------------------------
 		// set write bit
-		//
+		// -----------------------------------------------------------------
+		
+		// use write groups from resource
 		if(!CollectionUtil.isEmpty(resource.getWriteGroups())) {
-			writeGroups = resource.getWriteGroups();
+			lastWriteGroups = resource.getWriteGroups();
 			// !Collections.disjoint(userGroups, writeGroups)
-			if(writeGroups.stream().anyMatch(userGroupCodes::contains)) {
+			if(lastWriteGroups.stream().anyMatch(userGroupCodes::contains)) {
 				resource.setCanWrite(true);
 			}
+			
+		// otherwise use last write groups or last write bit to determine access
 		}else{
+			
+			// automatically set write access to true of store access rule is set to 'allow'
 			if(storeAccessRule == AccessRule.ALLOW) {
 				resource.setCanWrite(true);
+				
+			// store access rule is deny	
 			}else{
-				if(!CollectionUtil.isEmpty(writeGroups) && writeGroups.stream().anyMatch(userGroupCodes::contains)) {
+				
+				// use last write groups to determine access if we have them
+				if(!CollectionUtil.isEmpty(lastWriteGroups) && lastWriteGroups.stream().anyMatch(userGroupCodes::contains)) {
 					resource.setCanWrite(true);
+				
+				// otherwise use last write bit
+				}else{
+					if(lastWriteBit){
+						resource.setCanWrite(true);
+					}					
 				}
 			}
 		}
 		
-		//
+		// -----------------------------------------------------------------
 		// set execute bit
-		//
+		// -----------------------------------------------------------------
+		
+		// use execute groups from resource
 		if(!CollectionUtil.isEmpty(resource.getExecuteGroups())) {
-			executeGroups = resource.getExecuteGroups();
+			lastExecuteGroups = resource.getExecuteGroups();
 			// !Collections.disjoint(userGroups, executeGroups)
-			if(executeGroups.stream().anyMatch(userGroupCodes::contains)) {
+			if(lastExecuteGroups.stream().anyMatch(userGroupCodes::contains)) {
 				resource.setCanExecute(true);
 			}
+			
+		// otherwise use last execute groups or last execute bit to determine access
 		}else{
+			
+			// automatically set execute access to true of store access rule is set to 'allow'
 			if(storeAccessRule == AccessRule.ALLOW) {
 				resource.setCanExecute(true);
+				
+			// store access rule is deny	
 			}else{
-				if(!CollectionUtil.isEmpty(executeGroups) && executeGroups.stream().anyMatch(userGroupCodes::contains)) {
+				
+				// use last execute groups to determine access if we have them
+				if(!CollectionUtil.isEmpty(lastExecuteGroups) && lastExecuteGroups.stream().anyMatch(userGroupCodes::contains)) {
 					resource.setCanExecute(true);
-				}
+				
+					// otherwise use last execute bit
+					}else{
+						if(lastWriteBit){
+							resource.setCanExecute(true);
+						}					
+					}
 			}
 		}		
 		
@@ -278,7 +338,17 @@ public class SecurePathResourceTreeBuilder {
 			childTreeNode.setParent(treeNode);
 			treeNode.addChildNode(childTreeNode);
 			
-			addChildrenFromPathResourceMap(storeAccessRule, userGroupCodes, childTreeNode, readGroups, writeGroups, executeGroups, map);
+			addChildrenFromPathResourceMap(
+					storeAccessRule,
+					userGroupCodes, 
+					childTreeNode, 
+					lastReadGroups,
+					lastWriteGroups,
+					lastExecuteGroups,
+					resource.getCanRead(),
+					resource.getCanWrite(),
+					resource.getCanExecute(),
+					map);
 			
 		}
 		

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -214,14 +215,20 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(Long dirNodeId, String userId, int depth) throws ServiceException {
 		
-		List<PathResource> resources = getPathResourceTree(dirNodeId, depth);
+		// We need to evaluate the permissions for directory with dirNodeId in order
+		// to properly evaluate permissions for all the children. The getDirectory method
+		// will fetch the parent tree and evaluate all the group permissions, and set
+		// the read, write, and execute bits.
+		DirectoryResource dirResource = this.getDirectory(dirNodeId, userId);
+		
+		List<PathResource> resources = this.getPathResourceTree(dirResource.getNodeId(), depth);
 		
 		if(resources == null || resources.size() == 0){
 			throw new ServiceException("No top-down PathResource tree for directory node " + dirNodeId + 
 					". Returned list was null or empty.");
 		}
 		
-		return securePathResourceUtil.buildPathResourceTree(resources, userId, dirNodeId);		
+		return securePathResourceUtil.buildPathResourceTree(resources, userId, dirResource);		
 		
 	}
 	
@@ -356,7 +363,7 @@ public class SecurePathResourceTreeService {
 			// this is a root node with no parent
 			return null;
 		}else{
-			// tree is in reverse order
+			// tree is in reverse order, so root node is the child and child is the parent :-)
 			return tree.getRootNode().getFirstChild().getData();
 		}
 		
@@ -384,11 +391,37 @@ public class SecurePathResourceTreeService {
 			// this is a root node with no parent
 			return null;
 		}else{
-			// tree is in reverse order
+			// tree is in reverse order, so root node is the child and child is the parent :-)
 			return tree.getRootNode().getFirstChild().getData();
 		}
 		
-	}	
+	}
+	
+	/**
+	 * Fetch the first level children for the path resource. This is only applicable for
+	 * directory resources
+	 * 
+	 * @param dirId
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public List<PathResource> getChildPathResource(Long dirId, String userId) throws ServiceException {
+		
+		// this function will properly evaluate the permissions for the parent directory
+		// by fetching the entire parent tree and evaluating all parent permissions.
+		Tree<PathResource> tree = this.buildPathResourceTree(dirId, userId, 1);
+		
+		if(tree.getRootNode().hasChildren()){
+			return tree.getRootNode().getChildren()
+				.stream()
+				.map((treeNode) -> { return treeNode.getData(); } )
+				.collect(Collectors.toList());
+		}
+		
+		return null;
+		
+	}
 	
 	/**
 	 * Fetch a DirectoryResource by id

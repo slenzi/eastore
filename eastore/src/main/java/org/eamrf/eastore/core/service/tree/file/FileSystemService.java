@@ -84,6 +84,9 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
+	 * 
 	 * Create queued task managers for all stores. Any SQL update operations are queued per store.
 	 * 
 	 * Each store gets two task managers, one manager for tasks that involve adding binary data
@@ -130,6 +133,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
 	 * you can build a tree. This will not contain the binary data for files.
 	 * 
@@ -154,6 +159,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Get a list of PathResource starting at the specified dirNodeId, but only up to a specified depth.
 	 * With this information you can build a tree. This will not contain the binary data for files.
 	 * 
@@ -179,6 +186,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch bottom-up (leaf node to root node), PathResource list. This can
 	 * be used to build a tree (or more of a single path) from root to leaf.
 	 * 
@@ -203,6 +212,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch bottom-up (leaf node to root node) PathResource list, up to a specified levels up. This can
 	 * be used to build a tree (or more of a single path) from root to leaf.
 	 * 
@@ -228,6 +239,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Create a new store, and create it's queued task manager
 	 * 
 	 * @param storeName
@@ -284,6 +297,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch the general queued task manager for the store;
 	 * 
 	 * @param store
@@ -297,6 +312,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch the binary queued task manager for the store;
 	 * 
 	 * @param store
@@ -823,6 +840,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a store by id
 	 * 
 	 * @param storeId
@@ -843,6 +862,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a store by name
 	 * 
 	 * @param storeName
@@ -863,6 +884,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch the store object from the PathResource object. If the store object is null then
 	 * this method will attempt to fetch it from the database using the store id.
 	 * 
@@ -888,6 +911,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch all stores
 	 * 
 	 * @return
@@ -906,6 +931,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch path resource by node id
 	 * 
 	 * @param nodeId
@@ -926,6 +953,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch a path resource by store name and relative path of resource under that store.
 	 * 
 	 * @param storeName
@@ -948,6 +977,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch the parent path resource for the specified node. If the node is a root node, and
 	 * has no parent, then null will be returned.
 	 * 
