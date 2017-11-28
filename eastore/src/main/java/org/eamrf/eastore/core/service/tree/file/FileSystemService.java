@@ -1011,6 +1011,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Fetch the first level children for the path resource.
 	 * 
 	 * @param nodeId - id of the resource. All first level children will be returned
@@ -1044,6 +1046,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a directory
 	 * 
 	 * @param fileNodeId - file node id
@@ -1064,6 +1068,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a directory
 	 * 
 	 * @param storeName - the store name
@@ -1086,6 +1092,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a directory
 	 * 
 	 * @param dirNodeId - id of the directory node
@@ -1105,6 +1113,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * fetch a directory
 	 * 
 	 * @param storeName - store name
