@@ -203,8 +203,9 @@ public class SecurePathResourceTreeBuilder {
 	 * @param lastReadGroups - The read groups from the tree node, or the ones from the last parent that had them
 	 * @param lastWriteGroups - The write groups from the tree node, or the ones from the last parent that had them
 	 * @param lastExecuteGroups - The execute groups from the tree node, or the ones from the last parent that had them
-	 * @param hashSet
-	 * @param hashSet2
+	 * @param lastReadBit - The last (possibly from parent) read bit
+	 * @param lastWriteBit - The last (possibly from parent) write bit
+	 * @param lastExecuteBit - The last (possibly from parent) execute bit
 	 * @param map
 	 */
 	private void addChildrenFromPathResourceMap(
