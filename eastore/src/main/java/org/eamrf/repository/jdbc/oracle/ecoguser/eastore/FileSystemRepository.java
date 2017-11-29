@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
@@ -645,11 +646,25 @@ public class FileSystemRepository {
 	 * @param rootDirName
 	 * @param rootDirDesc
 	 * @param maxFileSizeDb
+	 * @param readGroup
+	 * @param writeGroup
+	 * @param executeGroup
+	 * @param rule
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public Store addStore(String storeName, String storeDesc, Path storePath, String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws Exception {
+	public Store addStore(
+			String storeName, 
+			String storeDesc, 
+			Path storePath, 
+			String rootDirName, 
+			String rootDirDesc, 
+			Long maxFileSizeDb,
+			String readGroup,
+			String writeGroup,
+			String executeGroup,
+			AccessRule rule) throws Exception {
 		
 		Long storeId = getNextStoreId();
 		Long rootNodeId = closureRepository.getNextNodeId();
@@ -661,9 +676,9 @@ public class FileSystemRepository {
 		// add entry to eas_store
 		jdbcTemplate.update(
 				"insert into eas_store (store_id, store_name, store_description, store_path, "
-				+ "node_id, max_file_size_in_db, creation_date, updated_date) " +
-				"values (?, ?, ?, ?, ?, ?, ?, ?)", storeId, storeName, storeDesc,
-				storePathString, rootNodeId, maxFileSizeDb, dtNow, dtNow);
+				+ "node_id, max_file_size_in_db, access_rule, creation_date, updated_date) " +
+				"values (?, ?, ?, ?, ?, ?, ?, ?, ?)", storeId, storeName, storeDesc,
+				storePathString, rootNodeId, maxFileSizeDb, rule.toString(), dtNow, dtNow);
 		
 		// create store directory on local file system
 		try {
@@ -674,7 +689,7 @@ public class FileSystemRepository {
 		
 		// add root directory for store
 		// TODO - pass in read group 1, and write group 1, or user can always add permissions later
-		DirectoryResource rootDir = addRootDirectory(storeId, storePath, rootNodeId, rootDirName, rootDirDesc);
+		DirectoryResource rootDir = addRootDirectory(storeId, storePath, rootNodeId, rootDirName, rootDirDesc, readGroup, writeGroup, executeGroup);
 		
 		Store store = new Store();
 		store.setId(storeId);
@@ -703,7 +718,10 @@ public class FileSystemRepository {
 	 * @param replaceExisting
 	 * @return
 	 * @throws Exception
+	 * 
+	 * @deprecated - for performance reasons...
 	 */
+	/*
 	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(
 			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {
@@ -729,6 +747,7 @@ public class FileSystemRepository {
 		}
 		
 	}
+	*/
 	
 	/**
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
@@ -969,7 +988,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource _addNewFileWithoutBinary(DirectoryResource dirResource, Path filePath) throws Exception {
+	public FileMetaResource _addNewFileWithoutBinary(DirectoryResource dirResource, Path filePath) throws Exception {
 		
 		String fileName = filePath.getFileName().toString();
 		Long fileSizeBytes = FileUtil.getFileSize(filePath);
@@ -1033,21 +1052,22 @@ public class FileSystemRepository {
 	 * 
 	 * @param dirResource - The directory where the new file will go
 	 * @param srcFilePath - The new file to add. The old binary data in the database will be removed.
+	 * @param currFileRes - The current file meta resource being updated
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath) throws Exception {
+	public FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath, FileMetaResource currFileRes) throws Exception {
 		
 		String newFileName = srcFilePath.getFileName().toString();
 		
 		// get current (file) PathResource (case-insensitive search, so we can use the new file name)
-		PathResource currPathRes = getChildPathResource(dirResource.getNodeId(), newFileName, ResourceType.FILE);
-		if(currPathRes == null){
-			throw new Exception("Cannot update file " + newFileName + " in directory node => " + 
-					dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
-		}		
+		//PathResource currPathRes = getChildPathResource(dirResource.getNodeId(), newFileName, ResourceType.FILE);
+		//if(currPathRes == null){
+		//	throw new Exception("Cannot update file " + newFileName + " in directory node => " + 
+		//			dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
+		//}		
 		
-		FileMetaResource currFileRes = (FileMetaResource)currPathRes;
+		//FileMetaResource currFileRes = (FileMetaResource)currPathRes;
 		Store store = getStoreById(dirResource.getStoreId());
 		
 		Long newFileSizeBytes = FileUtil.getFileSize(srcFilePath);
@@ -1063,7 +1083,7 @@ public class FileSystemRepository {
 		if(currFileRes.getIsBinaryInDatabase()){
 			
 			// remove existing binary data in database (it's the old file)
-			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", currPathRes.getNodeId());
+			jdbcTemplate.update("delete from eas_binary_resource where node_id = ?", currFileRes.getNodeId());
 			
 			currFileRes.setIsBinaryInDatabase(false);
 			
@@ -1190,10 +1210,21 @@ public class FileSystemRepository {
 	 * @param rootNodeId - id of store's root directory node
 	 * @param name - path name of store's root directory node
 	 * @param desc - description for directory
+	 * @param readGroup
+	 * @param writeGroup
+	 * @param executeGroup
 	 * @return
 	 * @throws Exception
 	 */
-	private DirectoryResource addRootDirectory(Long storeId, Path storePath, Long rootNodeId, String name, String desc) throws Exception {
+	private DirectoryResource addRootDirectory(
+			Long storeId, 
+			Path storePath, 
+			Long rootNodeId, 
+			String name, 
+			String desc,
+			String readGroup,
+			String writeGroup,
+			String executeGroup) throws Exception {
 		
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
@@ -1215,14 +1246,18 @@ public class FileSystemRepository {
 		dirResource.setRelativePath(dirRelPathString);
 		dirResource.setDesc(desc);
 		dirResource.setStoreId(storeId);
+		dirResource.setReadGroup1(readGroup);
+		dirResource.setWriteGroup1(writeGroup);
+		dirResource.setExecuteGroup1(executeGroup);
 		
 		// TODO - pass in read & write group? User can always set that afterwards.
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
-				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc, read_group_1, write_group_1, execute_group_1) " +
 				"values (?, ?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
-				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath(), dirResource.getDesc());		
+				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath(), dirResource.getDesc(), 
+				dirResource.getReadGroup1(), dirResource.getWriteGroup1(), dirResource.getExecuteGroup1());		
 		
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(

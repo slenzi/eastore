@@ -443,6 +443,8 @@ public class FileSystemService {
 	*/
 	
 	/**
+	 * DONE
+	 * 
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
 	 * binary data in the database
 	 * 
@@ -463,6 +465,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
 	 * binary data in the database
 	 * 
@@ -484,6 +488,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
 	 * binary data in the database
 	 * 

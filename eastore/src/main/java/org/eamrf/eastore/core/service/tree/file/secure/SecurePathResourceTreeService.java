@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
+import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
@@ -34,6 +35,7 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaReso
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -632,8 +634,17 @@ public class SecurePathResourceTreeService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public Store addStore(String storeName, String storeDesc, Path storePath, 
-			String rootDirName, String rootDirDesc, Long maxFileSizeDb) throws ServiceException {
+	public Store addStore(
+			String storeName, 
+			String storeDesc, 
+			Path storePath, 
+			String rootDirName, 
+			String rootDirDesc, 
+			Long maxFileSizeDb,
+			String readGroup,
+			String writeGroup,
+			String executeGroup,
+			AccessRule rule) throws ServiceException {
 		
 		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc) || storePath == null || maxFileSizeDb == null){
 			throw new ServiceException("Missing required parameter for creating a new store.");
@@ -651,7 +662,17 @@ public class SecurePathResourceTreeService {
 		}
 		
 		try {
-			store = fileSystemRepository.addStore(storeName, storeDesc, storePath, rootDirName, rootDirDesc, maxFileSizeDb);
+			store = fileSystemRepository.addStore(
+					storeName, 
+					storeDesc, 
+					storePath, 
+					rootDirName, 
+					rootDirDesc, 
+					maxFileSizeDb,
+					readGroup,
+					writeGroup,
+					executeGroup,
+					rule);
 		} catch (Exception e) {
 			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
 		}
@@ -784,6 +805,196 @@ public class SecurePathResourceTreeService {
 		return stores;
 	}
 	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database.
+	 * 
+	 * @param dirNodeId - id of directory where file will be added
+	 * @param userId - Id of the user adding the file
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(Long dirNodeId, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		final DirectoryResource dirRes = this.getDirectory(dirNodeId, userId);
+		
+		if(!dirRes.getCanWrite()){
+			// TODO create a new exception type for permission not allowed
+			throw new ServiceException("User " + userId + " does not have permission to write to directory "
+					+ "[id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "]");
+		}
+		
+		return addFile(dirRes, filePath, replaceExisting, userId);
+		
+	}
 	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database
+	 * 
+	 * @param storeName - name of the store
+	 * @param dirRelPath - relative path of directory resource within the store
+	 * @param userId - Id of the user adding the file
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
+		
+		final DirectoryResource dirRes = this.getDirectory(storeName, dirRelPath, userId);
+		
+		if(!dirRes.getCanWrite()){
+			// TODO create a new exception type for permission not allowed
+			throw new ServiceException("User " + userId + " does not have permission to write to directory "
+					+ "[id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "]");
+		}
+		
+		return addFile(dirRes, filePath, replaceExisting, userId);		
+		
+	}
+	
+	/**
+	 * Fetch an existing file meta resource in the directory, if it exists. Permissions will be evaluated.
+	 * 
+	 * @param dirNodeId - id of the directory node
+	 * @param userId - id of user to evaluate permissions
+	 * @param fileName - name of file
+	 * @return
+	 * @throws ServiceException
+	 */
+	private FileMetaResource getExistingFileInDirectory(Long dirNodeId, String userId, String fileName) throws ServiceException {
+		
+		// TODO - this will get all children...Consider a new function which just gets the one file we are looking for.
+		List<PathResource> childResources = getChildPathResource(dirNodeId, userId);
+		if(childResources == null || childResources.size() == 0){
+			return null;
+		}
+		for(PathResource res : childResources){
+			if(res.getParentNodeId().equals(dirNodeId) && res.getResourceType() == ResourceType.FILE 
+					&& res.getPathName().toLowerCase().equals(fileName.toLowerCase())){
+				return (FileMetaResource)res;
+			}
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
+	 * binary data in the database
+	 * 
+	 * @param dirRes - directory where file will be added
+	 * @param filePath - path to file on local file system
+	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
+	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
+	 * @param userId - Id of the user adding the file
+	 * @return A new FileMetaResource object (without the binary data)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public FileMetaResource addFile(DirectoryResource dirRes, Path filePath, boolean replaceExisting, String userId) throws ServiceException {
+		
+		final Store store = getStore(dirRes);
+		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
+		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);	
+		
+		//
+		// parent task adds file meta data to database, spawns child task for refreshing binary data
+		// in the database, then returns quickly. We must wait (block) for this parent task to complete.
+		//
+		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
+			public FileMetaResource doWork() throws ServiceException {
+				
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
+				String fileName = filePath.getFileName().toString();
+				FileMetaResource existingResource = getExistingFileInDirectory(dirRes.getNodeId(), userId, fileName);
+				boolean haveExisting = existingResource != null ? true : false;
+				
+				FileMetaResource newOrUpdatedFileResource = null;
+				if(haveExisting){
+					if(!replaceExisting){
+						throw new ServiceException(" Directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "] "
+								+ "already contains a file with the name '" + fileName + "', and 'replaceExisting' param is set to false.");
+						
+					}else if(!existingResource.getCanWrite()){
+						throw new ServiceException("User " + userId + " does not have write permission on existing"
+								+ "file [id=" + existingResource.getNodeId() + ", relPath=" + existingResource.getRelativePath() + "] in "
+								+ "directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "]");
+						
+					}else{
+						// update existing file (remove current binary data, and update existing file meta data)
+						try {
+							newOrUpdatedFileResource = fileSystemRepository._updateFileDiscardOldBinary(dirRes, filePath, existingResource);
+						} catch (Exception e) {
+							throw new ServiceException("Error updating existing file [id=" + existingResource.getNodeId() + ", relPath=" + existingResource.getRelativePath() + "] in "
+									+ "directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "], " + e.getMessage());
+						}
+					}
+				}else{
+					// add new file (we've already checked for write permission on directory)
+					try {
+						newOrUpdatedFileResource = fileSystemRepository._addNewFileWithoutBinary(dirRes, filePath);
+					} catch (Exception e) {
+						throw new ServiceException("Error adding new file " + filePath.toString() + " to "
+								+ "directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "], " + e.getMessage());
+					}
+				}
+				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
+				
+				//
+				// child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
+				//
+				final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
+				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
+					public Void doWork() throws ServiceException {
+
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(START)");
+						try {
+							fileSystemRepository.refreshBinaryDataInDatabase(finalFileMetaResource);
+						} catch (Exception e) {
+							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
+									+ "for file resource node => " + finalFileMetaResource.getNodeId(), e);
+						}
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(END)");
+						return null;				
+						
+					}
+					public Logger getLogger() {
+						return logger;
+					}
+				}
+				
+				// add to binary task manager (not general task manager)
+				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
+				refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
+				binaryTaskManager.addTask(refreshTask);				
+				
+				return newOrUpdatedFileResource;				
+			}
+			public Logger getLogger() {
+				return logger;
+			}
+		};
+		
+		AddFileTask addTask = new AddFileTask();
+		addTask.setName("Add File Without Binary [dirNodeId=" + dirRes.getNodeId() + ", filePath=" + filePath + 
+				", replaceExisting=" + replaceExisting + "]");
+		generalTaskManager.addTask(addTask);
+		
+		FileMetaResource fileMetaResource = addTask.get(); // block until finished
+		
+		// broadcast directory contents changed event
+		resChangeService.directoryContentsChanged(dirRes.getNodeId());
+		
+		return fileMetaResource;
+		
+	}
 
 }

@@ -58,14 +58,6 @@ public class TreeResource extends BaseResourceHandler {
     
     @Autowired
     private SecurePathResourceTreeService pathResourceTreeService;
-    //private PathResourceTreeService pathResourceTreeService;
-    
-    //
-    // everything from file system service gets moved into SecurePathResourceTreeService
-    //     
-    //@Autowired
-    //private SecureFileSystemService fileSystemService;
-    //private FileSystemService fileSystemService;
     
     // basic toString() call on the Node
 	private class NodeToString implements ToString<Node>{
@@ -289,31 +281,32 @@ public class TreeResource extends BaseResourceHandler {
     	
     }
     
-	/**
-	 * Fetch PathResource top-down (root to all leafs) tree in HTML representation
-	 * 
-	 * @param dirNodeId
-	 * @return
-	 * @throws WebServiceException
-	 */
+    /**
+     * Fetch PathResource top-down (root to all leafs) tree in HTML representation
+     * 
+     * @param dirNodeId
+     * @param userId
+     * @return
+     * @throws WebServiceException
+     */
     @GET
-    @Path("/pathresource/html/{dirNodeId}")
+    @Path("/pathresource/html/dirId/{dirId}/userId/{userId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPathResourceTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    public Response getPathResourceTree(@PathParam("dirId") Long dirId, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirNodeId == null){
-    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	if(dirId == null || userId == null){
+    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId);
+    		tree = pathResourceTreeService.buildPathResourceTree(dirId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
     	if(tree == null){
-    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	String htmlTree = buildPathResourceTreeHtml(tree);
@@ -327,16 +320,17 @@ public class TreeResource extends BaseResourceHandler {
      * 
      * @param dirNodeId
      * @param depth
+     * @param userId
      * @return
      * @throws WebServiceException
      */
     @GET
-    @Path("/pathresource/html/{dirNodeId}/depth/{depth}")
+    @Path("/pathresource/html/dirId/{dirId}/depth/{depth}/userId/{userId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPathResourceTree(@PathParam("dirNodeId") Long dirNodeId, @PathParam("depth") int depth) throws WebServiceException {
+    public Response getPathResourceTree(@PathParam("dirId") Long dirId, @PathParam("depth") int depth, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirNodeId == null){
-    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	if(dirId == null || userId == null){
+    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	if(depth < 0){
     		handleError("Depth param must be positive.", WebExceptionType.CODE_IO_ERROR);
@@ -344,13 +338,13 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId, depth);
+    		tree = pathResourceTreeService.buildPathResourceTree(dirId, userId, depth);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
     	if(tree == null){
-    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	String htmlTree = buildPathResourceTreeHtml(tree);
@@ -359,31 +353,32 @@ public class TreeResource extends BaseResourceHandler {
     	
     }
     
-	/**
-	 * Fetch PathResource bottom-up tree (leaf to root) in HTML representation
-	 * 
-	 * @param dirNodeId
-	 * @return
-	 * @throws WebServiceException
-	 */
+    /**
+     * Fetch PathResource bottom-up tree (leaf to root) in HTML representation
+     * 
+     * @param nodeId
+     * @param userId
+     * @return
+     * @throws WebServiceException
+     */
     @GET
-    @Path("/pathresource/parent/html/{dirNodeId}")
+    @Path("/pathresource/parent/html/nodeId/{nodeId}/userId/{userId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPathResourceParentTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    public Response getPathResourceParentTree(@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirNodeId == null){
-    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	if(nodeId == null || userId == null){
+    		handleError("Missing nodeId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(dirNodeId);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId, userId, false);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
     	if(tree == null){
-    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    		handleError("Tree object was null for nodeId => " + nodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	String htmlTree = buildPathResourceTreeHtml(tree);
@@ -392,20 +387,25 @@ public class TreeResource extends BaseResourceHandler {
     	
     }
     
-	/**
-	 * Fetch bottom-up tree (leaf to root) in HTML representation, but only include so many levels up (towards the root node)
-	 * 
-	 * @param nodeId - some leaf node
-	 * @return
-	 * @throws WebServiceException
-	 */
+    /**
+     * Fetch bottom-up tree (leaf to root) in HTML representation, but only include so many levels up (towards the root node)
+     * 
+     * @param nodeId
+     * @param levels
+     * @param userId
+     * @return
+     * @throws WebServiceException
+     * 
+     * @deprecated - we have to fetch all the way up to the root node to properly evaluate permissions.
+     */
+    /*
     @GET
-    @Path("/pathresource/parent/html/{dirNodeId}/levels/{levels}")
+    @Path("/pathresource/parent/html/{nodeId}/levels/{levels}/userId/{userId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPathResourceParentTree(@PathParam("dirNodeId") Long dirNodeId, @PathParam("levels") int levels) throws WebServiceException {
+    public Response getPathResourceParentTree(@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirNodeId == null){
-    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	if(nodeId == null){
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	if(levels < 0){
     		handleError("Levels param must be positive.", WebExceptionType.CODE_IO_ERROR);
@@ -413,13 +413,14 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(dirNodeId, levels);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId, levels);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId, userId, reverse)
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
     	if(tree == null){
-    		handleError("Tree object was null for node => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    		handleError("Tree object was null for nodeId => " + nodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	String htmlTree = buildPathResourceTreeHtml(tree);
@@ -427,33 +428,35 @@ public class TreeResource extends BaseResourceHandler {
     	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
     }
+    */
     
-	/**
+    /**
 	 * Fetch PathResource top-down (root to all leafs) tree in HTML representation, with ahref download links
 	 * for all FileMetaResources
-	 * 
-	 * @param dirNodeId
-	 * @return
-	 * @throws WebServiceException
-	 */
+     * 
+     * @param dirId
+     * @param userId
+     * @return
+     * @throws WebServiceException
+     */
     @GET
-    @Path("/pathresource/download/{dirNodeId}")
+    @Path("/pathresource/download/dirId/{dirId}/userId/{userId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPathResourceDownloadTree(@PathParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    public Response getPathResourceDownloadTree(@PathParam("dirId") Long dirId, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirNodeId == null){
-    		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
+    	if(dirId == null || userId == null){
+    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildPathResourceTree(dirNodeId);
+    		tree = pathResourceTreeService.buildPathResourceTree(dirId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
     	if(tree == null){
-    		handleError("Tree object was null for dirNodeId => " + dirNodeId, WebExceptionType.CODE_IO_ERROR);
+    		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	String htmlTree = buildPathResourceTreeDownload(tree);
@@ -494,7 +497,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = fileSystemService.getStore(rootNode);
+			store = pathResourceTreeService.getStore(rootNode);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -537,7 +540,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = fileSystemService.getStore(rootNode);
+			store = pathResourceTreeService.getStore(rootNode);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
