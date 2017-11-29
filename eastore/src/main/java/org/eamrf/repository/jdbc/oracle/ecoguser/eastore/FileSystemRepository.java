@@ -1134,35 +1134,32 @@ public class FileSystemRepository {
 	/**
 	 * Add a directory node.
 	 * 
-	 * @param parentDirNodeId - Id of parent directory node.
+	 * @param parentDir - the directory under which a new child directory will be added
 	 * @param name - name for new directory node.
 	 * @param desc - description for new directory
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(Long parentDirNodeId, String name, String desc) throws Exception {
-		
-		// make sure parentDirNodeId is actually of a directory path resource type
-		DirectoryResource parentDirectory = getDirectory(parentDirNodeId);
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc) throws Exception {
 		
 		// make sure directory doesn't already contain a sub-directory with the same name	
-		if(hasChildPathResource(parentDirNodeId, name, ResourceType.DIRECTORY)){
-			throw new Exception("Directory with dirNodeId " + parentDirNodeId + 
+		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY)){
+			throw new Exception("Directory with dirNodeId " + parentDir.getNodeId() + 
 					" already contains a sub-directory with the name '" + name + "'");			
 		}
 		
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
 		try {
-			newNode = closureRepository.addNode(parentDirNodeId, name);
+			newNode = closureRepository.addNode(parentDir.getNodeId(), name);
 		} catch (Exception e) {
 			throw new Exception("Error adding directory node", e);
 		}
 		
-		Store store = getStoreById(parentDirectory.getStoreId());
+		Store store = getStoreById(parentDir.getStoreId());
 		
-		String dirRelPathString = fileSystemUtil.buildRelativePath(parentDirectory, name);
+		String dirRelPathString = fileSystemUtil.buildRelativePath(parentDir, name);
 		
 		PathResource resource = new DirectoryResource();
 		resource.setNodeId(newNode.getNodeId());

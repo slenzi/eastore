@@ -574,6 +574,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Add new directory
 	 * 
 	 * @param dirNodeId - id of parent directory
@@ -592,6 +594,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Add new directory.
 	 * 
 	 * @param parentDir - The parent directory
@@ -641,6 +645,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
 	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
 	 * the tree to rename the directory, and update the relative path data for all resources
@@ -717,6 +723,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Remove the file, from database and disk. No undo.
 	 * 
 	 * @param fileNodeId - id of the FileMetaResource
@@ -760,6 +768,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Remove a directory. Walks the tree in POST_ORDER_TRAVERSAL, from leafs to root node.
 	 * 
 	 * @param dirNodeId
@@ -1142,6 +1152,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Copy file to another directory (could be in another store)
 	 * 
 	 * @param fileNodeId - the file to copy
@@ -1160,6 +1172,9 @@ public class FileSystemService {
 		
 	}
 	
+	//
+	// DONE
+	//
 	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
 		
 		Store soureStore = getStore(fileToCopy);
@@ -1189,6 +1204,8 @@ public class FileSystemService {
 	}	
 	
 	/**
+	 * DONE
+	 * 
 	 * Copies directory 'copyDirNodeId' to destination directory 'destDirNodeId'. The destination directory
 	 * may already contain files and sub-directories with the same name. Directories will be merged. Files
 	 * will be overwritten if 'replaceExisting' is set to true. If 'replaceExisting' is set to false and there
@@ -1220,6 +1237,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Recursively walk the tree to copy all child path resources
 	 * 
 	 * @param fromStore
@@ -1262,6 +1281,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Makes a copy of 'dirToCopy' under directory 'toDir'. If there already exists a directory under 'toDir' with the
 	 * same name as directory 'dirToCopy' then the existing directory is returned. If not then a new directory is created.
 	 * 
@@ -1295,6 +1316,8 @@ public class FileSystemService {
 	}
 
 	/**
+	 * DONE
+	 * 
 	 * Move a file, preserving same node id.
 	 * 
 	 * @param fileNodeId - id of the file to move
@@ -1313,6 +1336,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Move a file, preserving same node id.
 	 * 
 	 * @param fileNodeId - the file to move
@@ -1444,6 +1469,8 @@ public class FileSystemService {
 	}
 
 	/**
+	 * DONE
+	 * 
 	 * All files in 'tempDir' will be added to directory 'dirNodeId'
 	 * 
 	 * @param dirNodeId - id of the directory node
@@ -1493,6 +1520,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * All files in 'tempDir' will be added to the directory (the correct directory will be determined using the
 	 * store name and dirRelPath values.)
 	 * 

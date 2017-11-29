@@ -18,8 +18,6 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
-import org.eamrf.eastore.core.service.tree.file.FileSystemService;
-import org.eamrf.eastore.core.service.tree.file.secure.SecureFileSystemService;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +37,6 @@ public class UploadPipeline {
     
     @Autowired
     private ManagedProperties appProps;
-	
-    //
-    // everything from file system service gets moved into SecurePathResourceTreeService
-    //    
-	//@Autowired
-	//private SecureFileSystemService fileSystemService;
-	//private FileSystemService fileSystemService;
     
     @Autowired
     private SecurePathResourceTreeService pathResourceTreeService;    
@@ -62,16 +53,20 @@ public class UploadPipeline {
 	 * @param dataHandler - interface to the binary data for the file
 	 * @param replaceExisting - pass true to replace exiting file, or pass false. If you pass false and
 	 * and file with the same name already exists, then a service exception will be thrown.
+	 * @param userId - id of user performing action
 	 * @throws ServiceException
 	 */
 	@MethodTimer
 	public void processUpload(
-			Long dirNodeId, String fileName, DataHandler dataHandler, 
-			boolean replaceExisting) throws ServiceException {
+			Long dirNodeId,
+			String fileName,
+			DataHandler dataHandler, 
+			boolean replaceExisting,
+			String userId) throws ServiceException {
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
 		
-		fileSystemService.processToDirectory(dirNodeId, tempDir, replaceExisting);
+		pathResourceTreeService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId);
 		
 	}
 	
@@ -84,16 +79,21 @@ public class UploadPipeline {
 	 * @param dataHandler - interface to the binary data for the file
 	 * @param replaceExisting - pass true to replace exiting file, or pass false. If you pass false and
 	 * and file with the same name already exists, then a service exception will be thrown.
+	 * @param userId - id of user performing action
 	 * @throws ServiceException
 	 */
 	@MethodTimer
 	public void processUpload(
-			String storeName, String dirRelPath, String fileName, DataHandler dataHandler, 
-			boolean replaceExisting) throws ServiceException {	
+			String storeName, 
+			String dirRelPath, 
+			String fileName, 
+			DataHandler dataHandler, 
+			boolean replaceExisting,
+			String userId) throws ServiceException {	
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
 		
-		fileSystemService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting);
+		pathResourceTreeService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId);
 		
 	}
 	

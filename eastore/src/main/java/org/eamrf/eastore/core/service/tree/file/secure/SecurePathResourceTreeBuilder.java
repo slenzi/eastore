@@ -356,6 +356,8 @@ public class SecurePathResourceTreeBuilder {
 	}
 	
 	/**
+	 * TODO - This really needs to be cached (maybe every 5-10 minutes)
+	 * 
 	 * Fetch users group codes
 	 * 
 	 * @param userId - user id (ctep id)
