@@ -290,12 +290,14 @@ public class TreeResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @Path("/pathresource/html/dirId/{dirId}/userId/{userId}")
+    @Path("/pathresource/html/userId/{userId}/dirId/{dirId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getPathResourceTree(@PathParam("dirId") Long dirId, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirId == null || userId == null){
-    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
+    	validateUserId(userId);
+    	
+    	if(dirId == null){
+    		handleError("Missing dirId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
@@ -325,12 +327,14 @@ public class TreeResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @Path("/pathresource/html/dirId/{dirId}/depth/{depth}/userId/{userId}")
+    @Path("/pathresource/html/userId/{userId}/dirId/{dirId}/depth/{depth}")
     @Produces(MediaType.TEXT_HTML)
     public Response getPathResourceTree(@PathParam("dirId") Long dirId, @PathParam("depth") int depth, @PathParam("userId") String userId) throws WebServiceException {
     	
-    	if(dirId == null || userId == null){
-    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
+    	validateUserId(userId);
+    	
+    	if(dirId == null){
+    		handleError("Missing dirId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	if(depth < 0){
     		handleError("Depth param must be positive.", WebExceptionType.CODE_IO_ERROR);
@@ -362,12 +366,14 @@ public class TreeResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @Path("/pathresource/parent/html/nodeId/{nodeId}/userId/{userId}")
+    @Path("/pathresource/parent/html/userId/{userId}/nodeId/{nodeId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getPathResourceParentTree(@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
     	
+    	validateUserId(userId);
+    	
     	if(nodeId == null || userId == null){
-    		handleError("Missing nodeId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
+    		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
@@ -440,12 +446,14 @@ public class TreeResource extends BaseResourceHandler {
      * @throws WebServiceException
      */
     @GET
-    @Path("/pathresource/download/dirId/{dirId}/userId/{userId}")
+    @Path("/pathresource/download/userId/{userId}/dirId/{dirId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getPathResourceDownloadTree(@PathParam("dirId") Long dirId, @PathParam("userId") String userId) throws WebServiceException {
     	
+    	validateUserId(userId);
+    	
     	if(dirId == null || userId == null){
-    		handleError("Missing dirId and/or userId param.", WebExceptionType.CODE_IO_ERROR);
+    		handleError("Missing dirId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;

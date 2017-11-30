@@ -35,11 +35,13 @@ import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
 import org.eamrf.web.rs.exception.WebServiceException;
 import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
@@ -56,14 +58,7 @@ import org.springframework.stereotype.Service;
 public class FileSystemActionResource extends BaseResourceHandler {
 
     @InjectLogger
-    private Logger logger;    
-	
-    //
-    // everything from file system service gets moved into SecurePathResourceTreeService
-    //    
-    // @Autowired
-    //private SecureFileSystemService fileSystemService;
-    //private FileSystemService fileSystemService;
+    private Logger logger;
     
     @Autowired
     private FileSystemUtil fileSystemUtil;    
@@ -72,10 +67,13 @@ public class FileSystemActionResource extends BaseResourceHandler {
     private UploadPipeline uploadPipeline;
     
     @Autowired
+    private SecurePathResourceTreeService pathResourceTreeService;    
+    
+    @Autowired
     private HttpSession session;
     
     @Autowired
-    private HttpServletRequest request;    
+    private HttpServletRequest request;   
     
 	public FileSystemActionResource() {
 
@@ -92,13 +90,18 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	/**
 	 * Download a file by it's file node ID.
 	 * 
+	 * @param fileId
+	 * @param userId - id of user completing action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/download/id/{fileId}")
+	@Path("/download/userId/{userId}/id/{fileId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response downloadFile(@PathParam("fileId") Long fileId) throws WebServiceException {
+	public Response downloadFile(
+			@PathParam("fileId") Long fileId, @PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(fileId == null){
 			handleError("Missing fileId path param", WebExceptionType.CODE_IO_ERROR);
@@ -106,7 +109,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = fileSystemService.getFileMetaResource(fileId, true);
+			fileMeta = pathResourceTreeService.getFileMetaResource(fileId, userId, true);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -123,16 +126,21 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	/**
 	 * Download a file by store name and relative path value within the store.
 	 * 
+	 * @param storeName
 	 * @param list
+	 * @param userId - id of user completing action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/download/{storeName}/{relPath:.+}")
+	@Path("/download/userId/{userId}/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response downloadFile(
 			@PathParam("storeName") String storeName,
-			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+			@PathParam("relPath") List<PathSegment> list,
+			@PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
@@ -143,7 +151,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = fileSystemService.getFileMetaResource(storeName, relPath, true);
+			fileMeta = pathResourceTreeService.getFileMetaResource(storeName, relPath, userId, true);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -264,9 +272,12 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	DataHandler dataHandler = fileAttachment.getDataHandler();    	
     	
     	// check for additional upload parameters
+    	String userId = getStringValue("userId", body);
     	String dirId = getStringValue("dirId", body);
     	String storeName = getStringValue("storeName", body);
     	String dirRelPath = getStringValue("dirRelPath", body);
+    	
+    	validateUserId(userId);
     	
     	// if user provided a 'dirId' value then use that
     	if(!StringUtil.isNullEmpty(dirId)){
@@ -279,16 +290,16 @@ public class FileSystemActionResource extends BaseResourceHandler {
     		}
         	
         	try {
-    			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true);
+    			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true, userId);
     		} catch (ServiceException e) {
     			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
     		}        	
     	
-        // use store name and directory relative patn value
+        // use store name and directory relative path value
     	}else if(!StringUtil.isNullEmpty(storeName) && !StringUtil.isNullEmpty(dirRelPath)){
     		
         	try {
-    			uploadPipeline.processUpload(storeName, dirRelPath, fileName, dataHandler, true);
+    			uploadPipeline.processUpload(storeName, dirRelPath, fileName, dataHandler, true, userId);
     		} catch (ServiceException e) {
     			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
     		}    		
@@ -310,6 +321,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param dirNodeId - id of parent directory. New directory will be created under the parent.
      * @param name - name for new directory
      * @param desc - description for new directory
+     * @param readGroup1
+     * @param writeGroup1
+     * @param executeGroup1
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -319,7 +334,13 @@ public class FileSystemActionResource extends BaseResourceHandler {
     public DirectoryResource addDirectory(
     		@QueryParam("dirNodeId") Long dirNodeId,
     		@QueryParam("name") String name,
-    		@QueryParam("desc") String desc) throws WebServiceException {
+    		@QueryParam("desc") String desc,
+    		@QueryParam("readGroup1") String readGroup1,
+    		@QueryParam("writeGroup1") String writeGroup1,
+    		@QueryParam("executeGroup1") String executeGroup1,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(dirNodeId == null || StringUtil.isNullEmpty(name)){
     		handleError("Missing 'dirNodeId', 'name', and/or 'desc' params.", WebExceptionType.CODE_IO_ERROR);
@@ -327,7 +348,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	DirectoryResource dirResource = null;
     	try {
-    		dirResource = fileSystemService.addDirectory(dirNodeId, name, desc);
+    		dirResource = pathResourceTreeService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -336,7 +357,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	return dirResource;
     	
     }
-    
+        
     /**
      * Create a new store
      * 
@@ -349,6 +370,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * database in blob format (file will still be saved to the local file system.)
      * @param rootDirName - directory name for the root directory for the store.
      * @param rootDirDesc - description for the root directory
+     * @param readGroup1
+     * @param writeGroup1
+     * @param executeGroup1
      * @return
      * @throws WebServiceException
      */
@@ -361,7 +385,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     		@QueryParam("storePath") String storePath,
     		@QueryParam("maxFileSizeBytes") Long maxFileSizeBytes,
     		@QueryParam("rootDirName") String rootDirName,
-    		@QueryParam("rootDirDesc") String rootDirDesc) throws WebServiceException {
+    		@QueryParam("rootDirDesc") String rootDirDesc,
+    		@QueryParam("readGroup1") String readGroup1,
+    		@QueryParam("writeGroup1") String writeGroup1,
+    		@QueryParam("executeGroup1") String executeGroup1) throws WebServiceException {
     	
     	if(maxFileSizeBytes == null || StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc)
     			|| StringUtil.isNullEmpty(storePath) || StringUtil.isNullEmpty(rootDirName) ||
@@ -377,8 +404,8 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = fileSystemService.addStore(storeName, storeDesc, 
-					Paths.get(storePath), rootDirName, rootDirDesc, maxFileSizeBytes);
+			store = pathResourceTreeService.addStore(storeName, storeDesc, Paths.get(storePath), rootDirName, rootDirDesc, maxFileSizeBytes, 
+					readGroup1, writeGroup1, executeGroup1, AccessRule.DENY);
 		} catch (ServiceException e) {
 			handleError("Error creating new store, name=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -387,25 +414,29 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	return store;
     	
     }    
-    
+  
     /**
      * Delete a file
      * 
      * @param fileNodeId
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
     @POST
     @Path("/removeFile")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response removeFile(@QueryParam("fileNodeId") Long fileNodeId) throws WebServiceException {
+    public Response removeFile(
+    		@QueryParam("fileNodeId") Long fileNodeId, @QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(fileNodeId == null){
     		handleError("Missing fileNodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
-			fileSystemService.removeFile(fileNodeId);
+    		pathResourceTreeService.removeFile(fileNodeId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -415,23 +446,25 @@ public class FileSystemActionResource extends BaseResourceHandler {
     }
     
     /**
-     * Delete a directory
      * 
-     * @param dirNodeId
+     * @param dirNodeId - id of directory to delete
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
     @POST
     @Path("/removeDirectory")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response removeDirectory(@QueryParam("dirNodeId") Long dirNodeId) throws WebServiceException {
+    public Response removeDirectory(@QueryParam("dirNodeId") Long dirNodeId, @QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(dirNodeId == null){
     		handleError("Missing dirNodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
-			fileSystemService.removeDirectory(dirNodeId);
+			pathResourceTreeService.removeDirectory(dirNodeId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -448,6 +481,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param replaceExisting - pass true to replace any existing file with the same name (case insensitive match) in
      * the target directory. Pass false not to replace. If you pass false and a file does already exist, then
      * an exception will be thrown.
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -457,7 +491,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     public Response copyFile(
     		@QueryParam("fileNodeId") Long fileNodeId,
     		@QueryParam("dirNodeId") Long dirNodeId,
-    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    		@QueryParam("replaceExisting") Boolean replaceExisting,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(fileNodeId == null || dirNodeId == null || replaceExisting == null){
     		handleError("Cannot copy file, missing fileNodeId, dirNodeId, and/or replaceExisting params.", 
@@ -465,7 +502,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileSystemService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue());
+			pathResourceTreeService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -480,6 +517,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param copyDirNodeId
      * @param destDirNodeId
      * @param replaceExisting
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -489,14 +527,17 @@ public class FileSystemActionResource extends BaseResourceHandler {
     public Response copyDirectory(
     		@QueryParam("copyDirNodeId") Long copyDirNodeId,
     		@QueryParam("destDirNodeId") Long destDirNodeId,
-    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    		@QueryParam("replaceExisting") Boolean replaceExisting,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(copyDirNodeId == null || destDirNodeId == null || replaceExisting == null){
     		handleError("Missing copyDirNodeId, destDirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
-			fileSystemService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue());
+			pathResourceTreeService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -513,6 +554,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param replaceExisting - pass true to replace any existing file with the same name (case insensitive match) in
      * the target directory. Pass false not to replace. If you pass false and a file does already exist, then
      * an exception will be thrown.
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -522,7 +564,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     public Response moveFile(
     		@QueryParam("fileNodeId") Long fileNodeId,
     		@QueryParam("dirNodeId") Long dirNodeId,
-    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    		@QueryParam("replaceExisting") Boolean replaceExisting,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(fileNodeId == null || dirNodeId == null || replaceExisting == null){
     		handleError("Cannot move file, missing fileNodeId, dirNodeId, and/or replaceExisting params.", 
@@ -530,7 +575,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileSystemService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue());
+			pathResourceTreeService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -545,6 +590,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param copyDirNodeId
      * @param destDirNodeId
      * @param replaceExisting
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -554,14 +600,17 @@ public class FileSystemActionResource extends BaseResourceHandler {
     public Response moveDirectory(
     		@QueryParam("moveDirNodeId") Long moveDirNodeId,
     		@QueryParam("destDirNodeId") Long destDirNodeId,
-    		@QueryParam("replaceExisting") Boolean replaceExisting) throws WebServiceException {
+    		@QueryParam("replaceExisting") Boolean replaceExisting,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(moveDirNodeId == null || destDirNodeId == null || replaceExisting == null){
     		handleError("Missing moveDirNodeId, destDirNodeId, and/or replaceExisting params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
-			fileSystemService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue());
+			pathResourceTreeService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -576,6 +625,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * 
      * @param nodeId
      * @param newName
+     * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
      */
@@ -584,14 +634,17 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @Produces(MediaType.APPLICATION_JSON)
     public Response renameResource(
     		@QueryParam("nodeId") Long nodeId,
-    		@QueryParam("newName") String newName) throws WebServiceException {
+    		@QueryParam("newName") String newName,
+    		@QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
     	
     	if(nodeId == null || newName == null){
     		handleError("Missing nodeId, and/or newName params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	try {
-			fileSystemService.renamePathResource(nodeId, newName);
+			pathResourceTreeService.renamePathResource(nodeId, newName, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -613,7 +666,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	Store testStore = null;
     	try {
-			testStore = fileSystemService.createTestStore();
+			testStore = pathResourceTreeService.createTestStore();
 		} catch (ServiceException e) {
 			handleError("Error creating test store, " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

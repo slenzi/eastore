@@ -1,6 +1,7 @@
 package org.eamrf.eastore.web.jaxrs;
 
 import org.eamrf.core.util.Mailer;
+import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.constants.ApplicationConstants;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -27,6 +28,20 @@ public abstract class BaseResourceHandler {
 	}
 	
 	public abstract Logger getLogger();
+	
+	/**
+	 * Check if user id is ok
+	 * 
+	 * @param userId
+	 * @throws WebServiceException
+	 */
+	public void validateUserId(String userId) throws WebServiceException {
+		
+		if(StringUtil.isNullEmpty(userId)) {
+			handleError("Permission error, missing user id", WebExceptionType.CODE_IO_ERROR);
+		}
+		
+	}	
 	
     /**
      * Builds a simply OK response message in JSON.

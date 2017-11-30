@@ -6,6 +6,7 @@ package org.eamrf.eastore.core.service.tree.file.secure;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -445,12 +446,12 @@ public class SecurePathResourceTreeService {
 	 * Fetch the first level children for the path resource. This is only applicable for
 	 * directory resources
 	 * 
-	 * @param dirId
-	 * @param userId
+	 * @param dirId - id of directory node
+	 * @param userId - id of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
-	public List<PathResource> getChildPathResource(Long dirId, String userId) throws ServiceException {
+	public List<PathResource> getChildPathResources(Long dirId, String userId) throws ServiceException {
 		
 		// this function will properly evaluate the permissions for the parent directory
 		// by fetching the entire parent tree and evaluating all parent permissions.
@@ -466,6 +467,72 @@ public class SecurePathResourceTreeService {
 		return null;
 		
 	}
+	
+	/**
+	 * Fetch first-level resource, by name (case insensitive), from the directory, provided one exists.
+	 * 
+	 * @param dirId
+	 * @param dirName
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public PathResource getChildResource(Long dirId, String name, ResourceType type, String userId) throws ServiceException {
+		
+		List<PathResource> childResources = this.getChildPathResources(dirId, userId);
+		if(childResources == null || childResources.size() == 0) {
+			return null;
+		}
+		for(PathResource pr : childResources){
+			if(pr.getParentNodeId().equals(dirId)
+					&& pr.getResourceType() == type
+					&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
+				
+				return pr;
+				
+			}
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * Fetch first-level directory resource, by name (case insensitive), from the directory, provided one exists.
+	 * 
+	 * @param dirId
+	 * @param name
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public DirectoryResource getChildDirectoryResource(Long dirId, String name, String userId) throws ServiceException {
+		
+		PathResource resource = this.getChildResource(dirId, name, ResourceType.DIRECTORY, userId);
+		if(resource != null) {
+			return (DirectoryResource)resource;
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * Fetch first-level file meta resource, by name (case insensitive), from the directory, provided one exists.
+	 * 
+	 * @param dirId
+	 * @param name
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	public FileMetaResource getChildFileMetaResource(Long dirId, String name, String userId) throws ServiceException {
+		
+		PathResource resource = this.getChildResource(dirId, name, ResourceType.FILE, userId);
+		if(resource != null) {
+			return (FileMetaResource)resource;
+		}
+		return null;
+		
+	}	
 	
 	/**
 	 * Fetch a DirectoryResource by id
@@ -523,6 +590,30 @@ public class SecurePathResourceTreeService {
 		}		
 		
 	}
+	
+	/**
+	 * Fetch the parent directory of a resource
+	 * 
+	 * @param nodeId - id of resource. If this is an ID of a root directory of a store, then there is no parent. Null will be returned.
+	 * @param userId - id of user completing the action
+	 * @return The parent directory of the resource, or null if the resource has not parent (root directories have not parent.)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getParentDirectory(Long nodeId, String userId) throws ServiceException {
+		
+		PathResource parent = this.getParentPathResource(nodeId, userId);
+		
+		if(parent == null) {
+			return null;
+		}
+		if(parent.getResourceType() == ResourceType.DIRECTORY) {
+			return (DirectoryResource)parent;
+		}else {
+			throw new ServiceException("The parent resource for resource with id " + nodeId + " is not a directory resource, yet it should be.");
+		}
+		
+	}	
 	
 	/**
 	 * Fetch FileMetaResource by ID.
@@ -894,7 +985,7 @@ public class SecurePathResourceTreeService {
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
 	 * binary data in the database
 	 * 
-	 * @param dirRes - directory where file will be added
+	 * @param toDir - directory where file will be added
 	 * @param filePath - path to file on local file system
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
@@ -903,13 +994,14 @@ public class SecurePathResourceTreeService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public FileMetaResource addFile(DirectoryResource dirRes, Path filePath, boolean replaceExisting, String userId) throws ServiceException {
+	public FileMetaResource addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId) throws ServiceException {
 		
-		if(!dirRes.getCanWrite()){
-			handlePermissionDenied(PermissionError.WRITE, dirRes, userId);
+		// user must have write permission on destination directory
+		if(!toDir.getCanWrite()){
+			this.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 		}		
 		
-		final Store store = getStore(dirRes);
+		final Store store = getStore(toDir);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);		
 		
@@ -923,32 +1015,35 @@ public class SecurePathResourceTreeService {
 				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
 				
 				String fileName = filePath.getFileName().toString();
-				FileMetaResource existingResource = getExistingFileInDirectory(dirRes.getNodeId(), userId, fileName);
+				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
 				boolean haveExisting = existingResource != null ? true : false;
 				
 				FileMetaResource newOrUpdatedFileResource = null;
 				if(haveExisting){
 					if(!replaceExisting){
-						throw new ServiceException(" Directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "] "
+						throw new ServiceException(" Directory [id=" + toDir.getNodeId() + ", relPath=" + toDir.getRelativePath() + "] "
 								+ "already contains a file with the name '" + fileName + "', and 'replaceExisting' param is set to false.");
-						
-					}else if(!existingResource.getCanWrite()){
-						handlePermissionDenied(PermissionError.WRITE, existingResource, dirRes, userId);						
+					
+					// files no longer have their own permissions. It's now controlled by permissions on the directory they are in
+					//}else if(!existingResource.getCanWrite()){
+					//	(PermissionError.WRITE, existingResource, toDir, userId);						
+					
 					}else{
 						// update existing file (remove current binary data, and update existing file meta data)
 						try {
-							newOrUpdatedFileResource = fileSystemRepository._updateFileDiscardOldBinary(dirRes, filePath, existingResource);
+							newOrUpdatedFileResource = fileSystemRepository._updateFileDiscardOldBinary(toDir, filePath, existingResource);
 						} catch (Exception e) {
 							throw new ServiceException("Error updating existing file [id=" + existingResource.getNodeId() + ", relPath=" + existingResource.getRelativePath() + "] in "
-									+ "directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "], " + e.getMessage());
+									+ "directory [id=" + toDir.getNodeId() + ", relPath=" + toDir.getRelativePath() + "], " + e.getMessage());
 						}
 					}
+						
 				}else{
 					try {
-						newOrUpdatedFileResource = fileSystemRepository._addNewFileWithoutBinary(dirRes, filePath);
+						newOrUpdatedFileResource = fileSystemRepository._addNewFileWithoutBinary(toDir, filePath);
 					} catch (Exception e) {
 						throw new ServiceException("Error adding new file " + filePath.toString() + " to "
-								+ "directory [id=" + dirRes.getNodeId() + ", relPath=" + dirRes.getRelativePath() + "], " + e.getMessage());
+								+ "directory [id=" + toDir.getNodeId() + ", relPath=" + toDir.getRelativePath() + "], " + e.getMessage());
 					}
 				}
 				
@@ -990,34 +1085,23 @@ public class SecurePathResourceTreeService {
 		};
 		
 		AddFileTask addTask = new AddFileTask();
-		addTask.setName("Add File Without Binary [dirNodeId=" + dirRes.getNodeId() + ", filePath=" + filePath + 
+		addTask.setName("Add File Without Binary [dirNodeId=" + toDir.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
 		generalTaskManager.addTask(addTask);
 		
 		FileMetaResource fileMetaResource = addTask.get(); // block until finished
 		
 		// broadcast directory contents changed event
-		resChangeService.directoryContentsChanged(dirRes.getNodeId());
+		resChangeService.directoryContentsChanged(toDir.getNodeId());
 		
 		return fileMetaResource;
 		
 	}
 	
-	/**
-	 * TODO - have to test to make sure this works
-	 * 
-	 * Fetch an existing file meta resource in the directory, if it exists. Permissions will be evaluated.
-	 * 
-	 * @param dirNodeId - id of the directory node
-	 * @param userId - id of user to evaluate permissions
-	 * @param fileName - name of file
-	 * @return
-	 * @throws ServiceException
-	 */
-	private FileMetaResource getExistingFileInDirectory(Long dirNodeId, String userId, String fileName) throws ServiceException {
+	/*
+	private FileMetaResource getFileInDirectory(Long dirNodeId, String userId, String fileName) throws ServiceException {
 		
-		// TODO - this will get all children...Consider a new function which just gets the one file we are looking for.
-		List<PathResource> childResources = getChildPathResource(dirNodeId, userId);
+		List<PathResource> childResources = getChildPathResources(dirNodeId, userId);
 		
 		if(childResources == null || childResources.size() == 0){
 			return null;
@@ -1031,7 +1115,8 @@ public class SecurePathResourceTreeService {
 		}
 		return null;
 		
-	}	
+	}
+	*/	
 	
 	/**
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
@@ -1046,9 +1131,11 @@ public class SecurePathResourceTreeService {
 	 */
 	@MethodTimer
 	public void renamePathResource(Long nodeId, String newName, String userId) throws ServiceException {
+
+		// works for both files and directories. Files will inherit their permissions from the directories they are in.
 		
 		PathResource resource = this.getPathResource(nodeId, userId);
-		if(resource.getCanWrite()) {
+		if(!resource.getCanWrite()) {
 			this.handlePermissionDenied(PermissionError.WRITE, resource, userId);
 		}
 		
@@ -1072,18 +1159,43 @@ public class SecurePathResourceTreeService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(Long dirNodeId, String name, String desc, String userId) throws ServiceException {
+	public DirectoryResource addDirectory(
+			Long dirNodeId, String name, String desc, String userId) throws ServiceException {
 		
 		final DirectoryResource resource = this.getDirectory(dirNodeId, userId);		
 		
-		return addDirectory(resource, name, desc, userId);
+		return addDirectory(resource, name, desc, null, null, null, userId);
+		
+	}	
+	
+	/**
+	 * Add new directory
+	 * 
+	 * @param dirNodeId - id of parent directory
+	 * @param name - name of new directory
+	 * @param desc - description for new directory
+	 * @param readGroup1 - optional read group
+	 * @param writeGroup1 - optional write group
+	 * @param executeGroup1 - optional execute group
+	 * @param userId - id of user performing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource addDirectory(
+			Long dirNodeId, String name, String desc, String readGroup1, String writeGroup1, 
+			String executeGroup1, String userId) throws ServiceException {
+		
+		final DirectoryResource resource = this.getDirectory(dirNodeId, userId);		
+		
+		return addDirectory(resource, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
 		
 	}
 	
 	/**
 	 * Add new directory
 	 * 
-	 * @param dirNodeId - parent directory
+	 * @param parentDir - the parent directory under which the new directory will be created
 	 * @param name - name of new directory
 	 * @param desc - description for new directory
 	 * @param userId - id of user performing the action
@@ -1093,7 +1205,29 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc, String userId) throws ServiceException {
 		
-		if(parentDir.getCanWrite()) {
+		return this.addDirectory(parentDir, name, desc, null, null, null, userId);
+		
+	}
+		
+	
+	/**
+	 * Add new directory
+	 * 
+	 * @param parentDir - the parent directory under which the new directory will be created
+	 * @param name - name of new directory
+	 * @param desc - description for new directory
+	 * @param readGroup1 - optional read group
+	 * @param writeGroup1 - optional write group
+	 * @param executeGroup1 - optional execute group
+	 * @param userId - id of user performing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1, String userId) throws ServiceException {
+		
+		// user must have write permission on parent directory
+		if(!parentDir.getCanWrite()) {
 			this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 		}		
 		
@@ -1107,7 +1241,7 @@ public class SecurePathResourceTreeService {
 
 				DirectoryResource dirResource = null;
 				try {
-					dirResource = fileSystemRepository.addDirectory(parentDir, name, desc);
+					dirResource = fileSystemRepository.addDirectory(parentDir, name, desc, readGroup1, writeGroup1, executeGroup1);
 				} catch (Exception e) {
 					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
 				}
@@ -1159,7 +1293,12 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public void removeFile(FileMetaResource fileMetaResource, String userId) throws ServiceException {
 		
-		if(fileMetaResource.getCanWrite()) {
+		// user must have read & write access on parent directory
+		// file resource inherits permission from parent directory, so this works.
+		if(!fileMetaResource.getCanRead()) {
+			this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
+		}		
+		if(!fileMetaResource.getCanWrite()) {
 			this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
 		}		
 		
@@ -1205,10 +1344,26 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public void removeDirectory(Long dirNodeId, String userId) throws ServiceException {
 		
-		final DirectoryResource dirToDelete = getDirectory(dirNodeId, userId);
+		final DirectoryResource dirToDelete = this.getDirectory(dirNodeId, userId);
+		
+		this.removeDirectory(dirToDelete, userId);		
+		
+	}	
+	
+	/**
+	 * Remove a directory. Walks the tree in POST_ORDER_TRAVERSAL, from leafs to root node.
+	 * 
+	 * @param dirNodeId - id of directory to remove
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void removeDirectory(DirectoryResource dirToDelete, String userId) throws ServiceException {
+		
 		final Store store = getStore(dirToDelete);
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		
+		Long dirNodeId = dirToDelete.getNodeId();
 		
 		class Task extends AbstractQueuedTask<Void> {
 
@@ -1237,6 +1392,7 @@ public class SecurePathResourceTreeService {
 								if(treeNode.getData().getResourceType() == ResourceType.FILE){
 									
 									FileMetaResource fileToDelete = (FileMetaResource)treeNode.getData();
+									// this works because files inherit permissions from their directory
 									if(!fileToDelete.getCanWrite()) {
 										handlePermissionDenied(PermissionError.WRITE, fileToDelete, userId);
 									}
@@ -1310,6 +1466,8 @@ public class SecurePathResourceTreeService {
 	
 	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId) throws ServiceException {
 		
+		// user must have read on parent directory
+		// file resource inherits permission from parent directory, so this works.
 		if(!fileToCopy.getCanRead()) {
 			handlePermissionDenied(PermissionError.READ, fileToCopy, userId);
 		}
@@ -1360,6 +1518,17 @@ public class SecurePathResourceTreeService {
 					", destDirNodeId=" + destDirNodeId + ", replaceExisting=" + replaceExisting);
 		}
 		
+		final DirectoryResource fromDirParent = this.getParentDirectory(copyDirNodeId, userId);
+		if(fromDirParent != null) {
+			
+			// if the directory being copied has a parent directory, then the user must have read access
+			// on that directory in order to perform copy.
+			if(!fromDirParent.getCanRead()) {
+				handlePermissionDenied(PermissionError.READ, fromDirParent, userId);
+			}
+			
+		}
+		
 		final DirectoryResource fromDir = this.getDirectory(copyDirNodeId, userId);
 		final DirectoryResource toDir = this.getDirectory(destDirNodeId, userId);
 		final Store fromStore = getStore(fromDir);
@@ -1394,19 +1563,26 @@ public class SecurePathResourceTreeService {
 		
 		if(resourceToCopy.getResourceType() == ResourceType.DIRECTORY){
 			
-			// copy the directory
+			DirectoryResource dirToCopy = (DirectoryResource) resourceToCopy;
+			
+			// user needs read permission on directory to copy
+			if(!dirToCopy.getCanRead()) {
+				handlePermissionDenied(PermissionError.READ, dirToCopy, userId);
+			}
+			// user need write permission on destination directory
+			if(!toDir.getCanWrite()) {
+				handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+			}			
 			
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
-			DirectoryResource newToDir = _createCopyOfDirectory((DirectoryResource) resourceToCopy, toDir, userId);
+			DirectoryResource newToDir = _createCopyOfDirectory(dirToCopy, toDir, userId);
 			
-			// copy over children of the directory (files and subdirectories)
+			// copy over children of the directory (files and sub-directories)
 			if(pathResourceNode.hasChildren()){
 				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
-					
 					copyDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting, userId);
-					
 				}
 			}
 			
@@ -1429,36 +1605,39 @@ public class SecurePathResourceTreeService {
 	 * @throws Exception
 	 */
 	private DirectoryResource _createCopyOfDirectory(
-			DirectoryResource dirToCopy, DirectoryResource toDir, String userId) throws ServiceException {
-		
-		if(!dirToCopy.getCanRead()) {
-			handlePermissionDenied(PermissionError.READ, dirToCopy, userId);
-		}
-		
-		// handled in addDirectory method
-		//if(!toDir.getCanWrite()) {
-		//	handlePermissionDenied(PermissionError.WRITE, dirToCopy, userId);
-		//}
+			DirectoryResource dirToCopy, 
+			DirectoryResource toDir, 
+			String userId) throws ServiceException {
 		
 		// see if there already exists a child directory with the same name
-		PathResource existingChildDir = null;
+		DirectoryResource existingChildDir = null;
 		try {
-			existingChildDir = fileSystemRepository.getChildPathResource(
-					toDir.getNodeId(), dirToCopy.getPathName(), ResourceType.DIRECTORY);
+			existingChildDir = this.getChildDirectoryResource(toDir.getNodeId(), dirToCopy.getPathName(), userId);
 		} catch (Exception e) {
 			throw new ServiceException("Failed to check for existing child directory with name '" + 
 					dirToCopy.getPathName() + "' under directory node " + toDir.getNodeId(), e);
 		}
 		
 		if(existingChildDir != null){
+			
 			// directory with the same name already exists in the 'toDir'
 			// TODO - directory names might differ by case (uppercase/lowercase etc). Do we want to change
 			// the name of the existing directory to exactly match the one being copied?
-			return (DirectoryResource) existingChildDir;
+			return existingChildDir;
+			
 		}else{
+			
 			// create new directory
-			return this.addDirectory(toDir, dirToCopy.getPathName(), dirToCopy.getDesc(), userId);
-			//return addDirectory(toDir, dirToCopy.getPathName(), dirToCopy.getDesc());
+			DirectoryResource newCopy = this.addDirectory(toDir, dirToCopy.getPathName(), dirToCopy.getDesc(), 
+					dirToCopy.getReadGroup1(), dirToCopy.getWriteGroup1(), dirToCopy.getExecuteGroup1(), userId);
+			
+			// read/write/execute bits should be the same
+			newCopy.setCanRead(dirToCopy.getCanRead());
+			newCopy.setCanWrite(dirToCopy.getCanWrite());
+			newCopy.setCanExecute(dirToCopy.getCanExecute());
+			
+			return newCopy;
+			
 		}
 		
 	}
@@ -1493,11 +1672,18 @@ public class SecurePathResourceTreeService {
 	 */
 	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting, String userId) throws ServiceException {
 		
+		// user must have write access on destination directory
+		if(!destDir.getCanWrite()){
+			handlePermissionDenied(PermissionError.WRITE, destDir, userId);
+		}
+		// user must have read and write on parent directory of file being moved
+		// file resource inherits permission from parent directory, so this works.		
 		if(!fileToMove.getCanRead()) {
 			handlePermissionDenied(PermissionError.READ, fileToMove, userId);
 		}
-		
-		this.getExistingFileInDirectory(destDir.getNodeId(), userId, fileToMove.getNodeName())
+		if(!fileToMove.getCanWrite()) {
+			handlePermissionDenied(PermissionError.WRITE, fileToMove, userId);
+		}
 		
 		final Store store = getStore(destDir);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
@@ -1526,11 +1712,124 @@ public class SecurePathResourceTreeService {
 		}		
 		
 		Task task = new Task();
-		task.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + 
-				", replaceExisting=" + replaceExisting + "]");
+		task.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
 		taskManager.addTask(task);
 		
 		task.waitComplete(); // block until finished	
+		
+	}
+	
+	/**
+	 * Move a directory (does not preserve node IDs for directories, but does for files.)
+	 * 
+	 * @param moveDirId - the directory to move
+	 * @param destDirId - the directory where 'moveDirId' will be moved to (under). 
+	 * @param replaceExisting
+	 * @param userId - id of user completing the action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting, String userId) throws ServiceException {
+		
+		// TODO - wrap in queued task
+		
+		// we can preserve file IDs but hard to preserve directory IDs...
+		// if you eventually manage to preserve directory IDs, then you might have to worry about
+		// updating the eas_store.node_id (root node) value.
+		
+		DirectoryResource dirToMove = this.getDirectory(moveDirId, userId);
+		
+		// make sure the user is not trying to move a root directory for a store
+		if(dirToMove.getParentNodeId().equals(0L)){
+			throw new ServiceException("You cannot move a root directory of a store. All stores require a root directory. "
+					+ "moveDirId = " + moveDirId + ", destDirId = " + destDirId);
+		}
+		
+		// user must have read and write on parent directory
+		DirectoryResource parentDir = this.getParentDirectory(moveDirId, userId);
+		if(parentDir != null) {
+			if(!parentDir.getCanRead()) {
+				handlePermissionDenied(PermissionError.READ, parentDir, userId);
+			}
+			if(!parentDir.getCanWrite()) {
+				handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+			}			
+		}
+		
+		// make sure destDirId is not a child node under moveDirId. Cannot move a directory to under itself.
+		boolean isChild = false;
+		try {
+			isChild = fileSystemRepository.isChild(moveDirId, destDirId);
+		} catch (Exception e) {
+			throw new ServiceException("Error checking if directory " + destDirId + 
+					" is a child directory (at any depth) of directory " + moveDirId, e);
+		}
+		if(isChild){
+			throw new ServiceException("Cannot move directory " + moveDirId + " to under directory " + 
+					destDirId + " because directory " + destDirId + " is a child of directory " + moveDirId + ".");
+		}
+
+		final Tree<PathResource> fromTree = this.buildPathResourceTree(dirToMove, userId);
+		
+		DirectoryResource toDir = this.getDirectory(destDirId, userId);
+		final Store fromStore = getStore(dirToMove);
+		final Store toStore = getStore(toDir);
+		
+		// walk the tree top-down and copy over directories one at a time, then use
+		// existing moveFile method.
+		moveDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting, userId);
+		
+		// remove from dir and all child directories
+		removeDirectory(dirToMove.getNodeId(), userId);
+		
+	}
+	
+	private void moveDirectoryTraversal(
+			Store fromStore,
+			Store toStore, 
+			TreeNode<PathResource> pathResourceNode, 
+			DirectoryResource toDir, 
+			boolean replaceExisting,
+			String userId) throws ServiceException {
+		
+		PathResource resourceToMove = pathResourceNode.getData();
+		
+		if(resourceToMove.getResourceType() == ResourceType.DIRECTORY){
+			
+			DirectoryResource dirToMove = (DirectoryResource)resourceToMove;
+			
+			// user must have read & write access on directory to move
+			if(!dirToMove.getCanRead()) {
+				handlePermissionDenied(PermissionError.READ, dirToMove, userId);
+			}
+			if(!dirToMove.getCanWrite()) {
+				handlePermissionDenied(PermissionError.WRITE, dirToMove, userId);
+			}
+			
+			// user must have write access on destination directory
+			if(!toDir.getCanWrite()) {
+				handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+			}
+			
+			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
+			// to keep the directory that already exists (which we do now) or rename it to match exactly of
+			// the one we are copying?
+			DirectoryResource newToDir = _createCopyOfDirectory(dirToMove, toDir, userId);
+			
+			// move children of the directory (files and sub-directories)
+			if(pathResourceNode.hasChildren()){
+				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
+					
+					moveDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting, userId);
+					
+				}
+			}
+			
+		}else if(resourceToMove.getResourceType() == ResourceType.FILE){
+			
+			moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting, userId);
+			
+		}
 		
 	}	
 	
@@ -1559,9 +1858,8 @@ public class SecurePathResourceTreeService {
 		
 		filePaths.stream().forEach(
 			(pathToFile) ->{
-				FileMetaResource fileMetaResource = null;
 				try {
-					fileMetaResource = this.addFile(dirNodeId, userId, pathToFile, replaceExisting);
+					this.addFile(dirNodeId, userId, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
 				}
@@ -1597,15 +1895,59 @@ public class SecurePathResourceTreeService {
 		
 		filePaths.stream().forEach(
 			(pathToFile) ->{
-				FileMetaResource fileMetaResource = null;
 				try {
-					fileMetaResource = this.addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting);
+					this.addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 
 							dirRelPath + "', under store name '" + storeName + "'.", e);
 				}
 			});		
 		
+	}
+	
+	/**
+	 * Create sample store for testing, with some sub-directories.
+	 * 
+	 * @throws ServiceException
+	 */
+	@SuppressWarnings("unused")
+	@MethodTimer
+	public Store createTestStore() throws ServiceException {
+		
+		String userId = appProps.getProperty("store.test.user.id");
+		String testStoreName = appProps.getProperty("store.test.name");
+		String testStoreDesc = appProps.getProperty("store.test.desc");
+		String testStorePath = fileSystemUtil.cleanFullPath(appProps.getProperty("store.test.path"));
+		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
+		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
+		String testStoreRootDirDesc = appProps.getProperty("store.test.root.dir.desc");
+		String readGroup = appProps.getProperty("store.test.root.dir.read");
+		String writeGroup = appProps.getProperty("store.test.root.dir.write");
+		String executeGroup = appProps.getProperty("store.test.root.dir.execute");
+		
+		Long maxBytes = 0L;
+		try {
+			maxBytes = Long.valueOf(testStoreMaxFileSizeBytes);
+		} catch (NumberFormatException e) {
+			throw new ServiceException("Error parsing store.test.max.file.size.bytes to long. " + e.getMessage(), e);
+		}
+		
+		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), 
+				testStoreRootDirName, testStoreRootDirDesc, maxBytes, 
+				readGroup, writeGroup, executeGroup, AccessRule.DENY);
+		
+		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc", userId);
+		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc", userId);
+			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc", userId);
+			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc", userId);
+				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc", userId);
+				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc", userId);
+					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc", userId);
+					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc", userId);
+						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc", userId);		
+		
+		return store;
+	
 	}	
 	
 	private enum PermissionError {

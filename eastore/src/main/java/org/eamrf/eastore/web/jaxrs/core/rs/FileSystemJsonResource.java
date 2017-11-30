@@ -41,16 +41,8 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     @InjectLogger
     private Logger logger;
     
-    //
-    // everything from file system service gets moved into SecurePathResourceTreeService
-    //
-    //@Autowired
-    //private SecureFileSystemService fileSystemService;
-    //private FileSystemService fileSystemService;
-    
     @Autowired
     private SecurePathResourceTreeService pathResourceTreeService;
-    //private PathResourceTreeService pathResourceTreeService;
 	
 	public FileSystemJsonResource() {
 		
@@ -65,22 +57,25 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * Fetch a path resource by ID
 	 * 
 	 * @param nodeId - node id of the resource
+	 * @param userId - id of user performing the action
 	 * @return The path resource
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/resource/nodeId/{nodeId}")
+	@Path("/resource/userId/{userId}/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public PathResource getPathResourceById(
-			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+			@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
 		
-		if( nodeId == null ){
+		validateUserId(userId);
+		
+		if(nodeId == null){
 			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
 		}
 
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(nodeId);
+			resource = pathResourceTreeService.getPathResource(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -99,15 +94,19 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * 
 	 * @param storeName - name of the store that the resource resides under
 	 * @param relPath - relative path of resource within the store.
+	 * @param userId - id of user performing the action
 	 * @return The path resource
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/resource/path/{storeName}/{relPath:.+}")
+	@Path("/resource/userId/{userId}/path/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public PathResource getPathResourceByPath(
 			@PathParam("storeName") String storeName,
-			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+			@PathParam("relPath") List<PathSegment> list,
+			@PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
@@ -124,7 +123,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(storeName, relPath);
+			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -143,13 +142,17 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * Fetch the store's root directory path resource
 	 * 
 	 * @param storeName
+	 * @param userId - id of user performing the action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/resource/storeName/{storeName}")
+	@Path("/resource/userId/{userId}/storeName/{storeName}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public PathResource getPathResourceForStore(@PathParam("storeName") String storeName) throws WebServiceException {
+	public PathResource getPathResourceForStore(
+			@PathParam("storeName") String storeName, @PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName)){
 			handleError("Missing storeName parameter", WebExceptionType.CODE_IO_ERROR);
@@ -160,7 +163,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = fileSystemService.getStoreByName(storeName);
+			store = pathResourceTreeService.getStoreByName(storeName);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -168,7 +171,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(store.getNodeId());
+			resource = pathResourceTreeService.getPathResource(store.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -184,14 +187,17 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * 
 	 * @param nodeId - id of the child node. the parent will be returned, or null
 	 * if the node is a root node and has no parent.
+	 * @param userId - id of user performing the action
 	 * @return The parent resource, or null if the node is a root node and has no parent
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/parent/resource/nodeId/{nodeId}")
+	@Path("/parent/resource/userId/{userId}/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public PathResource getParentPathResourceById(
-			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+			@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if( nodeId == null ){
 			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
@@ -199,7 +205,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getParentPathResource(nodeId);
+			resource = pathResourceTreeService.getParentPathResource(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching parent path resource for node " + nodeId + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -216,15 +222,19 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @param storeName - store that the resource is located in
 	 * @param relPath - relative path of a resource in the store. this method will return it's parent resource,
 	 * or null if the resource has no parent.
+	 * @param userId - id of user performing the action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/parent/resource/path/{storeName}/{relPath:.+}")
+	@Path("/parent/resource/userId/{userId}/path/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public PathResource getParentPathResourceByPath(
 			@PathParam("storeName") String storeName,
-			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+			@PathParam("relPath") List<PathSegment> list,
+			@PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
@@ -242,7 +252,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(storeName, relPath);
+			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -256,7 +266,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch it's parent
 		PathResource parentResource = null;
 		try {
-			parentResource = fileSystemService.getParentPathResource(resource.getNodeId());
+			parentResource = pathResourceTreeService.getParentPathResource(resource.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching parent path resource for node " + 
 					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
@@ -272,14 +282,17 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * 
 	 * @param nodeId - id of the child node. the parent will be returned, or null
 	 * if the node is a root node and has no parent.
+	 * @param userId - id of user performing the action
 	 * @return A list of all the first-level resources under the node
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/child/resource/nodeId/{nodeId}")
+	@Path("/child/resource/userId/{userId}/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<PathResource> getChildPathResourceById(
-			@PathParam("nodeId") Long nodeId) throws WebServiceException {
+			@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if( nodeId == null ){
 			handleError("Missing nodeId parameter", WebExceptionType.CODE_IO_ERROR);
@@ -287,7 +300,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		List<PathResource> children = null;
 		try {
-			children = fileSystemService.getChildPathResource(nodeId);
+			children = pathResourceTreeService.getChildPathResources(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching child path resources for node " + nodeId + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -303,15 +316,19 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @param storeName - name of the store that the resources reside under
 	 * @param relPath - relative path of a resource within the store. this method will fetch all the first-level
 	 * children under that resource.
+	 * @param userId - id of user performing the action
 	 * @return A list of all the first-level resources under the node
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/child/resource/path/{storeName}/{relPath:.+}")
+	@Path("/child/resource/userId/{userId}/path/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<PathResource> getChildPathResourceByPath(
 			@PathParam("storeName") String storeName,
-			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+			@PathParam("relPath") List<PathSegment> list, 
+			@PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
@@ -329,7 +346,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(storeName, relPath);
+			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -343,7 +360,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch all the first-level resources under the resource
 		List<PathResource> children = null;
 		try {
-			children = fileSystemService.getChildPathResource(resource.getNodeId());
+			children = pathResourceTreeService.getChildPathResources(resource.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching child path resources for node " + 
 					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
@@ -360,21 +377,25 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * the root node.
 	 * 
 	 * @param nodeId
+	 * @param userId - id of user performing the action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/breadcrumb/nodeId/{nodeId}")
+	@Path("/breadcrumb/userId/{userId}/nodeId/{nodeId}")
 	@Produces(MediaType.APPLICATION_JSON)	
-    public List<PathResource> getBreadcrumbByNodeId(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<PathResource> getBreadcrumbByNodeId(
+    		@PathParam("nodeId") Long nodeId, @PathParam("userId") String userId) throws WebServiceException {
     	
+		validateUserId(userId);
+		
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId);
+    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId, userId, false);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -399,16 +420,20 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @param storeName - name of the store that the resources resides under
 	 * @param relPath - relative path of a resource within the store. this method will fetch all parents (bottom-up)
 	 * all the way to the root node.
+	 * @param userId - id of user performing the action
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/breadcrumb/path/{storeName}/{relPath:.+}")
+	@Path("/breadcrumb/path/userId/{userId}/{storeName}/{relPath:.+}")
 	@Produces(MediaType.APPLICATION_JSON)	
     public List<PathResource> getBreadcrumbByPath(
     		@PathParam("storeName") String storeName,
-			@PathParam("relPath") List<PathSegment> list) throws WebServiceException {
+			@PathParam("relPath") List<PathSegment> list,
+			@PathParam("userId") String userId) throws WebServiceException {
     	
+		validateUserId(userId);
+		
 		if(StringUtil.isNullEmpty(storeName) || list == null || list.size() == 0){
 			handleError("Missing storeName, and/or relPath segment parameters", WebExceptionType.CODE_IO_ERROR);
 		}
@@ -425,7 +450,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = fileSystemService.getPathResource(storeName, relPath);
+			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -438,7 +463,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(resource.getNodeId());
+    		tree = pathResourceTreeService.buildParentPathResourceTree(resource.getNodeId(), userId, false);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -484,7 +509,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = fileSystemService.getStoreByName(storeName);
+			store = pathResourceTreeService.getStoreByName(storeName);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -508,7 +533,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		List<Store> stores = null;
 		try {
-			stores = fileSystemService.getStores();
+			stores = pathResourceTreeService.getStores();
 		} catch (ServiceException e) {
 			handleError("Error fetching stores, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);

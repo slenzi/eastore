@@ -797,8 +797,6 @@ public class FileSystemRepository {
 		String newRelPath = oldRelPath.substring(0, oldRelPath.lastIndexOf(oldName));
 		newRelPath = newRelPath + newName;
 		
-		// TODO - overwrite read & write groups?
-		
 		// rename data in EAS_PATH_RESOURCE
 		jdbcTemplate.update(
 				"update eas_path_resource set path_name = ?, relative_path = ? where node_id = ?", 
@@ -1137,11 +1135,20 @@ public class FileSystemRepository {
 	 * @param parentDir - the directory under which a new child directory will be added
 	 * @param name - name for new directory node.
 	 * @param desc - description for new directory
+	 * @param readGroup1 - optional read group
+	 * @param writeGroup1 - optional write group
+	 * @param executeGroup1 - optional execute group
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc) throws Exception {
+	public DirectoryResource addDirectory(
+			DirectoryResource parentDir, 
+			String name, 
+			String desc, 
+			String readGroup1, 
+			String writeGroup1, 
+			String executeGroup1) throws Exception {
 		
 		// make sure directory doesn't already contain a sub-directory with the same name	
 		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY)){
@@ -1171,14 +1178,15 @@ public class FileSystemRepository {
 		resource.setRelativePath(dirRelPathString);
 		resource.setDesc(desc);
 		resource.setStoreId(store.getId());
-		
-		// TODO - pass in read and write group? User can always add that data after adding directory
+		resource.setReadGroup1(readGroup1);
+		resource.setWriteGroup1(writeGroup1);
+		resource.setExecuteGroup1(executeGroup1);
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
-				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
-				"values (?, ?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
-				resource.getResourceType().getTypeString(), resource.getRelativePath(), resource.getDesc());		
+				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc, read_group_1, write_group_1, execute_group_1) " +
+				"values (?, ?, ?, ?, ?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
+				resource.getResourceType().getTypeString(), resource.getRelativePath(), resource.getDesc(), resource.getReadGroup1(), resource.getWriteGroup1(), resource.getExecuteGroup1());		
 		
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(

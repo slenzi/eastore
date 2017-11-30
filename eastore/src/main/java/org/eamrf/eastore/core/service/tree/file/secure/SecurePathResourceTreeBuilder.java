@@ -320,7 +320,7 @@ public class SecurePathResourceTreeBuilder {
 				
 					// otherwise use last execute bit
 					}else{
-						if(lastWriteBit){
+						if(lastExecuteBit){
 							resource.setCanExecute(true);
 						}					
 					}

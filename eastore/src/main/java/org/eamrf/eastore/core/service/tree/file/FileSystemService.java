@@ -1383,6 +1383,8 @@ public class FileSystemService {
 	}
 	
 	/**
+	 * DONE
+	 * 
 	 * Move a directory (does not preserve node IDs for directories, but does for files.)
 	 * 
 	 * @param moveDirId - the directory to move
@@ -1436,6 +1438,9 @@ public class FileSystemService {
 		
 	}
 	
+	//
+	// DONE
+	//
 	private void moveDirectoryTraversal(
 			Store fromStore, Store toStore, TreeNode<PathResource> pathResourceNode, 
 			DirectoryResource toDir, boolean replaceExisting) throws ServiceException {
