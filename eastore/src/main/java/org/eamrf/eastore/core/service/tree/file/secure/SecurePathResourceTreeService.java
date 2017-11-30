@@ -143,56 +143,6 @@ public class SecurePathResourceTreeService {
 	}	
 	
 	/**
-	 * Get a list of PathResource starting at the specified dirNodeId, but only up to a specified depth.
-	 * With this information you can build a tree. This will not contain the binary data for files.
-	 * 
-	 * This is functionally equivalent to ClosureService.getChildMappings(Long nodeId, int depth)
-	 * 
-	 * @param nodeId
-	 * @param depth
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public List<PathResource> getPathResourceTree(Long nodeId, int depth) throws ServiceException {
-		
-		List<PathResource> resources = null;
-		try {
-			resources = fileSystemRepository.getPathResourceTree(nodeId, depth);
-		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for node " + 
-					nodeId + ". " + e.getMessage(), e);
-		}
-		return resources;		
-		
-	}
-	
-	/**
-	 * Fetch bottom-up (leaf node to root node) PathResource list, up to a specified levels up. This can
-	 * be used to build a tree (or more of a single path) from root to leaf.
-	 * 
-	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId, int depth)
-	 * 
-	 * @param nodeId
-	 * @param levels
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws ServiceException {
-		
-		List<PathResource> resources = null;
-		try {
-			resources = fileSystemRepository.getParentPathResourceTree(nodeId, levels);
-		} catch (Exception e) {
-			throw new ServiceException("Error getting PathResource tree for node " + 
-					nodeId + ". " + e.getMessage(), e);
-		}
-		return resources;		
-		
-	}	
-	
-	/**
 	 * Build a top-down (from root node to leaf nodes) tree of PathResource objects.
 	 * 
 	 * Access permissions will be evaluated for the user using the Gatekeeper groups assigned to
@@ -343,6 +293,165 @@ public class SecurePathResourceTreeService {
 		return buildParentPathResourceTree(resource.getNodeId(), userId, reverse);
 		
 	}
+	
+	/**
+	 * Get a list of PathResource starting at the specified dirNodeId, but only up to a specified depth.
+	 * With this information you can build a tree. This will not contain the binary data for files.
+	 * 
+	 * This is functionally equivalent to ClosureService.getChildMappings(Long nodeId, int depth)
+	 * 
+	 * @param nodeId
+	 * @param depth
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	private List<PathResource> getPathResourceTree(Long nodeId, int depth) throws ServiceException {
+		
+		List<PathResource> resources = null;
+		try {
+			resources = fileSystemRepository.getPathResourceTree(nodeId, depth);
+		} catch (Exception e) {
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
+		}
+		return resources;		
+		
+	}
+	
+	/**
+	 * Fetch bottom-up (leaf node to root node) PathResource list, up to a specified levels up. This can
+	 * be used to build a tree (or more of a single path) from root to leaf.
+	 * 
+	 * This is functionally equivalent to ClosureService.getParentMappings(Long nodeId, int depth)
+	 * 
+	 * @param nodeId
+	 * @param levels
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	private List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws ServiceException {
+		
+		List<PathResource> resources = null;
+		try {
+			resources = fileSystemRepository.getParentPathResourceTree(nodeId, levels);
+		} catch (Exception e) {
+			throw new ServiceException("Error getting PathResource tree for node " + 
+					nodeId + ". " + e.getMessage(), e);
+		}
+		return resources;		
+		
+	}	
+	
+	/**
+	 * Fetch the general queued task manager for the store;
+	 * 
+	 * @param store
+	 * @return
+	 */
+	private QueuedTaskManager getGeneralTaskManagerForStore(Store store){
+		
+		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
+		return map.getGeneralTaskManager();
+		
+	}
+	
+	/**
+	 * Fetch the binary queued task manager for the store;
+	 * 
+	 * @param store
+	 * @return
+	 */
+	private QueuedTaskManager getBinaryTaskManagerForStore(Store store){
+		
+		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
+		return map.getBinaryTaskManager();
+		
+	}	
+	
+	/**
+	 * fetch a store by id
+	 * 
+	 * @param storeId
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStoreById(Long storeId) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreById(storeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store id => " + storeId, e);
+		}
+		return store;
+		
+	}
+	
+	/**
+	 * fetch a store by name
+	 * 
+	 * @param storeName
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStoreByName(String storeName) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreByName(storeName);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store name => " + storeName, e);
+		}
+		return store;
+		
+	}	
+	
+	/**
+	 * Fetch the store object from the PathResource object. If the store object is null then
+	 * this method will attempt to fetch it from the database using the store id.
+	 * 
+	 * @param r
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStore(PathResource r) throws ServiceException {
+		
+		if(r == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
+		}
+		Store s = r.getStore();
+		if(s != null){
+			return s;
+		}
+		if(r.getStoreId() == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
+		}
+		return getStoreById(r.getStoreId());
+		
+	}	
+	
+	/**
+	 * Fetch all stores
+	 * 
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public List<Store> getStores() throws ServiceException {
+		
+		List<Store> stores = null;
+		try {
+			stores = fileSystemRepository.getStores();
+		} catch (Exception e) {
+			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
+		}
+		return stores;
+	}	
 	
 	/**
 	 * Fetch a PathResource by Id, and evaluate the permissions.
@@ -830,115 +939,6 @@ public class SecurePathResourceTreeService {
 	}
 	
 	/**
-	 * Fetch the general queued task manager for the store;
-	 * 
-	 * @param store
-	 * @return
-	 */
-	private QueuedTaskManager getGeneralTaskManagerForStore(Store store){
-		
-		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
-		return map.getGeneralTaskManager();
-		
-	}
-	
-	/**
-	 * Fetch the binary queued task manager for the store;
-	 * 
-	 * @param store
-	 * @return
-	 */
-	private QueuedTaskManager getBinaryTaskManagerForStore(Store store){
-		
-		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
-		return map.getBinaryTaskManager();
-		
-	}	
-	
-	/**
-	 * fetch a store by id
-	 * 
-	 * @param storeId
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store getStoreById(Long storeId) throws ServiceException {
-		
-		Store store = null;
-		try {
-			store = fileSystemRepository.getStoreById(storeId);
-		} catch (Exception e) {
-			throw new ServiceException("Failed to get store for store id => " + storeId, e);
-		}
-		return store;
-		
-	}
-	
-	/**
-	 * fetch a store by name
-	 * 
-	 * @param storeName
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store getStoreByName(String storeName) throws ServiceException {
-		
-		Store store = null;
-		try {
-			store = fileSystemRepository.getStoreByName(storeName);
-		} catch (Exception e) {
-			throw new ServiceException("Failed to get store for store name => " + storeName, e);
-		}
-		return store;
-		
-	}	
-	
-	/**
-	 * Fetch the store object from the PathResource object. If the store object is null then
-	 * this method will attempt to fetch it from the database using the store id.
-	 * 
-	 * @param r
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store getStore(PathResource r) throws ServiceException {
-		
-		if(r == null){
-			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
-		}
-		Store s = r.getStore();
-		if(s != null){
-			return s;
-		}
-		if(r.getStoreId() == null){
-			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
-		}
-		return getStoreById(r.getStoreId());
-		
-	}	
-	
-	/**
-	 * Fetch all stores
-	 * 
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public List<Store> getStores() throws ServiceException {
-		
-		List<Store> stores = null;
-		try {
-			stores = fileSystemRepository.getStores();
-		} catch (Exception e) {
-			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
-		}
-		return stores;
-	}
-	
-	/**
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
 	 * binary data in the database.
 	 * 
@@ -1098,56 +1098,6 @@ public class SecurePathResourceTreeService {
 		
 	}
 	
-	/*
-	private FileMetaResource getFileInDirectory(Long dirNodeId, String userId, String fileName) throws ServiceException {
-		
-		List<PathResource> childResources = getChildPathResources(dirNodeId, userId);
-		
-		if(childResources == null || childResources.size() == 0){
-			return null;
-		}
-		
-		for(PathResource res : childResources){
-			if(res.getParentNodeId().equals(dirNodeId) && res.getResourceType() == ResourceType.FILE 
-					&& res.getPathName().toLowerCase().equals(fileName.toLowerCase())){
-				return (FileMetaResource)res;
-			}
-		}
-		return null;
-		
-	}
-	*/	
-	
-	/**
-	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
-	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
-	 * the tree to rename the directory, and update the relative path data for all resources
-	 * under the directory.
-	 * 
-	 * @param nodeId - id of resource to rename
-	 * @param newName - new name for resource
-	 * @param userId - id of user performing the rename action
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public void renamePathResource(Long nodeId, String newName, String userId) throws ServiceException {
-
-		// works for both files and directories. Files will inherit their permissions from the directories they are in.
-		
-		PathResource resource = this.getPathResource(nodeId, userId);
-		if(!resource.getCanWrite()) {
-			this.handlePermissionDenied(PermissionError.WRITE, resource, userId);
-		}
-		
-		try {
-			fileSystemRepository.renamePathResource(resource, newName);
-		} catch (Exception e) {
-			throw new ServiceException("Error renaming path resource, nodeId=" + nodeId + 
-					", newName=" + newName + ", " + e.getMessage(), e);
-		}
-		
-	}
-	
 	/**
 	 * Add new directory
 	 * 
@@ -1266,6 +1216,36 @@ public class SecurePathResourceTreeService {
 		return newDir;
 		
 	}
+	
+	/**
+	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
+	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
+	 * the tree to rename the directory, and update the relative path data for all resources
+	 * under the directory.
+	 * 
+	 * @param nodeId - id of resource to rename
+	 * @param newName - new name for resource
+	 * @param userId - id of user performing the rename action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void renamePathResource(Long nodeId, String newName, String userId) throws ServiceException {
+
+		// works for both files and directories. Files will inherit their permissions from the directories they are in.
+		
+		PathResource resource = this.getPathResource(nodeId, userId);
+		if(!resource.getCanWrite()) {
+			this.handlePermissionDenied(PermissionError.WRITE, resource, userId);
+		}
+		
+		try {
+			fileSystemRepository.renamePathResource(resource, newName);
+		} catch (Exception e) {
+			throw new ServiceException("Error renaming path resource, nodeId=" + nodeId + 
+					", newName=" + newName + ", " + e.getMessage(), e);
+		}
+		
+	}	
 	
 	/**
 	 * Remove the file, from database and disk. No undo.

@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
-import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
@@ -720,8 +719,7 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 * 
 	 * @deprecated - for performance reasons...
-	 */
-	/*
+	 * 
 	@MethodTimer
 	public FileMetaResource addFileWithoutBinary(
 			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {

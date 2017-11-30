@@ -64,19 +64,19 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		final long sampleStoreLeafNodeId = 289L;
 		
 		Tree<PathResource> tree1 = null;
-		Tree<PathResource> tree2 = null;
-		Tree<PathResource> tree3 = null;
+		//Tree<PathResource> tree2 = null;
+		//Tree<PathResource> tree3 = null;
 		try {
 			tree1 = securePathTreeService.buildPathResourceTree(sampleStoreRootNodeId, "508941");
-			tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", false);
-			tree3 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", true);
+			//tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", false);
+			//tree3 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", true);
 		} catch (ServiceException e) {
 			logger.error(e.getMessage());
 		}
 		
 		logger.info("Path resource tree:\n" + tree1.printTree((node) -> { return node.toString(); }) );
-		logger.info("Parent Path resource tree:\n" + tree2.printTree((node) -> { return node.toString(); }) );
-		logger.info("Reveresed parent Path resource tree:\n" + tree3.printTree((node) -> { return node.toString(); }) );
+		//logger.info("Parent Path resource tree:\n" + tree2.printTree((node) -> { return node.toString(); }) );
+		//logger.info("Reveresed parent Path resource tree:\n" + tree3.printTree((node) -> { return node.toString(); }) );
 		
 	}
 	

@@ -128,7 +128,29 @@ public class SecurePathResourceTreeBuilder {
 			}
 		}
 		
-		AccessRule storeAccessRule = rootResource.getStore().getAccessRule();	
+		// -------------------------------
+		// TODO - remove this later
+		logger.info("Root = " + rootResource.toString());
+		for(Long nodeId : map.keySet()) {
+			List<PathResource> children = map.get(nodeId);
+			if(children != null) {
+				logger.info("Childen for node " + nodeId);
+				for(PathResource p : children){
+					logger.info(p.toString());
+				}
+			}else {
+				logger.info("No children for node " + nodeId);
+			}
+		}
+		TreeNode<PathResource> tmpRootNode = new TreeNode<PathResource>();
+		tmpRootNode.setData(rootResource);
+		Tree<PathResource> tmpTree = new Tree<PathResource>();
+		tmpTree.setRootNode(tmpRootNode);
+		logger.info("Temp tree");
+		logger.info(tmpTree.printTree((node) -> { return node.toString(); } ));		
+		// -------------------------
+		
+		AccessRule storeAccessRule = rootResource.getStore().getAccessRule();
 		
 		TreeNode<PathResource> rootNode = new TreeNode<PathResource>();
 		rootNode.setData(rootResource);
@@ -148,8 +170,15 @@ public class SecurePathResourceTreeBuilder {
 		Tree<PathResource> tree = new Tree<PathResource>();
 		tree.setRootNode(rootNode);
 		
+		// TODO - remove this later
+		logger.info("Before reverse");
+		logger.info(tree.printTree((node) -> { return node.toString(); } ));
+		
 		if(reverse) {
-			return reverseSingleChildTree(tree);
+			Tree<PathResource> reverseTree = reverseSingleChildTree(tree);
+			logger.info("After reverse");
+			logger.info(reverseTree.printTree((node) -> { return node.toString(); } ));			
+			return reverseTree;
 		}
 		
 		return tree;		
@@ -171,6 +200,12 @@ public class SecurePathResourceTreeBuilder {
 			return null;
 		}
 		
+		Tree<PathResource> reverseTree = new Tree<PathResource>();
+		if(!tree.getRootNode().hasChildren()) {
+			reverseTree.setRootNode(tree.getRootNode());
+			return reverseTree;
+		}
+		
 		TreeNode<PathResource> temp = null;
 		TreeNode<PathResource> curr = tree.getRootNode();
 		while(curr != null) {
@@ -184,7 +219,7 @@ public class SecurePathResourceTreeBuilder {
 			curr = curr.getParent();
 		}
 		
-		Tree<PathResource> reverseTree = new Tree<PathResource>();
+		
 		reverseTree.setRootNode(temp.getParent());
 		
 		return reverseTree;
