@@ -91,13 +91,21 @@
 			</properties>
 		</profile>
 		
+		<!-- deployment on lenzi's EAMRF desktop, using cancorddb testing group -->
+		<profile>
+			<id>eamrf.lenzi.cancordb</id>
+			<properties>
+				<property.file>eamrf.lenzi.cancordb.properties</property.file>
+			</properties>
+		</profile>		
+		
 		<!-- deployment on EAMRF ecog2 development machine -->
 		<profile>
 			<id>eamrf.ecog2</id>
 			<properties>
 				<property.file>eamrf.ecog2.properties</property.file>
 			</properties>
-		</profile>
+		</profile>	
 		
 		<!-- deployment on EAMRF triton production machine -->
 		<profile>

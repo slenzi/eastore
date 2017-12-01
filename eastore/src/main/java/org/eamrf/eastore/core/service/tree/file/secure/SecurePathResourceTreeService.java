@@ -1182,7 +1182,7 @@ public class SecurePathResourceTreeService {
 		
 		final Store store = getStore(parentDir);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
-		
+	
 		class Task extends AbstractQueuedTask<DirectoryResource> {
 
 			@Override
@@ -1194,7 +1194,11 @@ public class SecurePathResourceTreeService {
 				} catch (Exception e) {
 					throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
 				}
-				return dirResource;				
+				
+				// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
+				DirectoryResource evaluatedDir = getDirectory(dirResource.getNodeId(), userId);
+				
+				return evaluatedDir;				
 				
 			}
 

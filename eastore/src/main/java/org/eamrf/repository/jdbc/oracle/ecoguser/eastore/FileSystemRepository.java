@@ -1258,7 +1258,7 @@ public class FileSystemRepository {
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc, read_group_1, write_group_1, execute_group_1) " +
-				"values (?, ?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
+				"values (?, ?, ?, ?, ?, ?, ?, ?, ?)", dirResource.getNodeId(), dirResource.getStoreId(), dirResource.getPathName(),
 				dirResource.getResourceType().getTypeString(), dirResource.getRelativePath(), dirResource.getDesc(), 
 				dirResource.getReadGroup1(), dirResource.getWriteGroup1(), dirResource.getExecuteGroup1());		
 		
