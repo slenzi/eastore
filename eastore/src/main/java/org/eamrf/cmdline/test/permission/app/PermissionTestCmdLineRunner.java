@@ -51,6 +51,8 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		logger.info(PermissionTestCmdLineRunner.class.getName() + " running...");
 		
+		//createTestStore();
+		
 		doPathResourceTest();
 		
 		//doMyNodeTest();
@@ -65,18 +67,19 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		final String userId1 = "508941";
 		
-		logger.info("Get parent for 286");
-		this.doGetParentNode(286L, userId1);
-		logger.info("Get parent for 282");
-		this.doGetParentNode(282L, userId1); // no parent
+		logger.info("Get parent for 105");
+		this.doGetParentNode(105L, userId1);
+		logger.info("Get parent for 100");
+		this.doGetParentNode(100L, userId1); // no parent
 		
-		logger.info("Get children for 283");
-		this.doGetChildren(283L, userId1);
-		logger.info("Get children for 288");
-		this.doGetChildren(288L, userId1);
-		logger.info("Get children for 286");
-		this.doGetChildren(286L, userId1);
+		logger.info("Get children for 106");
+		this.doGetChildren(106L, userId1);
+		logger.info("Get children for 102");
+		this.doGetChildren(102L, userId1);
+		logger.info("Get children for 103");
+		this.doGetChildren(103L, userId1);
 		
+		/*
 		logger.info("Get file for 289");
 		this.doGetFileMetaResourceById(289L, userId1);
 		try {
@@ -91,35 +94,42 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		} catch (ServiceException e) {
 			logger.info("No file for node 283, " + e.getMessage());
 		}
+		*/
 		
-		logger.info("Get directory for 282");
-		this.doGetDirectoryResourceById(282L, userId1);
-		logger.info("Get directory for 285");
-		this.doGetDirectoryResourceById(285L, userId1);
+		logger.info("Get directory for 109");
+		this.doGetDirectoryResourceById(109L, userId1);
+		logger.info("Get directory for 100");
+		this.doGetDirectoryResourceById(100L, userId1);
 		try {
 			logger.info("Get directory for 400");
 			this.doGetDirectoryResourceById(400L, userId1);	// does not exists
 		} catch (ServiceException e) {
 			logger.info("No directory for node 400, " + e.getMessage());
 		}		
-		try {
-			logger.info("Get directory for 289");
-			this.doGetDirectoryResourceById(289L, userId1); // id is of a file
-		} catch (ServiceException e) {
-			logger.info("No directory for node 289, " + e.getMessage());
-		}		
+		//try {
+		//	logger.info("Get directory for 289");
+		//	this.doGetDirectoryResourceById(289L, userId1); // id is of a file
+		//} catch (ServiceException e) {
+		//	logger.info("No directory for node 289, " + e.getMessage());
+		//}		
 		
-		logger.info("Do path resource tree from root node 282");
-		this.doPathResourceTreeFromRootNode(282L, userId1);
-		logger.info("Do path resource tree from root node 283");
-		this.doPathResourceTreeFromRootNode(283L, userId1);
+		logger.info("Do path resource tree from root node 100");
+		this.doPathResourceTreeFromRootNode(100L, userId1);
+		logger.info("Do path resource tree from root node 106");
+		this.doPathResourceTreeFromRootNode(106L, userId1);
 		
-		logger.info("Do parent path resource tree from leaf node 289, reverse = false");
-		this.doParentPathResourceTreeFromLeadNode(289L, userId1, false);
-		logger.info("Do parent path resource tree from leaf node 289, reverse = true");
-		this.doParentPathResourceTreeFromLeadNode(289L, userId1, true);
+		logger.info("Do parent path resource tree from leaf node 109, reverse = false");
+		this.doParentPathResourceTreeFromLeadNode(109L, userId1, false);
+		logger.info("Do parent path resource tree from leaf node 103, reverse = true");
+		this.doParentPathResourceTreeFromLeadNode(103L, userId1, true);
 		
 	}
+	
+	private void createTestStore() throws ServiceException {
+		
+		securePathTreeService.createTestStore();
+		
+	}	
 	
 	private void doGetParentNode(long nodeId, String userId) throws ServiceException {
 		PathResource resource = securePathTreeService.getParentPathResource(nodeId, userId);
