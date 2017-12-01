@@ -214,7 +214,7 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(DirectoryResource dirResource, String userId, int depth) throws ServiceException {
 		
-		List<PathResource> resources = this.getPathResourceTree(dirResource.getNodeId(), depth);
+		List<PathResource> resources = this.getPathResourceForTree(dirResource.getNodeId(), depth);
 		
 		if(resources == null || resources.size() == 0){
 			throw new ServiceException("No top-down PathResource tree for directory node " + dirResource.getNodeId() + 
@@ -259,7 +259,7 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	private Tree<PathResource> buildParentPathResourceTree(Long nodeId, String userId, int levels, boolean reverse) throws ServiceException {
 		
-		List<PathResource> resources = getParentPathResourceTree(nodeId, levels);
+		List<PathResource> resources = getParentPathResourceForTree(nodeId, levels);
 		
 		if(resources == null || resources.size() == 0){
 			throw new ServiceException("No bottom-up PathResource tree for nodeId " + nodeId + 
@@ -306,7 +306,7 @@ public class SecurePathResourceTreeService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	private List<PathResource> getPathResourceTree(Long nodeId, int depth) throws ServiceException {
+	private List<PathResource> getPathResourceForTree(Long nodeId, int depth) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
@@ -331,7 +331,7 @@ public class SecurePathResourceTreeService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	private List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws ServiceException {
+	private List<PathResource> getParentPathResourceForTree(Long nodeId, int levels) throws ServiceException {
 		
 		List<PathResource> resources = null;
 		try {
@@ -586,7 +586,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	public PathResource getChildResource(Long dirId, String name, ResourceType type, String userId) throws ServiceException {
+	private PathResource getChildResource(Long dirId, String name, ResourceType type, String userId) throws ServiceException {
 		
 		List<PathResource> childResources = this.getChildPathResources(dirId, userId);
 		if(childResources == null || childResources.size() == 0) {

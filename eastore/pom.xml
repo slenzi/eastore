@@ -39,6 +39,9 @@
 		<version.javax.mail>1.5.6</version.javax.mail>
 		<version.javax.mail.api>1.5.6</version.javax.mail.api>
 		
+		<!-- requires Java >=1.8 -->
+		<version.google.guava>23.5-jre</version.google.guava>
+		
 		<!-- for spring mvc (error page) -->
 		<!--
 		<version.javax.servlet.jsp-api>2.3.1</version.javax.servlet.jsp-api>
@@ -302,7 +305,15 @@
 		            <artifactId>*</artifactId>
 		        </exclusion>		                
     		</exclusions>		    
-		</dependency>				
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+		<dependency>
+		    <groupId>com.google.guava</groupId>
+		    <artifactId>guava</artifactId>
+		    <version>${version.google.guava}</version>
+		</dependency>
+						
 	
 	</dependencies>
 	

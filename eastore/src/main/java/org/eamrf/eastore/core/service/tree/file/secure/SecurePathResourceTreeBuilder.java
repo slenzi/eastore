@@ -12,16 +12,14 @@ import java.util.Set;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.security.GateKeeperClientProvider;
+import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
-import org.eamrf.gatekeeper.web.service.jaxrs.client.GatekeeperRestClient;
-import org.eamrf.gatekeeper.web.service.jaxws.model.Group;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
-import org.eamrf.web.rs.exception.WebServiceException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,7 +37,7 @@ public class SecurePathResourceTreeBuilder {
     private Logger logger;
     
     @Autowired
-    private GateKeeperClientProvider gatekeeperClientProvider;
+    private GatekeeperService gatekeeperService;
 
 	public SecurePathResourceTreeBuilder() {
 
@@ -56,9 +54,10 @@ public class SecurePathResourceTreeBuilder {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(List<PathResource> resources, String userId, DirectoryResource dirResource) throws ServiceException {
 		
-		Set<String> userGroupCodes = getUserGroupCodes(userId);
+		Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
 		//Set<String> userGroupCodes = new HashSet<String>();
 
 		PathResource rootResource = null;
@@ -109,9 +108,10 @@ public class SecurePathResourceTreeBuilder {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Tree<PathResource> buildParentPathResourceTree(List<PathResource> resources, String userId, boolean reverse) throws ServiceException {
 		
-		Set<String> userGroupCodes = getUserGroupCodes(userId);
+		Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
 		//Set<String> userGroupCodes = new HashSet<String>();
 		
 		PathResource rootResource = null;
@@ -360,50 +360,6 @@ public class SecurePathResourceTreeBuilder {
 					map);
 			
 		}
-		
-	}
-	
-	/**
-	 * TODO - This really needs to be cached (maybe every 5-10 minutes)
-	 * 
-	 * Fetch users group codes
-	 * 
-	 * @param userId - user id (ctep id)
-	 * @return A set of group codes
-	 */
-	private Set<String> getUserGroupCodes(String userId) throws ServiceException {
-		
-		List<Group> groupList = getGatekeeperGroups(userId);
-		
-		Set<String> groupSet = new HashSet<String>();
-		if(!CollectionUtil.isEmpty(groupList)) {
-			for(Group group : groupList) {
-				groupSet.add(group.getGroupCode());
-			}
-		}
-		
-		return groupSet;
-	}
-	
-	/**
-	 * Fetch users gatekeeper groups
-	 * 
-	 * @param userId
-	 * @return
-	 * @throws ServiceException
-	 */
-	private List<Group> getGatekeeperGroups(String userId) throws ServiceException {
-		
-		GatekeeperRestClient client = gatekeeperClientProvider.getRestClient();
-		
-		List<Group> groupList = null;
-		try {
-			groupList = client.getGroupsForUser(userId);
-		} catch (WebServiceException e) {
-			throw new ServiceException("Error fetching Gatekeeper groups for user " + userId + ". " + e.getMessage(), e);
-		}
-		
-		return groupList;
 		
 	}
 
