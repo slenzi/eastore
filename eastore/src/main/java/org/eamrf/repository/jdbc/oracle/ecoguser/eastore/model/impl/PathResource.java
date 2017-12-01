@@ -191,8 +191,21 @@ public class PathResource extends Node implements Serializable {
 		if(executeGroup1 != null)
 			executeGroups.add(executeGroup1);
 		return executeGroups;
-	}	
+	}
+	
+	/**
+	 * Same as toString but with less attributes printed
+	 * 
+	 * @return
+	 */
+	public String simpleToString() {
+		return PathResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", type=" + getResourceType().getTypeString() + 
+				", relPath=" + getRelativePath() + ", canRead=" + canRead + ", canWrite=" + canWrite + ", canExecute=" + canExecute + "]";
+	}
 
+	/**
+	 * 
+	 */
 	@Override
 	public String toString() {
 		return PathResource.class.getSimpleName() + " [id=" + getNodeId() + ", parentId=" + getParentNodeId() + ", childId=" + getChildNodeId()

@@ -236,10 +236,10 @@ public final class Trees {
 			List<TreeNode<N>> children = node.getChildren();
 
 			for (int i = 0; i < children.size() - 1; i++) {
-				printTerminal(children.get(i), linePrefix + (isTail ? "   " : "|  "), false, buffer, toString);
+				printTerminal(children.get(i), linePrefix + (isTail ? "    " : "|   "), false, buffer, toString);
 			}
 			if (node.getChildren().size() >= 1) {
-				printTerminal(children.get(children.size() - 1), linePrefix + (isTail ? "   " : "|  "), true, buffer,
+				printTerminal(children.get(children.size() - 1), linePrefix + (isTail ? "    " : "|   "), true, buffer,
 						toString);
 			}
 		}

@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
@@ -56,29 +57,48 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 
 	}
 	
-	private void doPathResourceTest() {
+	private void doPathResourceTest() throws ServiceException {
 		
 		System.out.println("doPathResourceTest()");
 		
-		final long sampleStoreRootNodeId = 282L;
-		final long sampleStoreLeafNodeId = 289L;
+		final String userId1 = "508941";
 		
-		Tree<PathResource> tree1 = null;
-		Tree<PathResource> tree2 = null;
-		Tree<PathResource> tree3 = null;
-		try {
-			tree1 = securePathTreeService.buildPathResourceTree(sampleStoreRootNodeId, "508941");
-			tree2 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", false);
-			tree3 = securePathTreeService.buildParentPathResourceTree(sampleStoreLeafNodeId, "508941", true);
-		} catch (ServiceException e) {
-			logger.error(e.getMessage());
-		}
+		this.doGetParentNode(286L, userId1);
+		this.doGetParentNode(282L, userId1); // no parent
 		
-		logger.info("Path resource tree:\n" + tree1.printTree((node) -> { return node.toString(); }) );
-		logger.info("Parent Path resource tree:\n" + tree2.printTree((node) -> { return node.toString(); }) );
-		logger.info("Reveresed parent Path resource tree:\n" + tree3.printTree((node) -> { return node.toString(); }) );
+		this.doGetChildren(283L, userId1);
+		this.doGetChildren(288L, userId1);
+		this.doGetChildren(286L, userId1);
+		
+		this.doPathResourceTreeFromRootNode(282L, userId1);
+		this.doPathResourceTreeFromRootNode(283L, userId1);
+		
+		this.doParentPathResourceTreeFromLeadNode(289L, userId1, false);
+		this.doParentPathResourceTreeFromLeadNode(289L, userId1, true);
 		
 	}
+	
+	private void doGetParentNode(long nodeId, String userId) throws ServiceException {
+		PathResource resource = securePathTreeService.getParentPathResource(nodeId, userId);
+		logger.info("Parent resoure for node " + nodeId + " = " + ((resource != null) ? resource.simpleToString() : "no parent"));
+	}
+	
+	private void doGetChildren(long nodeId, String userId) throws ServiceException {
+		List<PathResource> resources = securePathTreeService.getChildPathResources(nodeId, userId);
+		for(PathResource resource : CollectionUtil.emptyIfNull(resources)) {
+			logger.info("Child resoure of node " + nodeId + " = " + resource.simpleToString());
+		}
+	}	
+	
+	private void doPathResourceTreeFromRootNode(long nodeId, String userId) throws ServiceException {
+		Tree<PathResource> tree = securePathTreeService.buildPathResourceTree(nodeId, userId);
+		logger.info("Path resource tree:\n" + tree.printTree((node) -> { return node.simpleToString(); }) );
+	}
+	
+	private void doParentPathResourceTreeFromLeadNode(long nodeId, String userId, boolean reverse) throws ServiceException {
+		Tree<PathResource> tree = securePathTreeService.buildParentPathResourceTree(nodeId, userId, reverse);
+		logger.info("Path resource tree:\n" + tree.printTree((node) -> { return node.simpleToString(); }) );
+	}	
 	
 	private void doMyNodeTest() {
 		
