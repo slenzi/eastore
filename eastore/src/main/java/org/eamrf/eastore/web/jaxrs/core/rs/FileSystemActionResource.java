@@ -321,9 +321,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
      * @param dirNodeId - id of parent directory. New directory will be created under the parent.
      * @param name - name for new directory
      * @param desc - description for new directory
-     * @param readGroup1
-     * @param writeGroup1
-     * @param executeGroup1
+     * @param readGroup1 - optional read group
+     * @param writeGroup1 - optional write group
+     * @param executeGroup1 - optional execute group
      * @param userId - id of user completing action
      * @return
      * @throws WebServiceException
