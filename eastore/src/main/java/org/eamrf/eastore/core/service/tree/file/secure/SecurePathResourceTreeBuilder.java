@@ -59,6 +59,7 @@ public class SecurePathResourceTreeBuilder {
 	public Tree<PathResource> buildPathResourceTree(List<PathResource> resources, String userId, DirectoryResource dirResource) throws ServiceException {
 		
 		Set<String> userGroupCodes = getUserGroupCodes(userId);
+		//Set<String> userGroupCodes = new HashSet<String>();
 
 		PathResource rootResource = null;
 		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
@@ -111,6 +112,7 @@ public class SecurePathResourceTreeBuilder {
 	public Tree<PathResource> buildParentPathResourceTree(List<PathResource> resources, String userId, boolean reverse) throws ServiceException {
 		
 		Set<String> userGroupCodes = getUserGroupCodes(userId);
+		//Set<String> userGroupCodes = new HashSet<String>();
 		
 		PathResource rootResource = null;
 		Map<Long,List<PathResource>> map = new HashMap<Long,List<PathResource>>();
@@ -127,28 +129,6 @@ public class SecurePathResourceTreeBuilder {
 				map.put(res.getParentNodeId(), children);
 			}
 		}
-		
-		// -------------------------------
-		// TODO - remove this later
-		logger.info("Root = " + rootResource.toString());
-		for(Long nodeId : map.keySet()) {
-			List<PathResource> children = map.get(nodeId);
-			if(children != null) {
-				logger.info("Childen for node " + nodeId);
-				for(PathResource p : children){
-					logger.info(p.toString());
-				}
-			}else {
-				logger.info("No children for node " + nodeId);
-			}
-		}
-		TreeNode<PathResource> tmpRootNode = new TreeNode<PathResource>();
-		tmpRootNode.setData(rootResource);
-		Tree<PathResource> tmpTree = new Tree<PathResource>();
-		tmpTree.setRootNode(tmpRootNode);
-		logger.info("Temp tree");
-		logger.info(tmpTree.printTree((node) -> { return node.toString(); } ));		
-		// -------------------------
 		
 		AccessRule storeAccessRule = rootResource.getStore().getAccessRule();
 		
@@ -170,15 +150,8 @@ public class SecurePathResourceTreeBuilder {
 		Tree<PathResource> tree = new Tree<PathResource>();
 		tree.setRootNode(rootNode);
 		
-		// TODO - remove this later
-		logger.info("Before reverse");
-		logger.info(tree.printTree((node) -> { return node.toString(); } ));
-		
 		if(reverse) {
-			Tree<PathResource> reverseTree = reverseSingleChildTree(tree);
-			logger.info("After reverse");
-			logger.info(reverseTree.printTree((node) -> { return node.toString(); } ));			
-			return reverseTree;
+			return reverseSingleChildTree(tree);
 		}
 		
 		return tree;		
@@ -196,7 +169,7 @@ public class SecurePathResourceTreeBuilder {
 	 */
 	private Tree<PathResource> reverseSingleChildTree(Tree<PathResource> tree) throws ServiceException {
 		
-		if(tree == null || tree.getRootNode() == null || tree.getRootNode().getChildCount() == 0) {
+		if(tree == null || tree.getRootNode() == null) {
 			return null;
 		}
 		
