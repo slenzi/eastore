@@ -48,8 +48,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * A version of org.eamrf.eastore.core.service.tree.file.PathResourceTreeService, but in this version we 
- * evaluate user access permissions using Gatekeeper when building the trees.
+ * Main service class for interacting with the file system.
  * 
  * @author slenzi
  */

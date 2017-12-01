@@ -14,6 +14,8 @@ import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeSer
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.slf4j.Logger;
@@ -63,17 +65,58 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		
 		final String userId1 = "508941";
 		
+		logger.info("Get parent for 286");
 		this.doGetParentNode(286L, userId1);
+		logger.info("Get parent for 282");
 		this.doGetParentNode(282L, userId1); // no parent
 		
+		logger.info("Get children for 283");
 		this.doGetChildren(283L, userId1);
+		logger.info("Get children for 288");
 		this.doGetChildren(288L, userId1);
+		logger.info("Get children for 286");
 		this.doGetChildren(286L, userId1);
 		
+		logger.info("Get file for 289");
+		this.doGetFileMetaResourceById(289L, userId1);
+		try {
+			logger.info("Get file for 500");
+			this.doGetFileMetaResourceById(500L, userId1); // does not exists
+		} catch (ServiceException e) {
+			logger.info("No file for node 500, " + e.getMessage());
+		}		
+		try {
+			logger.info("Get file for 283");
+			this.doGetFileMetaResourceById(283L, userId1); // id is of a directory
+		} catch (ServiceException e) {
+			logger.info("No file for node 283, " + e.getMessage());
+		}
+		
+		logger.info("Get directory for 282");
+		this.doGetDirectoryResourceById(282L, userId1);
+		logger.info("Get directory for 285");
+		this.doGetDirectoryResourceById(285L, userId1);
+		try {
+			logger.info("Get directory for 400");
+			this.doGetDirectoryResourceById(400L, userId1);	// does not exists
+		} catch (ServiceException e) {
+			logger.info("No directory for node 400, " + e.getMessage());
+		}		
+		try {
+			logger.info("Get directory for 289");
+			this.doGetDirectoryResourceById(289L, userId1); // id is of a file
+		} catch (ServiceException e) {
+			logger.info("No directory for node 289, " + e.getMessage());
+		}		
+		
+		logger.info("Do path resource tree from root node 282");
 		this.doPathResourceTreeFromRootNode(282L, userId1);
+		logger.info("Do path resource tree from root node 283");
 		this.doPathResourceTreeFromRootNode(283L, userId1);
 		
+		logger.info("Do parent path resource tree from leaf node 289, reverse = false");
 		this.doParentPathResourceTreeFromLeadNode(289L, userId1, false);
+		logger.info("Do parent path resource tree from leaf node 289, reverse = true");
 		this.doParentPathResourceTreeFromLeadNode(289L, userId1, true);
 		
 	}
@@ -88,6 +131,16 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 		for(PathResource resource : CollectionUtil.emptyIfNull(resources)) {
 			logger.info("Child resoure of node " + nodeId + " = " + resource.simpleToString());
 		}
+	}
+	
+	private void doGetFileMetaResourceById(long nodeId, String userId) throws ServiceException {
+		FileMetaResource resource = securePathTreeService.getFileMetaResource(nodeId, userId, false);
+		logger.info("File meta resoure for node " + nodeId + " = " + ((resource != null) ? resource.simpleToString() : "no file"));
+	}
+	
+	private void doGetDirectoryResourceById(long nodeId, String userId) throws ServiceException {
+		DirectoryResource resource = securePathTreeService.getDirectory(nodeId, userId);
+		logger.info("Directory resoure for node " + nodeId + " = " + ((resource != null) ? resource.simpleToString() : "no directory"));
 	}	
 	
 	private void doPathResourceTreeFromRootNode(long nodeId, String userId) throws ServiceException {
