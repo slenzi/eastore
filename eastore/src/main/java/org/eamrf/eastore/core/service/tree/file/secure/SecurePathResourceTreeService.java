@@ -400,9 +400,11 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public Store getStoreByName(String storeName) throws ServiceException {
 		
+		String lowerStoreName = storeName.toLowerCase();
+		
 		Store store = null;
 		try {
-			store = fileSystemRepository.getStoreByName(storeName);
+			store = fileSystemRepository.getStoreByName(lowerStoreName);
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get store for store name => " + storeName, e);
 		}
@@ -894,12 +896,19 @@ public class SecurePathResourceTreeService {
 			throw new ServiceException("Missing required parameter for creating a new store.");
 		}
 		
-		// store name and root dir name are used for the directory names. some environments are case insensitive
-		// so we make everything lowercase
-		// storePath should all be lowercase as well...
-		storeName = storeName.toLowerCase();
-		rootDirName = rootDirName.toLowerCase();
+		// make the last directory in the store path all lowercase, and remove any spaces
+		String storeDirName = storePath.getFileName().toString();
+		// remove all non alphanumeric characters except spaces, and convert to lowercase
+		String cleanStoreDirName = storeDirName.replaceAll("[^a-zA-Z0-9\\s]", "").toLowerCase();
+		Path storeParentPath = storePath.getParent();
+		Path cleanStorePath = Paths.get(storeParentPath.toString(), cleanStoreDirName);
 		
+		// make sure the store path does not already exist
+		if(Files.exists(cleanStorePath)) {
+			throw new ServiceException("Store path '" + cleanStorePath.toString() + "' already exists. Please provide a new directory that does not already exist.");
+		}
+		
+		// make sure there doesn't exist already a store with the same name (case insensitive)
 		Store store = getStoreByName(storeName);
 		if(store != null){
 			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");

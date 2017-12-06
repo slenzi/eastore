@@ -687,7 +687,6 @@ public class FileSystemRepository {
 		}		
 		
 		// add root directory for store
-		// TODO - pass in read group 1, and write group 1, or user can always add permissions later
 		DirectoryResource rootDir = addRootDirectory(storeId, storePath, rootNodeId, rootDirName, rootDirDesc, readGroup, writeGroup, executeGroup);
 		
 		Store store = new Store();
