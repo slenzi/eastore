@@ -46,8 +46,10 @@ public class Store implements Serializable {
 		}
 			
 	}
+	
+	public static final Long NO_FILE_SIZE_LIMIT = -1L;
 
-	private Long id = -1L;
+	private Long id = NO_FILE_SIZE_LIMIT;
 	private String name = null;
 	private String description = null;
 	private Path path = null;

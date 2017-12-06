@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -342,7 +343,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	validateUserId(userId);
     	
-    	if(dirNodeId == null || StringUtil.isNullEmpty(name)){
+    	if(dirNodeId == null || StringUtil.isNullEmpty(name) || StringUtil.isNullEmpty(desc)){
     		handleError("Missing 'dirNodeId', 'name', and/or 'desc' params.", WebExceptionType.CODE_IO_ERROR);
     	}
     	
@@ -392,7 +393,8 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	if(maxFileSizeBytes == null || StringUtil.isNullEmpty(storeName) || StringUtil.isNullEmpty(storeDesc)
     			|| StringUtil.isNullEmpty(storePath) || StringUtil.isNullEmpty(rootDirName) ||
-    			StringUtil.isNullEmpty(rootDirDesc)){
+    			StringUtil.isNullEmpty(rootDirDesc) || StringUtil.isNullEmpty(readGroup1) ||
+    			StringUtil.isNullEmpty(writeGroup1) || StringUtil.isNullEmpty(executeGroup1)){
     		
     		handleError("Missing required params. Please check, storeName, storeDesc, storePath, "
     				+ "maxFileSizeBytes, rootDirName, and/or rootDirDesc values.", WebExceptionType.CODE_IO_ERROR);
@@ -400,11 +402,19 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	// needs to be lowercase
-    	storePath = storePath.toLowerCase();
+    	//storePath = storePath.toLowerCase();
+    	
+    	java.nio.file.Path storeFilePath = null;
+    	try {
+    	storeFilePath = Paths.get(storePath);
+    	}catch(InvalidPathException e) {
+			handleError("Error creating new store, store path '" + storePath + "' is not valid. " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);    		
+    	}
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.addStore(storeName, storeDesc, Paths.get(storePath), rootDirName, rootDirDesc, maxFileSizeBytes, 
+			store = pathResourceTreeService.addStore(storeName, storeDesc, storeFilePath, rootDirName, rootDirDesc, maxFileSizeBytes, 
 					readGroup1, writeGroup1, executeGroup1, AccessRule.DENY);
 		} catch (ServiceException e) {
 			handleError("Error creating new store, name=" + storeName + ", " + 

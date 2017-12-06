@@ -888,7 +888,9 @@ public class SecurePathResourceTreeService {
 			String executeGroup,
 			AccessRule rule) throws ServiceException {
 		
-		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc) || storePath == null || maxFileSizeDb == null){
+		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc, readGroup, writeGroup, executeGroup) || 
+				storePath == null || maxFileSizeDb == null){
+			
 			throw new ServiceException("Missing required parameter for creating a new store.");
 		}
 		
