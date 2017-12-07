@@ -61,7 +61,7 @@
 		<version.oracle.jdbc>11.2.0.4</version.oracle.jdbc>
 		
 		<!-- ecog-acrin dependencies -->
-		<version.gatekeeper>1.0.0.RC2</version.gatekeeper>		 		
+		<version.gatekeeper>1.0.0.RC3</version.gatekeeper>		 		
   		
   	</properties>
   	
