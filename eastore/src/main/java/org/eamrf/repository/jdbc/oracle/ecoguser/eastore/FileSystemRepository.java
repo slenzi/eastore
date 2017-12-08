@@ -706,47 +706,6 @@ public class FileSystemRepository {
 	}
 	
 	/**
-	 * Adds a new file, but does not add the binary data to eas_binary_resource.
-	 * 
-	 * If a file with the same name already exists, then the file on disk is updated, and the old binary
-	 * data in eas_binary_resource is removed.
-	 * 
-	 * @param parentDirectory
-	 * @param srcFilePath
-	 * @param replaceExisting
-	 * @return
-	 * @throws Exception
-	 * 
-	 * @deprecated - for performance reasons...
-	 * 
-	@MethodTimer
-	public FileMetaResource addFileWithoutBinary(
-			DirectoryResource parentDirectory, Path srcFilePath, boolean replaceExisting) throws Exception {
-			
-		String fileName = srcFilePath.getFileName().toString();
-		
-		// check if directory already contains a file with the same name (case insensitive)
-		boolean hasExisting = hasChildPathResource(parentDirectory.getNodeId(), fileName, ResourceType.FILE);
-		
-		if(hasExisting && replaceExisting){
-			
-			return _updateFileDiscardOldBinary(parentDirectory, srcFilePath);
-		
-		}else if(hasExisting && !replaceExisting){
-			
-			throw new Exception("Directory with dirNodeId " + parentDirectory.getNodeId() + 
-					" already contains a file with the name '" + fileName + "', and 'replaceExisting' param is set to false.");
-			
-		}else{
-			
-			return _addNewFileWithoutBinary(parentDirectory, srcFilePath);
-			
-		}
-		
-	}
-	*/
-	
-	/**
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
 	 * rename the file. If the path resource is a DirectoryResource then we rename the directory,
 	 * and update the relative path data for all resources under the directory.
@@ -758,7 +717,13 @@ public class FileSystemRepository {
 	@MethodTimer
 	public void renamePathResource(PathResource resource, String newName) throws Exception {
 		
+		//
+		// TODO - need to update rename code to allow renaming to same name, but different case
+		//
+		
 		if(resource.getResourceType() == ResourceType.FILE){
+			
+			logger.info("Peforming path resource rename on file");
 			
 			// get parent dir, and check if resource with the new name already exists.
 			PathResource parentDir = getParentPathResource(resource.getNodeId());
@@ -770,6 +735,8 @@ public class FileSystemRepository {
 			_renameFileResource((FileMetaResource)resource, newName);
 			
 		}else if(resource.getResourceType() == ResourceType.DIRECTORY){
+			
+			logger.info("Peforming path resource rename on directory");
 			
 			_renameDirectory((DirectoryResource)resource, newName);
 			
@@ -1575,6 +1542,30 @@ public class FileSystemRepository {
 			}
 			
 		}
+		
+	}
+
+	/**
+	 * Updates the directory. This will properly rename the directory and update the relative paths of all child resources.
+	 * 
+	 * @param dir - the directory to update
+	 * @param name - new name
+	 * @param desc - new description
+	 * @param readGroup1 - new optional read group
+	 * @param writeGroup1 - new optional write group
+	 * @param executeGroup1 new optional execute group
+	 * @throws Exception
+	 */
+	public void updateDirectory(DirectoryResource dir, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1) throws Exception {
+		
+		// perform recursive rename, if name is actually different
+		if(!dir.getPathName().equals(name)) {
+			this.renamePathResource(dir, name);
+		}
+		
+		// update other fields
+		jdbcTemplate.update("update eas_path_resource set path_desc = ?, read_group_1 = ?, write_group_1 = ?, execute_group_1 = ? where node_id = ?",
+				desc, readGroup1, writeGroup1, executeGroup1, dir.getNodeId());		
 		
 	}
 

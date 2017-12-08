@@ -1233,6 +1233,88 @@ public class SecurePathResourceTreeService {
 	}
 	
 	/**
+	 * Updates the directory
+	 * 
+	 * @param dirNodeId - id of directory to update
+	 * @param name - new name
+	 * @param desc - new description
+	 * @param readGroup1 - new read group
+	 * @param writeGroup1 - new write group
+	 * @param executeGroup1 - new execute group
+	 * @param userId - id of user completing the action
+	 * @throws ServiceException
+	 */
+	public void updateDirectory(Long dirNodeId, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1, String userId) throws ServiceException {
+		
+		logger.debug("Updating directory [dirNodeId=" + dirNodeId + "]");
+		
+		// need execute & write permission on directory
+		DirectoryResource dir = this.getDirectory(dirNodeId, userId);
+		if(!dir.getCanExecute()) {
+			logger.info("No execute permission");
+			this.handlePermissionDenied(PermissionError.EXECUTE, dir, userId);
+		}
+		if(!dir.getCanWrite()) {
+			logger.info("No write permission");
+			this.handlePermissionDenied(PermissionError.WRITE, dir, userId);
+		}		
+		
+		// also need read & write permission on parent directory, if one exists
+		DirectoryResource parentDir = this.getParentDirectory(dirNodeId, userId);
+		if(parentDir != null) {
+			if(!parentDir.getCanRead()) {
+				logger.info("No read permission on parent");
+				this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
+			}
+			if(!parentDir.getCanWrite()) {
+				logger.info("No write permission on parent");
+				this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+			}
+		}else {
+			// no parent directory, so this must be a root directory for a store.
+			// read, write, and execute groups are required for root directories.
+			if(StringUtil.isAnyNullEmpty(readGroup1, writeGroup1, executeGroup1)) {
+				throw new ServiceException("Read, write, and execute groups are required for root directories (directories that have no parent.) "
+						+ "One or all of the values for read, write, and execute groups are null or blank.");
+			}			
+		}
+		
+		final Store store = getStore(dir);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+				
+				// update directory
+				try {
+					fileSystemRepository.updateDirectory(dir, name, desc, readGroup1, writeGroup1, executeGroup1);
+				} catch (Exception e) {
+					throw new ServiceException("Error updating directory with node id => " + dir.getNodeId() + ". " + e.getMessage(), e);
+				}
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+			
+		}
+		
+		Task task = new Task();
+		task.setName("Update directory [dirNodeId=" + dir.getNodeId() + ", name=" + dir.getNodeName() + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until complete	
+		
+	}	
+	
+	/**
 	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
 	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
 	 * the tree to rename the directory, and update the relative path data for all resources
@@ -1249,14 +1331,35 @@ public class SecurePathResourceTreeService {
 		// works for both files and directories. Files will inherit their permissions from the directories they are in.
 		
 		PathResource resource = this.getPathResource(nodeId, userId);
-		if(!resource.getCanWrite()) {
-			this.handlePermissionDenied(PermissionError.WRITE, resource, userId);
-		}
+		
+		renamePathResource(resource, newName, userId);
+		
+	}
+	
+	/**
+	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
+	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
+	 * the tree to rename the directory, and update the relative path data for all resources
+	 * under the directory.
+	 * 
+	 * @param resource - the resource to rename
+	 * @param newName - new name for resource
+	 * @param userId - id of user performing the rename action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void renamePathResource(PathResource resource, String newName, String userId) throws ServiceException {
+
+		// works for both files and directories. Files will inherit their permissions from the directories they are in.
+
+		//if(!resource.getCanWrite()) {
+		//	this.handlePermissionDenied(PermissionError.WRITE, resource, userId);
+		//}
 		
 		try {
 			fileSystemRepository.renamePathResource(resource, newName);
 		} catch (Exception e) {
-			throw new ServiceException("Error renaming path resource, nodeId=" + nodeId + 
+			throw new ServiceException("Error renaming path resource, nodeId=" + resource.getNodeId() + 
 					", newName=" + newName + ", " + e.getMessage(), e);
 		}
 		

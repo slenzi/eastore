@@ -358,6 +358,49 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	return dirResource;
     	
     }
+    
+    /**
+     * Update a directory
+     * 
+     * @param dirNodeId - the id of the directory to update
+     * @param name - new name for the directory
+     * @param desc - new description for the directory
+     * @param readGroup1 - new read group
+     * @param writeGroup1 - new write group
+     * @param executeGroup1 - new execute group
+     * @param userId - id of user completing action
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/updateDirectory")
+    @Produces(MediaType.APPLICATION_JSON)    
+    public Response updateDirectory(
+    		@QueryParam("dirNodeId") Long dirNodeId,
+    		@QueryParam("name") String name,
+    		@QueryParam("desc") String desc,
+    		@QueryParam("readGroup1") String readGroup1,
+    		@QueryParam("writeGroup1") String writeGroup1,
+    		@QueryParam("executeGroup1") String executeGroup1,
+    		@QueryParam("userId") String userId)  throws WebServiceException {
+    	
+    	validateUserId(userId);
+    	
+    	if(dirNodeId == null || StringUtil.isNullEmpty(name) || StringUtil.isNullEmpty(desc)){
+    		handleError("Missing 'dirNodeId', 'name', and/or 'desc' params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			pathResourceTreeService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	logger.info("Update of directory complete.");
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }
         
     /**
      * Create a new store
