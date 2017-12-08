@@ -82,6 +82,14 @@
 				<property.file>lenzi.mac.production.properties</property.file>
 			</properties>
 		</profile>
+		
+		<!-- deployment on lenzi's personal mac, using cancordb database -->
+		<profile>
+			<id>lenzi.mac.cancordb</id>
+			<properties>
+				<property.file>lenzi.mac.cancordb.properties</property.file>
+			</properties>
+		</profile>
 	
 		<!-- deployment on lenzi's EAMRF desktop -->
 		<profile>
