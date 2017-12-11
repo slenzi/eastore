@@ -1110,6 +1110,80 @@ public class SecurePathResourceTreeService {
 	}
 	
 	/**
+	 * Updates the file
+	 * 
+	 * @param fileNodeId - id of file to update
+	 * @param newName - new name
+	 * @param newDesc - new description
+	 * @param userId - id of user performing the action
+	 * @throws ServiceException
+	 */
+	public void updateFile(Long fileNodeId, String newName, String newDesc, String userId) throws ServiceException {
+		
+		logger.debug("Updating file [fileNodeId=" + fileNodeId + "]");
+		
+		// need execute & write permission on file
+		FileMetaResource file = this.getFileMetaResource(fileNodeId, userId, false);
+		if(!file.getCanExecute()) {
+			logger.info("No execute permission");
+			this.handlePermissionDenied(PermissionError.EXECUTE, file, userId);
+		}
+		if(!file.getCanWrite()) {
+			logger.info("No write permission");
+			this.handlePermissionDenied(PermissionError.WRITE, file, userId);
+		}		
+		
+		// also need read & write permission on parent directory, if one exists
+		DirectoryResource parentDir = this.getParentDirectory(fileNodeId, userId);
+		if(parentDir != null) {
+			if(!parentDir.getCanRead()) {
+				logger.info("No read permission on parent");
+				this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
+			}
+			if(!parentDir.getCanWrite()) {
+				logger.info("No write permission on parent");
+				this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+			}
+		}else {
+			throw new ServiceException("Error fetching parent directory file file resource with node id = " + fileNodeId);		
+		}
+		
+		final Store store = getStore(file);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+				
+				// update file
+				try {
+					fileSystemRepository.updateFile(file, newName, newDesc);
+				} catch (Exception e) {
+					throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
+				}
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+			
+		}
+		
+		Task task = new Task();
+		task.setName("Update file [fileNodeId=" + file.getNodeId() + ", name=" + file.getNodeName() + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until complete		
+		
+	}
+	
+	/**
 	 * Add new directory
 	 * 
 	 * @param dirNodeId - id of parent directory
@@ -1314,17 +1388,7 @@ public class SecurePathResourceTreeService {
 		
 	}	
 	
-	/**
-	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
-	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
-	 * the tree to rename the directory, and update the relative path data for all resources
-	 * under the directory.
-	 * 
-	 * @param nodeId - id of resource to rename
-	 * @param newName - new name for resource
-	 * @param userId - id of user performing the rename action
-	 * @throws ServiceException
-	 */
+	/*
 	@MethodTimer
 	public void renamePathResource(Long nodeId, String newName, String userId) throws ServiceException {
 
@@ -1335,18 +1399,9 @@ public class SecurePathResourceTreeService {
 		renamePathResource(resource, newName, userId);
 		
 	}
+	*/
 	
-	/**
-	 * Renames the path resource. If the path resource is a FileMetaResource then we simply
-	 * rename the file. If the path resource is a DirectoryResource then we recursively walk
-	 * the tree to rename the directory, and update the relative path data for all resources
-	 * under the directory.
-	 * 
-	 * @param resource - the resource to rename
-	 * @param newName - new name for resource
-	 * @param userId - id of user performing the rename action
-	 * @throws ServiceException
-	 */
+	/*
 	@MethodTimer
 	public void renamePathResource(PathResource resource, String newName, String userId) throws ServiceException {
 
@@ -1363,7 +1418,8 @@ public class SecurePathResourceTreeService {
 					", newName=" + newName + ", " + e.getMessage(), e);
 		}
 		
-	}	
+	}
+	*/	
 	
 	/**
 	 * Remove the file, from database and disk. No undo.

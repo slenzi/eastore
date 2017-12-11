@@ -317,6 +317,43 @@ public class FileSystemActionResource extends BaseResourceHandler {
     }
     
     /**
+     * Update a directory
+     * 
+     * @param fileNodeId - the id of the file to update
+     * @param name - new name for the directory
+     * @param desc - new description for the directory
+     * @param userId - id of user completing action
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/updateFile")
+    @Produces(MediaType.APPLICATION_JSON)    
+    public Response updateFile(
+    		@QueryParam("fileNodeId") Long fileNodeId,
+    		@QueryParam("name") String name,
+    		@QueryParam("desc") String desc,
+    		@QueryParam("userId") String userId)  throws WebServiceException {
+    	
+    	validateUserId(userId);
+    	
+    	if(fileNodeId == null || StringUtil.isNullEmpty(name) || StringUtil.isNullEmpty(desc)){
+    		handleError("Missing 'fileNodeId', 'name', and/or 'desc' params.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			pathResourceTreeService.updateFile(fileNodeId, name, desc, userId);
+		} catch (ServiceException e) {
+			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	logger.info("Update of file complete.");
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }    
+    
+    /**
      * Add a directory
      * 
      * @param dirNodeId - id of parent directory. New directory will be created under the parent.
@@ -672,16 +709,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     }
     
-    /**
-     * Rename path resource. Will throw exception if there already exists a resource with
-     * the name.
-     * 
-     * @param nodeId
-     * @param newName
-     * @param userId - id of user completing action
-     * @return
-     * @throws WebServiceException
-     */
+    /*
     @POST
     @Path("/rename")
     @Produces(MediaType.APPLICATION_JSON)
@@ -704,7 +732,8 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
     	
-    }    
+    }
+    */   
     
     /**
      * Create the test store

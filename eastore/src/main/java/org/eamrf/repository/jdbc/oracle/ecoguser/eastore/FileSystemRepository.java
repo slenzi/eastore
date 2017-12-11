@@ -19,7 +19,6 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeBuilder;
 import org.eamrf.eastore.core.tree.Tree;
-import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
 import org.eamrf.repository.jdbc.SpringJdbcUtil;
@@ -203,6 +202,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	@MethodTimer
 	public Store getStoreById(Long storeId) throws Exception {
 		
@@ -221,6 +221,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	@MethodTimer
 	public Store getStoreByName(String storeName) throws Exception {
 		
@@ -403,6 +404,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	@MethodTimer
 	public PathResource getPathResource(Long nodeId) throws Exception {
 		
@@ -434,6 +436,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	public PathResource getPathResource(String storeName, String relativePath) throws Exception {
 		
 		String sql =
@@ -715,21 +718,17 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public void renamePathResource(PathResource resource, String newName) throws Exception {
-		
-		//
-		// TODO - need to update rename code to allow renaming to same name, but different case
-		//
+	private void renamePathResource(PathResource resource, String newName) throws Exception {
 		
 		if(resource.getResourceType() == ResourceType.FILE){
 			
 			logger.info("Peforming path resource rename on file");
 			
-			// get parent dir, and check if resource with the new name already exists.
+			// get parent directory and check if file resource with the new name already exists
 			PathResource parentDir = getParentPathResource(resource.getNodeId());
-			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.FILE)){
+			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.FILE, resource.getNodeId()) ){
 				throw new Exception("Cannot rename file resource " + resource.getNodeId() + " to " + newName + 
-						", the directory in which the resource exists already contains a resource with that name.");
+						", the directory in which the resource exists already contains a file with that name.");
 			}
 			
 			_renameFileResource((FileMetaResource)resource, newName);
@@ -737,6 +736,13 @@ public class FileSystemRepository {
 		}else if(resource.getResourceType() == ResourceType.DIRECTORY){
 			
 			logger.info("Peforming path resource rename on directory");
+			
+			// get parent directory and check if a child directory resource with the new name already exists
+			PathResource parentDir = getParentPathResource(resource.getNodeId());
+			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.DIRECTORY, resource.getNodeId()) ){
+				throw new Exception("Cannot rename directory resource " + resource.getNodeId() + " to " + newName + 
+						", the directory in which the resource exists already contains a child directory with that name.");
+			}			
 			
 			_renameDirectory((DirectoryResource)resource, newName);
 			
@@ -791,7 +797,7 @@ public class FileSystemRepository {
 		List<PathResource> resTree = getPathResourceTree(resource.getNodeId());
 		Tree<PathResource> tree = pathResTreeUtil.buildPathResourceTree(resTree, resource.getNodeId());
 		
-		TreeNode<PathResource> rootNode = tree.getRootNode();
+		//TreeNode<PathResource> rootNode = tree.getRootNode();
 		
 		//logger.info("before rename");
 		//pathResTreeUtil.logPreOrderTraversal(tree);	
@@ -983,8 +989,6 @@ public class FileSystemRepository {
 		((FileMetaResource)resource).setMimeType(fileMimeType);
 		((FileMetaResource)resource).setIsBinaryInDatabase(isBinaryInDb);
 		
-		// TODO - pass in read and write group? users can always set that data after upload
-		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
@@ -1115,7 +1119,7 @@ public class FileSystemRepository {
 			String executeGroup1) throws Exception {
 		
 		// make sure directory doesn't already contain a sub-directory with the same name	
-		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY)){
+		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY, null)){
 			throw new Exception("Directory with dirNodeId " + parentDir.getNodeId() + 
 					" already contains a sub-directory with the name '" + name + "'");			
 		}
@@ -1219,8 +1223,6 @@ public class FileSystemRepository {
 		dirResource.setWriteGroup1(writeGroup);
 		dirResource.setExecuteGroup1(executeGroup);
 		
-		// TODO - pass in read & write group? User can always set that afterwards.
-		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc, read_group_1, write_group_1, execute_group_1) " +
@@ -1253,14 +1255,20 @@ public class FileSystemRepository {
 	 * @param dirNodeId - the id of the directory node
 	 * @param name - the name of the child path resource. Will match on name.toLowerCase()
 	 * @param type - the type of child path resource to check for.
+	 * @param ignoreChildId - Id of child resource to ignore when performing check. Useful when renaming resources as we don't
+	 * 	watch to match the file or directory we're renaming against itself.
 	 * @return
 	 */
 	@MethodTimer
-	public boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
+	public boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type, Long ignoreChildId) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
 		if(childResources != null && childResources.size() > 0){
 			for(PathResource pr : childResources){
+				if(ignoreChildId != null && pr.getNodeId() == ignoreChildId) {
+					// ignore this child
+					continue;
+				}
 				if(pr.getParentNodeId().equals(dirNodeId)
 						&& pr.getResourceType() == type
 						&& pr.getPathName().toLowerCase().equals(name.toLowerCase())){
@@ -1566,6 +1574,26 @@ public class FileSystemRepository {
 		// update other fields
 		jdbcTemplate.update("update eas_path_resource set path_desc = ?, read_group_1 = ?, write_group_1 = ?, execute_group_1 = ? where node_id = ?",
 				desc, readGroup1, writeGroup1, executeGroup1, dir.getNodeId());		
+		
+	}
+
+	/**
+	 * Updates the file (name and description)
+	 * 
+	 * @param file - the file to update
+	 * @param newName - the new name value
+	 * @param newDesc - the new description value
+	 */
+	public void updateFile(FileMetaResource file, String newName, String newDesc) throws Exception {
+		
+		// perform rename, if name is actually different
+		if(!file.getPathName().equals(newName)) {
+			this.renamePathResource(file, newName);
+		}
+		
+		// update other fields
+		jdbcTemplate.update("update eas_path_resource set path_desc = ? where node_id = ?",
+				newDesc, file.getNodeId());			
 		
 	}
 
