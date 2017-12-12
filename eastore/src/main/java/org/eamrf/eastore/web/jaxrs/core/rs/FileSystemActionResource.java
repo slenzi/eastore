@@ -34,6 +34,7 @@ import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
@@ -245,6 +246,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	 * @return
 	 * @throws WebServiceException
 	 */
+	@MethodTimer
     @POST
     @Path("/uploadFile")
     @Consumes(MediaType.MULTIPART_FORM_DATA)

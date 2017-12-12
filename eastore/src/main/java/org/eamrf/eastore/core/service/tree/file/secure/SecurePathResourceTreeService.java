@@ -635,6 +635,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public FileMetaResource getChildFileMetaResource(Long dirId, String name, String userId) throws ServiceException {
 		
 		PathResource resource = this.getChildResource(dirId, name, ResourceType.FILE, userId);

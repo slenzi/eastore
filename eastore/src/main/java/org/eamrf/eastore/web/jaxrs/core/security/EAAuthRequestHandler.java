@@ -110,12 +110,12 @@ public class EAAuthRequestHandler implements ContainerRequestFilter {
 			// the hashed password in the database will be stored in base 64.
 			String base64HashedPassword = Base64.encodeBase64String(hashedPassword);
 			
-			logger.info("username => " + username + ", expected hashed pwd => " + expectedHashedPassword + 
-					", base64 computed hash pwd => " + base64HashedPassword);
+			//logger.info("username => " + username + ", expected hashed pwd => " + expectedHashedPassword + 
+			//		", base64 computed hash pwd => " + base64HashedPassword);
 			
 			if(base64HashedPassword.equals(expectedHashedPassword)){
 				// good password
-				logger.info("User '" + username + "' is allowed access! Yay!");
+				//logger.info("User '" + username + "' is allowed access! Yay!");
 			}else{
 				logger.error("user '" + username + "' provided bad password. Not allowed to access " + 
 						EA_STORE_SERVICE + " services.");

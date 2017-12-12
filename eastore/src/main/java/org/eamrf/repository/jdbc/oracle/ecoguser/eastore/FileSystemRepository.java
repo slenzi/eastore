@@ -956,6 +956,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public FileMetaResource _addNewFileWithoutBinary(DirectoryResource dirResource, Path filePath) throws Exception {
 		
 		String fileName = filePath.getFileName().toString();
@@ -1022,6 +1023,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath, FileMetaResource currFileRes) throws Exception {
 		
 		String newFileName = srcFilePath.getFileName().toString();

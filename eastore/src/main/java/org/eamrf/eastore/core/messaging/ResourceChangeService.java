@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.messaging.model.EventCode;
 import org.eamrf.eastore.core.messaging.model.ResourceChangeMessage;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ public class ResourceChangeService {
 	 * 
 	 * @param dirNodeId - the id of the directory path resource
 	 */
+	@MethodTimer
 	public void directoryContentsChanged(Long dirNodeId){
 		
 		EventCode event = EventCode.DIRECTORY_CONTENTS_CHANGED;
