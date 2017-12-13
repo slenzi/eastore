@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import org.eamrf.core.util.CodeTimer;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
@@ -24,6 +25,7 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 	private Date runStartTime = null;
 	private Date runEndTime = null;
 	private String name = null;
+	private CodeTimer timer = null;
 	
 	private CompletableFuture<T> completableFuture = new CompletableFuture<T>();
 	
@@ -205,17 +207,22 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 	public void run() {
 		
 		runStartTime = DateUtil.getCurrentTime();
+		timer = new CodeTimer();	
+		timer.start();
 		
-		getLogger().info("Task is running, id => " + getTaskId() + ", name => " + getClass().getName() + 
-				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()));
+		getLogger().info("Task is running, [id => " + getTaskId() + ", name => " + getClass().getName() + 
+				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()) + "]");
 		
 		T value = null;
-		
 		try {
 			
 			value = doWork();
 			
+			timer.stop();
+			
 		} catch (ServiceException e) {
+			
+			timer.stop();
 			
 			// pass exception to CompletableFuture.get()
 			getCompletableFuture().completeExceptionally(e);
@@ -224,8 +231,8 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 		
 		runEndTime = DateUtil.getCurrentTime();
 		
-		getLogger().info("Task completed run, id => " + getTaskId() + ", name => " + getClass().getName() + 
-				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()));
+		getLogger().info("Task completed run in " + timer.getElapsedTime() + ", id => " + getTaskId() + ", name => " + this.getName() + 
+				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()) + "]");
 		
 		// at this point, any potential client thread that's blocking on CompletableFuture.get() will wake up and receive the value
 		getCompletableFuture().complete(value);

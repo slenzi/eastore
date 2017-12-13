@@ -54,7 +54,7 @@ public class SecurePathResourceTreeBuilder {
 	 * @return
 	 * @throws ServiceException
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(List<PathResource> resources, String userId, DirectoryResource dirResource) throws ServiceException {
 		
 		Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
@@ -108,7 +108,7 @@ public class SecurePathResourceTreeBuilder {
 	 * @return
 	 * @throws ServiceException
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public Tree<PathResource> buildParentPathResourceTree(List<PathResource> resources, String userId, boolean reverse) throws ServiceException {
 		
 		Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);

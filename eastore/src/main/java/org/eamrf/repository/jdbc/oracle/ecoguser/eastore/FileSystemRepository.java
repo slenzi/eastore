@@ -13,9 +13,10 @@ import java.util.stream.Collectors;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
-import org.eamrf.core.util.FileUtil;
+//import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.io.FileIOService;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeBuilder;
 import org.eamrf.eastore.core.tree.Tree;
@@ -70,6 +71,9 @@ public class FileSystemRepository {
     
     @Autowired
     private PathResourceTreeBuilder pathResTreeUtil;
+    
+    @Autowired
+    private FileIOService fileService;
     
     // common query element used by several methods below
     private final String SQL_PATH_RESOURCE_COMMON =
@@ -203,7 +207,6 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	@MethodTimer
 	public Store getStoreById(Long storeId) throws Exception {
 		
 		String sql = SQL_STORES_COMMON + " where s.store_id = ?";
@@ -222,7 +225,6 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	@MethodTimer
 	public Store getStoreByName(String storeName) throws Exception {
 		
 		String sql = SQL_STORES_COMMON + " where lower(s.store_name) = ?";
@@ -239,7 +241,6 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
 	public List<Store> getStores() throws Exception {
 		
 		String sql = SQL_STORES_COMMON;
@@ -260,7 +261,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public List<PathResource> getPathResourceTree(Long nodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId)	
@@ -287,7 +288,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public List<PathResource> getPathResourceTree(Long nodeId, int depth) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getChildMappings(Long nodeId, int depth)
@@ -314,7 +315,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long nodeId) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId)	
@@ -360,7 +361,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)	
@@ -405,7 +406,7 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	@MethodTimer
+	//@MethodTimer
 	public PathResource getPathResource(Long nodeId) throws Exception {
 		
 		//List<PathResource> childResources = getPathResourceTree(nodeId, 0);
@@ -513,7 +514,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public PathResource getChildPathResource(Long dirNodeId, String name, ResourceType type) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
@@ -540,7 +541,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public DirectoryResource getDirectory(Long nodeId) throws Exception {
 		
 		PathResource resource = getPathResource(nodeId);
@@ -587,7 +588,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public FileMetaResource getFileMetaResource(Long nodeId, boolean includeBinary) throws Exception {
 		
 		PathResource resource = getPathResource(nodeId);
@@ -617,7 +618,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public FileMetaResource getFileMetaResource(String storeName, String relativePath, boolean includeBinary) throws Exception {
 		
 		PathResource resource = getPathResource(storeName, relativePath);
@@ -655,7 +656,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public Store addStore(
 			String storeName, 
 			String storeDesc, 
@@ -684,7 +685,7 @@ public class FileSystemRepository {
 		
 		// create store directory on local file system
 		try {
-			FileUtil.createDirectory(storePath, true);
+			fileService.createDirectory(storePath, true);
 		} catch (Exception e) {
 			throw new Exception("Failed to create store directory => " + storePathString + ". " + e.getMessage(), e);
 		}		
@@ -781,7 +782,7 @@ public class FileSystemRepository {
 		Store store = resource.getStore();
 		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
 		Path newPath = Paths.get(store.getPath() + newRelPath);			
-		FileUtil.moveFile(oldPath, newPath);		
+		fileService.moveFile(oldPath, newPath);		
 		
 	}
 	
@@ -867,7 +868,7 @@ public class FileSystemRepository {
 		Store store = resource.getStore();
 		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
 		Path newPath = Paths.get(store.getPath() + tree.getRootNode().getData().getRelativePath());		
-		FileUtil.moveFile(oldPath, newPath);
+		fileService.moveFile(oldPath, newPath);
 		
 	}
 	
@@ -951,66 +952,67 @@ public class FileSystemRepository {
 	 * 
 	 * This method adds a new FileMetaResource, but does not add data to eas_binary_resource
 	 * 
-	 * @param dirResource
-	 * @param filePath
+	 * @param store - the store that 'directory' param is under
+	 * @param directory - directory where file will be added
+	 * @param filePath - temp path to source file on local file system
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public FileMetaResource _addNewFileWithoutBinary(DirectoryResource dirResource, Path filePath) throws Exception {
+	public FileMetaResource _addNewFileWithoutBinary(Store store, DirectoryResource directory, Path filePath) throws Exception {
 		
 		String fileName = filePath.getFileName().toString();
-		Long fileSizeBytes = FileUtil.getFileSize(filePath);
-		String fileMimeType = FileUtil.detectMimeType(filePath);
+		Long fileSizeBytes = fileService.getSize(filePath);
+		String fileMimeType = fileService.getMimeType(filePath);
 		Boolean isBinaryInDb = false;
 
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
 		try {
-			newNode = closureRepository.addNode(dirResource.getNodeId(), fileName);
+			newNode = closureRepository.addNode(directory.getNodeId(), fileName);
 		} catch (Exception e) {
 			throw new Exception("Error adding directory node", e);
 		}
 		
-		Store store = getStoreById(dirResource.getStoreId());
+		//Store store = getStoreById(dirResource.getStoreId());
 		
-		String fileRelPathString = fileSystemUtil.buildRelativePath(dirResource, fileName);
+		String fileRelPathString = fileSystemUtil.buildRelativePath(directory, fileName);
 		
-		PathResource resource = new FileMetaResource();
-		resource.setNodeId(newNode.getNodeId());
-		resource.setResourceType(ResourceType.FILE);
-		resource.setDateCreated(newNode.getDateCreated());
-		resource.setDateUpdated(newNode.getDateUpdated());
-		resource.setPathName(fileName);
-		resource.setParentNodeId(newNode.getParentNodeId());
-		resource.setRelativePath(fileRelPathString);
-		resource.setDesc(null); // TODO - change method to pass in optional description?
-		resource.setStoreId(store.getId());
-		((FileMetaResource)resource).setFileSize(fileSizeBytes);
-		((FileMetaResource)resource).setMimeType(fileMimeType);
-		((FileMetaResource)resource).setIsBinaryInDatabase(isBinaryInDb);
+		PathResource newFileResource = new FileMetaResource();
+		newFileResource.setNodeId(newNode.getNodeId());
+		newFileResource.setResourceType(ResourceType.FILE);
+		newFileResource.setDateCreated(newNode.getDateCreated());
+		newFileResource.setDateUpdated(newNode.getDateUpdated());
+		newFileResource.setPathName(fileName);
+		newFileResource.setParentNodeId(newNode.getParentNodeId());
+		newFileResource.setRelativePath(fileRelPathString);
+		newFileResource.setDesc(null); // TODO - change method to pass in optional description?
+		newFileResource.setStoreId(store.getId());
+		((FileMetaResource)newFileResource).setFileSize(fileSizeBytes);
+		((FileMetaResource)newFileResource).setMimeType(fileMimeType);
+		((FileMetaResource)newFileResource).setIsBinaryInDatabase(isBinaryInDb);
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
 				"insert into eas_path_resource (node_id, store_id, path_name, path_type, relative_path, path_desc) " +
-				"values (?, ?, ?, ?, ?, ?)", resource.getNodeId(), resource.getStoreId(), resource.getPathName(),
-				resource.getResourceType().getTypeString(), resource.getRelativePath(), resource.getDesc());
+				"values (?, ?, ?, ?, ?, ?)", newFileResource.getNodeId(), newFileResource.getStoreId(), newFileResource.getPathName(),
+				newFileResource.getResourceType().getTypeString(), newFileResource.getRelativePath(), newFileResource.getDesc());
 		
 		// add entry to eas_file_meta_resource
 		jdbcTemplate.update(
 				"insert into eas_file_meta_resource (node_id, file_size, mime_type, is_file_data_in_db) values (?, ?, ?, ?)",
-					resource.getNodeId(), fileSizeBytes, fileMimeType, ((isBinaryInDb) ? "Y" : "N"));
+					newFileResource.getNodeId(), fileSizeBytes, fileMimeType, ((isBinaryInDb) ? "Y" : "N"));
 		
 		// copy file to directory in the tree
-		Path newFilePath = fileSystemUtil.buildPath(store, resource);
+		Path newFilePath = fileSystemUtil.buildPath(store, newFileResource);
 		try {
-			FileUtil.copyFile(filePath, newFilePath);
+			fileService.copyFile(filePath, newFilePath);
 		} catch (Exception e) {
 			throw new Exception("Failed to copy file from => " + filePath.toString() + 
 					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
 		}
 		
-		return (FileMetaResource)resource;
+		return (FileMetaResource)newFileResource;
 		
 	}
 	
@@ -1038,8 +1040,8 @@ public class FileSystemRepository {
 		//FileMetaResource currFileRes = (FileMetaResource)currPathRes;
 		Store store = getStoreById(dirResource.getStoreId());
 		
-		Long newFileSizeBytes = FileUtil.getFileSize(srcFilePath);
-		String newFileMimeType = FileUtil.detectMimeType(srcFilePath);
+		Long newFileSizeBytes = fileService.getSize(srcFilePath);
+		String newFileMimeType = fileService.getMimeType(srcFilePath);
 		String newRelFilePath = fileSystemUtil.buildRelativePath(dirResource, newFileName);
 		
 		// old/current tree path for the old physical file
@@ -1079,7 +1081,7 @@ public class FileSystemRepository {
 		
 		// delete old file on local disk
 		try {
-			FileUtil.deletePath(oldFilePath);
+			fileService.deletePath(oldFilePath);
 		} catch (Exception e) {
 			throw new Exception("Failed to remove old file at => " + oldFilePath.toString() + 
 					". " + e.getMessage(), e);
@@ -1087,7 +1089,7 @@ public class FileSystemRepository {
 		
 		// copy new file to directory in the tree
 		try {
-			FileUtil.copyFile(srcFilePath, newFilePath);
+			fileService.copyFile(srcFilePath, newFilePath);
 		} catch (Exception e) {
 			throw new Exception("Failed to copy new file from => " + srcFilePath.toString() + 
 					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
@@ -1167,7 +1169,7 @@ public class FileSystemRepository {
 		// @Transactional(rollbackFor=Exception.class)
 		Path newDirectoryPath = fileSystemUtil.buildPath(store, resource);
 		try {
-			FileUtil.createDirectory(newDirectoryPath, true);
+			fileService.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
 			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
 		}
@@ -1191,6 +1193,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	private DirectoryResource addRootDirectory(
 			Long storeId, 
 			Path storePath, 
@@ -1241,7 +1244,7 @@ public class FileSystemRepository {
 		// @Transactional(rollbackFor=Exception.class)
 		Path newDirectoryPath = fileSystemUtil.buildPath(storePath, dirResource);
 		try {
-			FileUtil.createDirectory(newDirectoryPath, true);
+			fileService.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
 			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
 		}
@@ -1261,7 +1264,7 @@ public class FileSystemRepository {
 	 * 	watch to match the file or directory we're renaming against itself.
 	 * @return
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public boolean hasChildPathResource(Long dirNodeId, String name, ResourceType type, Long ignoreChildId) throws Exception {
 		
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
@@ -1292,7 +1295,7 @@ public class FileSystemRepository {
 	 * @param dirNodeB
 	 * @return
 	 */
-	@MethodTimer
+	//@MethodTimer
 	public boolean isChild(Long dirNodeA, Long dirNodeB) throws Exception {
 		
 		List<PathResource> parentResources = getParentPathResourceTree(dirNodeB);
@@ -1398,7 +1401,7 @@ public class FileSystemRepository {
 		closureRepository.deleteNode(resource.getNodeId());
 		
 		// remove file for local file system
-		FileUtil.deletePath(filePath);		
+		fileService.deletePath(filePath);		
 		
 	}
 	
@@ -1424,7 +1427,7 @@ public class FileSystemRepository {
 		closureRepository.deleteNode(resource.getNodeId());
 		
 		// remove file for local file system
-		FileUtil.deletePath(dirPath);		
+		fileService.deletePath(dirPath);		
 		
 	}
 	
@@ -1503,7 +1506,7 @@ public class FileSystemRepository {
 			
 			// move physical file on disk
 			try {
-				FileUtil.moveFile(oldFullPath, newFullPath);
+				fileService.moveFile(oldFullPath, newFullPath);
 			} catch (Exception e) {
 				throw new Exception("Failed to move file " + fileToMove.getNodeId() + " to directory " + destDir.getNodeId() + 
 						". oldFullPath => " + oldFullPath.toString() + ", newFullPath => " + newFullPath.toString() + 
@@ -1544,7 +1547,7 @@ public class FileSystemRepository {
 			
 			// move physical file on disk
 			try {
-				FileUtil.moveFile(oldFullPath, newFullPath);
+				fileService.moveFile(oldFullPath, newFullPath);
 			} catch (Exception e) {
 				throw new Exception("Failed to move file " + fileToMove.getNodeId() + " to directory " + destDir.getNodeId() + 
 						". oldFullPath => " + oldFullPath.toString() + ", newFullPath => " + newFullPath.toString() + 
@@ -1566,6 +1569,7 @@ public class FileSystemRepository {
 	 * @param executeGroup1 new optional execute group
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public void updateDirectory(DirectoryResource dir, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1) throws Exception {
 		
 		// perform recursive rename, if name is actually different
@@ -1586,6 +1590,7 @@ public class FileSystemRepository {
 	 * @param newName - the new name value
 	 * @param newDesc - the new description value
 	 */
+	@MethodTimer
 	public void updateFile(FileMetaResource file, String newName, String newDesc) throws Exception {
 		
 		// perform rename, if name is actually different
