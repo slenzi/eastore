@@ -56,7 +56,7 @@ public class GatekeeperUserGroupCacheLoader extends CacheLoader<String, Map<Stri
 	@Override
 	public ListenableFuture<Map<String, Group>> reload(final String userId, Map<String,Group> oldMap) throws Exception {
 
-		logger.info("Reloading groups in user-group cache for user " + userId);
+		//logger.info("Reloading groups in user-group cache for user " + userId);
 		
 		if (neverNeedsRefresh(userId)) {
 			return Futures.immediateFuture(oldMap);
@@ -64,7 +64,7 @@ public class GatekeeperUserGroupCacheLoader extends CacheLoader<String, Map<Stri
 			// asynchronous!
 			ListenableFutureTask<Map<String,Group>> task = ListenableFutureTask.create(new Callable<Map<String,Group>>() {
 				public Map<String,Group> call() throws ServiceException {
-					System.out.println("Asynchronous group reload for ctep id => " + userId);
+					//System.out.println("Asynchronous group reload for ctep id => " + userId);
 					return getGroupsForUser(userId);
 				}
 			});
@@ -84,7 +84,7 @@ public class GatekeeperUserGroupCacheLoader extends CacheLoader<String, Map<Stri
 	 */
 	private Map<String,Group> getGroupsForUser(String userId) throws ServiceException {
 		
-		logger.info("RESTful fetch to retrieve Gatekeeper groups for user " + userId);
+		//logger.info("RESTful fetch to retrieve Gatekeeper groups for user " + userId);
 		
 		GatekeeperRestClient client = gatekeeperClientProvider.getRestClient();
 		
