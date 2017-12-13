@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -233,6 +234,7 @@ public class ClosureRepository {
 	 * @param name - name of the new node
 	 * @return the id of the new node
 	 */
+	@MethodTimer
 	public Node addNode(Long parentNodeId, String name) throws Exception {
 		
 		// get next id from eas_node_id_sequence
@@ -251,6 +253,7 @@ public class ClosureRepository {
 	 * @return
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public Node addNode(Long newNodeId, Long parentNodeId, String name) throws Exception {
 		
 		Timestamp dtNow = DateUtil.getCurrentTime();
@@ -297,6 +300,7 @@ public class ClosureRepository {
 	 * @param nodeId
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public void deleteNode(Long nodeId) throws Exception {
 		
 		// get next value from prune ID sequence
@@ -325,6 +329,7 @@ public class ClosureRepository {
 	 * @param nodeId
 	 * @throws Exception
 	 */
+	@MethodTimer
 	public void deleteChildren(Long nodeId) throws Exception {
 		
 		// get next value from prune ID sequence
