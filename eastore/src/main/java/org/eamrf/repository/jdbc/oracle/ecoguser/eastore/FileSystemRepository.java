@@ -1401,7 +1401,11 @@ public class FileSystemRepository {
 		closureRepository.deleteNode(resource.getNodeId());
 		
 		// remove file for local file system
-		fileService.deletePath(filePath);		
+		if(Files.exists(filePath)) {
+			fileService.deletePath(filePath);
+		}else {
+			logger.warn("Removing file " + "[nodeId=" + resource.getNodeId() + ", name=" + resource.getNodeName() + ", relPath=" + resource.getRelativePath() + "] but physical file does not exists at " + filePath.toString());
+		}
 		
 	}
 	
