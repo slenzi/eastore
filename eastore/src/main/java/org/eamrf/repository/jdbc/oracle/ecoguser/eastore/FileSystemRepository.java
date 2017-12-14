@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.CodeTimer;
 import org.eamrf.core.util.DateUtil;
 //import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
@@ -361,7 +362,7 @@ public class FileSystemRepository {
 	 * @return
 	 * @throws Exception
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public List<PathResource> getParentPathResourceTree(Long nodeId, int levels) throws Exception {
 		
 		// functionally equivalent to ClosureRepository.getParentMappings(Long nodeId, int levels)	
@@ -882,6 +883,9 @@ public class FileSystemRepository {
 	@MethodTimer
 	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws Exception {
 		
+		CodeTimer timer = new CodeTimer();
+		timer.start();		
+		
 		final Store store = getStoreById(fileMetaResource.getStoreId());
 		final Long nodeId = fileMetaResource.getNodeId();
 		final Path filePath = fileSystemUtil.buildPath(store, fileMetaResource);
@@ -890,6 +894,7 @@ public class FileSystemRepository {
 		final int fileSize = toIntExact(lFileSize);
 		
 		if(!Files.exists(filePath)){
+			timer.stop();
 			throw new Exception("Cannot refresh binary data in DB for FileMetaResource with node id => " + 
 					fileMetaResource.getNodeId() + ". File does not exists on disk => " + filePath);
 		}
@@ -943,6 +948,9 @@ public class FileSystemRepository {
 		
 		inStream.close();
 		
+		timer.stop();
+		logger.info("refreshBinaryDataInDatabase completed in " + timer.getElapsedTime() + " for file " + filePath.toString());			
+		
 		return fileMetaResource;
 		
 	}
@@ -960,6 +968,9 @@ public class FileSystemRepository {
 	 */
 	@MethodTimer
 	public FileMetaResource _addNewFileWithoutBinary(Store store, DirectoryResource directory, Path filePath) throws Exception {
+		
+		CodeTimer timer = new CodeTimer();
+		timer.start();		
 		
 		String fileName = filePath.getFileName().toString();
 		Long fileSizeBytes = fileService.getSize(filePath);
@@ -1012,6 +1023,9 @@ public class FileSystemRepository {
 					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
 		}
 		
+		timer.stop();
+		logger.info("_addNewFileWithoutBinary completed in " + timer.getElapsedTime() + " for file " + filePath.toString());		
+		
 		return (FileMetaResource)newFileResource;
 		
 	}
@@ -1027,6 +1041,9 @@ public class FileSystemRepository {
 	 */
 	@MethodTimer
 	public FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath, FileMetaResource currFileRes) throws Exception {
+		
+		CodeTimer timer = new CodeTimer();
+		timer.start();
 		
 		String newFileName = srcFilePath.getFileName().toString();
 		
@@ -1097,6 +1114,9 @@ public class FileSystemRepository {
 		
 		// NOTE - do not delete file at srcFilePath
 		
+		timer.stop();
+		logger.info("_updateFileDiscardOldBinary completed in " + timer.getElapsedTime() + " for file " + srcFilePath.toString());
+		
 		return currFileRes;
 		
 	}
@@ -1122,12 +1142,21 @@ public class FileSystemRepository {
 			String writeGroup1, 
 			String executeGroup1) throws Exception {
 		
+		logger.info("Adding directory");
+		
+		CodeTimer timer = new CodeTimer();
+		
+		timer.start();
 		// make sure directory doesn't already contain a sub-directory with the same name	
 		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY, null)){
 			throw new Exception("Directory with dirNodeId " + parentDir.getNodeId() + 
 					" already contains a sub-directory with the name '" + name + "'");			
 		}
+		timer.stop();
+		logger.info("called hasChildPathResource in " + timer.getElapsedTime());
+		timer.reset();
 		
+		timer.start();
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
 		try {
@@ -1135,8 +1164,17 @@ public class FileSystemRepository {
 		} catch (Exception e) {
 			throw new Exception("Error adding directory node", e);
 		}
+		timer.stop();
+		logger.info("Added node via closure repository in " + timer.getElapsedTime());
+		timer.reset();
 		
+		timer.start();
 		Store store = getStoreById(parentDir.getStoreId());
+		timer.stop();
+		logger.info("Fetched store in " + timer.getElapsedTime());
+		timer.reset();
+		
+		timer.start();
 		
 		String dirRelPathString = fileSystemUtil.buildRelativePath(parentDir, name);
 		
@@ -1162,8 +1200,14 @@ public class FileSystemRepository {
 		
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(
-				"insert into eas_directory_resource (node_id) values (?)", resource.getNodeId());		
+				"insert into eas_directory_resource (node_id) values (?)", resource.getNodeId());
 		
+		timer.stop();
+		logger.info("Added rows to eas_path_resource and eas_directory_resource in " + timer.getElapsedTime());
+		timer.reset();		
+		
+		
+		timer.start();
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
@@ -1173,6 +1217,10 @@ public class FileSystemRepository {
 		} catch (Exception e) {
 			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
 		}
+		
+		timer.stop();
+		logger.info("Created directory on local file system in " + timer.getElapsedTime());
+		timer.reset();		
 		
 		return (DirectoryResource)resource;
 		

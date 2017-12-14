@@ -21,6 +21,7 @@ import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.CodeTimer;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
@@ -153,7 +154,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(Long dirNodeId, String userId) throws ServiceException {
 		
 		DirectoryResource dirResource = this.getDirectory(dirNodeId, userId);
@@ -173,7 +174,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(DirectoryResource dirResource, String userId) throws ServiceException {
 		
 		return this.buildPathResourceTree(dirResource, userId, Integer.MAX_VALUE);
@@ -192,7 +193,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(Long dirNodeId, String userId, int depth) throws ServiceException {
 		
 		DirectoryResource dirResource = this.getDirectory(dirNodeId, userId);
@@ -211,7 +212,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(DirectoryResource dirResource, String userId, int depth) throws ServiceException {
 		
 		List<PathResource> resources = this.getPathResourceForTree(dirResource.getNodeId(), depth);
@@ -234,7 +235,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildParentPathResourceTree(Long nodeId, String userId, boolean reverse) throws ServiceException {
 		
 		return buildParentPathResourceTree(nodeId, userId, Integer.MAX_VALUE, reverse);
@@ -256,7 +257,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	private Tree<PathResource> buildParentPathResourceTree(Long nodeId, String userId, int levels, boolean reverse) throws ServiceException {
 		
 		List<PathResource> resources = getParentPathResourceForTree(nodeId, levels);
@@ -279,7 +280,7 @@ public class SecurePathResourceTreeService {
 	 * @param reverse - get the tree in reverse order (leaf node becomes root node)
 	 * @return
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public Tree<PathResource> buildParentPathResourceTree(String storeName, String relativePath, String userId, boolean reverse) throws ServiceException {
 		
 		PathResource resource = null;
@@ -305,7 +306,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	private List<PathResource> getPathResourceForTree(Long nodeId, int depth) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -330,7 +331,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	private List<PathResource> getParentPathResourceForTree(Long nodeId, int levels) throws ServiceException {
 		
 		List<PathResource> resources = null;
@@ -467,7 +468,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public PathResource getPathResource(Long nodeId, String userId) throws ServiceException {
 		
 		Tree<PathResource> tree = this.buildParentPathResourceTree(nodeId, userId, true);
@@ -488,7 +489,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public PathResource getPathResource(String storeName, String relativePath, String userId) throws ServiceException {
 		
 		Tree<PathResource> tree = this.buildParentPathResourceTree(storeName, relativePath, userId, true);
@@ -508,7 +509,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public PathResource getParentPathResource(Long nodeId, String userId) throws ServiceException {
 		
 		Tree<PathResource> tree = this.buildParentPathResourceTree(nodeId, userId, true);
@@ -536,7 +537,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public PathResource getParentPathResource(String storeName, String relativePath, String userId) throws ServiceException {
 		
 		Tree<PathResource> tree = this.buildParentPathResourceTree(storeName, relativePath, userId, true);
@@ -563,6 +564,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public List<PathResource> getChildPathResources(Long dirId, String userId) throws ServiceException {
 		
 		// this function will properly evaluate the permissions for the parent directory
@@ -617,6 +619,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public DirectoryResource getChildDirectoryResource(Long dirId, String name, String userId) throws ServiceException {
 		
 		PathResource resource = this.getChildResource(dirId, name, ResourceType.DIRECTORY, userId);
@@ -636,10 +639,18 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public FileMetaResource getChildFileMetaResource(Long dirId, String name, String userId) throws ServiceException {
 		
+		CodeTimer timer = new CodeTimer();
+		timer.start();
+		
 		PathResource resource = this.getChildResource(dirId, name, ResourceType.FILE, userId);
+		
+		timer.stop();
+		
+		logger.info("getChildFileMetaResource completed in " + timer.getElapsedTime());
+		
 		if(resource != null) {
 			return (FileMetaResource)resource;
 		}
@@ -658,7 +669,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public DirectoryResource getDirectory(Long nodeId, String userId) throws ServiceException {
 		
 		PathResource resource = this.getPathResource(nodeId, userId);
@@ -686,7 +697,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public DirectoryResource getDirectory(String storeName, String relativePath, String userId) throws ServiceException {
 		
 		PathResource resource = this.getPathResource(storeName, relativePath, userId);
@@ -712,7 +723,7 @@ public class SecurePathResourceTreeService {
 	 * @return The parent directory of the resource, or null if the resource has not parent (root directories have not parent.)
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public DirectoryResource getParentDirectory(Long nodeId, String userId) throws ServiceException {
 		
 		PathResource parent = this.getParentPathResource(nodeId, userId);
@@ -740,7 +751,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws Exception
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public FileMetaResource getFileMetaResource(Long nodeId, String userId, boolean includeBinary) throws ServiceException {
 		
 		PathResource resource = this.getPathResource(nodeId, userId);
@@ -773,7 +784,7 @@ public class SecurePathResourceTreeService {
 	 * @return
 	 * @throws Exception
 	 */
-	//@MethodTimer
+	@MethodTimer
 	public FileMetaResource getFileMetaResource(String storeName, String relativePath, String userId, boolean includeBinary) throws ServiceException {
 		
 		PathResource resource = this.getPathResource(storeName, relativePath, userId);
@@ -1180,6 +1191,8 @@ public class SecurePathResourceTreeService {
 		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
 			public FileMetaResource doWork() throws ServiceException {
 				
+				CodeTimer timer = new CodeTimer();
+				timer.start();
 				logger.info("---- (START) ---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
 				
 				String fileName = filePath.getFileName().toString();
@@ -1210,7 +1223,13 @@ public class SecurePathResourceTreeService {
 				// broadcast directory contents changed event
 				resChangeService.directoryContentsChanged(toDir.getNodeId());				
 				
-				logger.info("----- (END) ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
+				timer.stop();
+				logger.info("----- (END " + timer.getElapsedTime() + ") ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
+				
+				timer.reset();
+				
+				timer.start();
+				logger.info("---- (START) ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
 				
 				//
 				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
@@ -1219,14 +1238,19 @@ public class SecurePathResourceTreeService {
 				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
 					public Void doWork() throws ServiceException {
 
-						logger.info("---- (START) ---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath());
+						CodeTimer timer = new CodeTimer();
+						timer.start();
+						logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath());
+						
 						try {
 							fileSystemRepository.refreshBinaryDataInDatabase(finalFileMetaResource);
 						} catch (Exception e) {
 							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 									+ "for file resource node => " + finalFileMetaResource.getNodeId(), e);
 						}
-						logger.info("----- (END) ----- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath());
+						timer.stop();
+						logger.info("----- (END " + timer.getElapsedTime() + ") ----- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + 
+								finalFileMetaResource.getRelativePath());
 						return null;				
 						
 					}
@@ -1237,8 +1261,11 @@ public class SecurePathResourceTreeService {
 				
 				// add to binary task manager (not general task manager)
 				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
-				refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
-				binaryTaskManager.addTask(refreshTask);				
+				refreshTask.setName("Refresh file binary [" + newOrUpdatedFileResource.toString() + "]");
+				binaryTaskManager.addTask(refreshTask);
+				
+				timer.stop();
+				logger.info("---- (END " + timer.getElapsedTime() + ") ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
 				
 				return newOrUpdatedFileResource;				
 			}
@@ -1248,7 +1275,7 @@ public class SecurePathResourceTreeService {
 		};
 		
 		AddFileTask addTask = new AddFileTask();
-		addTask.setName("Add File Without Binary [dirNodeId=" + toDir.getNodeId() + ", filePath=" + filePath + 
+		addTask.setName("Add File [dirNodeId=" + toDir.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
 		generalTaskManager.addTask(addTask);
 		

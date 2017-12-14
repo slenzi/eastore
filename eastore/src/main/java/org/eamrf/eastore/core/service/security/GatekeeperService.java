@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
+import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.gatekeeper.web.service.jaxws.model.Group;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ public class GatekeeperService {
 	 * @param userId - user id (ctep id)
 	 * @return A set of group codes
 	 */
+	@MethodTimer
 	public Set<String> getUserGroupCodes(String userId) throws ServiceException {
 		
 		Collection<Group> groups = getGatekeeperGroups(userId);
@@ -65,6 +67,7 @@ public class GatekeeperService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	@MethodTimer
 	public Collection<Group> getGatekeeperGroups(String userId) throws ServiceException {
 		
 		Map<String, Group> groupMap;
