@@ -234,7 +234,32 @@ public class FileSystemRepository {
 		
 		return jdbcTemplate.query(sql, storeResultExtractor, new Object[] { storeName });	
 		
-	}	
+	}
+	
+	/**
+	 * Fetch the store for the resource, first from the resource object itself, but if it doens't
+	 * exists then fetch it from the database.
+	 * 
+	 * @param resource
+	 * @return
+	 * @throws Exception
+	 */
+	public Store getStoreForResource(PathResource resource) throws Exception {
+		if(resource == null) {
+			return null;
+		}
+		Store store = resource.getStore();
+		if(store != null) {
+			return store;
+		}
+		Long storeId = resource.getStoreId();
+		if(storeId == null) {
+			return null;
+		}
+		store = this.getStoreById(storeId);
+		resource.setStore(store);
+		return store;
+	}
 	
 	/**
 	 * Fetch all stores
@@ -876,18 +901,25 @@ public class FileSystemRepository {
 	/**
 	 * Refreshes the data in eas_binary_resource (or adds a new entry) for the file
 	 * 
-	 * @param fileMetaResource
+	 * @param fileNodeId - the id of the file meta resource 
 	 * @return
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public FileMetaResource refreshBinaryDataInDatabase(FileMetaResource fileMetaResource) throws Exception {
+	public FileMetaResource refreshBinaryDataInDatabase(final Long fileNodeId) throws Exception {
+		
+		//
+		// rather than pass in the FileMetaResource object we pass in the ID for the file meta object
+		// and re-fetch it from the database. We do this in case the location of the file has changed
+		// by the time this method has been executed.
+		//
 		
 		CodeTimer timer = new CodeTimer();
-		timer.start();		
+		timer.start();
 		
-		final Store store = getStoreById(fileMetaResource.getStoreId());
-		final Long nodeId = fileMetaResource.getNodeId();
+		final FileMetaResource fileMetaResource = this.getFileMetaResource(fileNodeId, false);
+		final Store store = this.getStoreForResource(fileMetaResource);
+		//final Long nodeId = fileMetaResource.getNodeId();
 		final Path filePath = fileSystemUtil.buildPath(store, fileMetaResource);
 		final boolean haveBinaryInDb = fileMetaResource.getIsBinaryInDatabase();
 		long lFileSize = Files.size(filePath);
@@ -914,7 +946,7 @@ public class FileSystemRepository {
 								throws SQLException, DataAccessException {
 							
 							lobCreator.setBlobAsBinaryStream(statement, 1, inStream, fileSize);
-							statement.setLong(2, nodeId);
+							statement.setLong(2, fileNodeId);
 							
 						}
 						
@@ -932,7 +964,7 @@ public class FileSystemRepository {
 						protected void setValues(PreparedStatement statement, LobCreator lobCreator)
 								throws SQLException, DataAccessException {
 							
-							statement.setLong(1, nodeId);
+							statement.setLong(1, fileNodeId);
 							lobCreator.setBlobAsBinaryStream(statement, 2, inStream, fileSize);
 							
 						}
@@ -940,7 +972,7 @@ public class FileSystemRepository {
 					});
 			
 			// Update eas_file_meta_resource.is_binary_data_in_db to 'Y'
-			jdbcTemplate.update("update eas_file_meta_resource set is_file_data_in_db = 'Y' where node_id = ?", nodeId);			
+			jdbcTemplate.update("update eas_file_meta_resource set is_file_data_in_db = 'Y' where node_id = ?", fileNodeId);			
 		
 			fileMetaResource.setIsBinaryInDatabase(true);
 			
@@ -1045,21 +1077,11 @@ public class FileSystemRepository {
 		CodeTimer timer = new CodeTimer();
 		timer.start();
 		
-		String newFileName = srcFilePath.getFileName().toString();
-		
-		// get current (file) PathResource (case-insensitive search, so we can use the new file name)
-		//PathResource currPathRes = getChildPathResource(dirResource.getNodeId(), newFileName, ResourceType.FILE);
-		//if(currPathRes == null){
-		//	throw new Exception("Cannot update file " + newFileName + " in directory node => " + 
-		//			dirResource.getNodeId() + ", failed to fetch child (file) resource, return object was null.");
-		//}		
-		
-		//FileMetaResource currFileRes = (FileMetaResource)currPathRes;
-		Store store = getStoreById(dirResource.getStoreId());
-		
-		Long newFileSizeBytes = fileService.getSize(srcFilePath);
-		String newFileMimeType = fileService.getMimeType(srcFilePath);
-		String newRelFilePath = fileSystemUtil.buildRelativePath(dirResource, newFileName);
+		final String newFileName = srcFilePath.getFileName().toString();
+		final Store store = this.getStoreForResource(dirResource);
+		final Long newFileSizeBytes = fileService.getSize(srcFilePath);
+		final String newFileMimeType = fileService.getMimeType(srcFilePath);
+		final String newRelFilePath = fileSystemUtil.buildRelativePath(dirResource, newFileName);
 		
 		// old/current tree path for the old physical file
 		Path oldFilePath = fileSystemUtil.buildPath(store, currFileRes);
@@ -1169,7 +1191,7 @@ public class FileSystemRepository {
 		timer.reset();
 		
 		timer.start();
-		Store store = getStoreById(parentDir.getStoreId());
+		Store store = this.getStoreForResource(parentDir);
 		timer.stop();
 		logger.info("Fetched store in " + timer.getElapsedTime());
 		timer.reset();
@@ -1390,19 +1412,9 @@ public class FileSystemRepository {
 		// else get data from local file system
 		}else{
 		
-			Store store = resource.getStore();
-			if(store == null){
-				Long storeId = resource.getStoreId();
-				if(storeId == null){
-					throw new Exception("FileMetaResource storeId value is null. Need store path information to read file "
-							+ "data from local file system. Cannot populate FileMetaResource with binary data.");
-				}
-				store = getStoreById(storeId);
-				if(store == null){
-					throw new Exception("Failed to fetch store from DB for FileMetaResource, returned store object "
-							+ "was null, storeId => " + storeId + " Cannot populate FileMetaResource with binary data.");
-				}
-				resource.setStore(store);
+			Store store = this.getStoreForResource(resource);
+			if(store == null) {
+				throw new Exception("Cannot populate file meta resource with binary data from database because the store could not be fetched.");
 			}
 			Path pathToFile = fileSystemUtil.buildPath(store, resource);
 			if(!Files.exists(pathToFile)){
@@ -1529,8 +1541,8 @@ public class FileSystemRepository {
 		// replace existing file
 		if(hasExisting && replaceExisting){
 			
-			Store sourceStore = getStoreById(fileToMove.getStoreId());
-			Store destinationStore = getStoreById(destDir.getStoreId());
+			Store sourceStore = this.getStoreForResource(fileToMove);
+			Store destinationStore = this.getStoreForResource(destDir);			
 			
 			// current/old path to file on local file system
 			Path oldFullPath = fileSystemUtil.buildPath(sourceStore, fileToMove);
@@ -1573,8 +1585,8 @@ public class FileSystemRepository {
 			
 		}else{
 			
-			Store sourceStore = getStoreById(fileToMove.getStoreId());
-			Store destinationStore = getStoreById(destDir.getStoreId());
+			Store sourceStore = this.getStoreForResource(fileToMove);
+			Store destinationStore = this.getStoreForResource(destDir);			
 			
 			// current/old path to file on local file system
 			Path oldFullPath = fileSystemUtil.buildPath(sourceStore, fileToMove);

@@ -1071,18 +1071,20 @@ public class SecurePathResourceTreeService {
 				//
 				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
 				//
-				final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
+				//final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
+				final Long fileNodeId = newOrUpdatedFileResource.getNodeId();
+				final String fileRelPath = newOrUpdatedFileResource.getRelativePath();
 				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
 					public Void doWork() throws ServiceException {
 
-						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(START)");
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(START)");
 						try {
-							fileSystemRepository.refreshBinaryDataInDatabase(finalFileMetaResource);
+							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
 						} catch (Exception e) {
 							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
-									+ "for file resource node => " + finalFileMetaResource.getNodeId(), e);
+									+ "for file resource node => " + fileNodeId, e);
 						}
-						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath() + "(END)");
+						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(END)");
 						return null;				
 						
 					}
@@ -1234,23 +1236,25 @@ public class SecurePathResourceTreeService {
 				//
 				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
 				//
-				final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
+				//final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
+				final Long fileNodeId = newOrUpdatedFileResource.getNodeId();
+				final String fileRelPath = newOrUpdatedFileResource.getRelativePath();
 				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
 					public Void doWork() throws ServiceException {
 
 						CodeTimer timer = new CodeTimer();
 						timer.start();
-						logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + finalFileMetaResource.getRelativePath());
+						logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath);
 						
 						try {
-							fileSystemRepository.refreshBinaryDataInDatabase(finalFileMetaResource);
+							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
 						} catch (Exception e) {
 							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
-									+ "for file resource node => " + finalFileMetaResource.getNodeId(), e);
+									+ "for file resource node => " + fileNodeId, e);
 						}
 						timer.stop();
 						logger.info("----- (END " + timer.getElapsedTime() + ") ----- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + 
-								finalFileMetaResource.getRelativePath());
+								fileRelPath);
 						return null;				
 						
 					}
