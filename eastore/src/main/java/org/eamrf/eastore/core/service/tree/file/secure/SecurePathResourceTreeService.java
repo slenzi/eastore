@@ -422,6 +422,9 @@ public class SecurePathResourceTreeService {
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get store for store id => " + storeId, e);
 		}
+		if(store == null) {
+			return null;
+		}		
 		
 		// validate read, write, and execute bits
 		if(!StringUtil.isNullEmpty(userId)) {
@@ -452,6 +455,9 @@ public class SecurePathResourceTreeService {
 			store = fileSystemRepository.getStoreByName(lowerStoreName);
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get store for store name => " + storeName, e);
+		}
+		if(store == null) {
+			return null;
 		}
 		
 		// validate read, write, and execute bits

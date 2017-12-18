@@ -782,10 +782,12 @@ public class FileSystemRepository {
 			
 			// get parent directory and check if a child directory resource with the new name already exists
 			PathResource parentDir = getParentPathResource(resource.getNodeId());
-			if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.DIRECTORY, resource.getNodeId()) ){
-				throw new Exception("Cannot rename directory resource " + resource.getNodeId() + " to " + newName + 
-						", the directory in which the resource exists already contains a child directory with that name.");
-			}			
+			if(parentDir != null) {
+				if(hasChildPathResource(parentDir.getNodeId(), newName, ResourceType.DIRECTORY, resource.getNodeId()) ){
+					throw new Exception("Cannot rename directory resource " + resource.getNodeId() + " to " + newName + 
+							", the directory in which the resource exists already contains a child directory with that name.");
+				}				
+			} // else it's a root directory for a store			
 			
 			_renameDirectory((DirectoryResource)resource, newName);
 			
