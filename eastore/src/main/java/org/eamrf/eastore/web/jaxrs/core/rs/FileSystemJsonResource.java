@@ -163,7 +163,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = pathResourceTreeService.getStoreByName(storeName);
+			store = pathResourceTreeService.getStoreByName(storeName, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -496,9 +496,11 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/store/name/{storeName}")
+	@Path("/store/userId/{userId}/name/{storeName}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Store getStoreByName(@PathParam("storeName") String storeName) throws WebServiceException {
+	public Store getStoreByName(@PathParam("storeName") String storeName, @PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		if(StringUtil.isNullEmpty(storeName)){
 			handleError("Missing storeName parameter", WebExceptionType.CODE_IO_ERROR);
@@ -509,7 +511,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = pathResourceTreeService.getStoreByName(storeName);
+			store = pathResourceTreeService.getStoreByName(storeName, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -527,13 +529,15 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/store")
+	@Path("/store/userId/{userId}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<Store> getStores() throws WebServiceException {
+	public List<Store> getStores(@PathParam("userId") String userId) throws WebServiceException {
+		
+		validateUserId(userId);
 		
 		List<Store> stores = null;
 		try {
-			stores = pathResourceTreeService.getStores();
+			stores = pathResourceTreeService.getStores(userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching stores, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);

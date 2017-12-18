@@ -278,6 +278,22 @@ public class FileSystemRepository {
 	}
 	
 	/**
+	 * Update store name & desc.
+	 * 
+	 * @param storeToEdit - the store to edit
+	 * @param storeName - new name
+	 * @param storeDesc - new desc
+	 */
+	public void updateStore(Store storeToEdit, String storeName, String storeDesc) {
+
+		// TODO - add update for store path, max file size db, and access rule
+		
+		jdbcTemplate.update("update eas_store set store_name = ?, store_description = ? where store_id = ?",
+				storeName, storeDesc, storeToEdit.getId());			
+		
+	}	
+	
+	/**
 	 * Get a list of PathResource starting at the specified dirNodeId. With this information
 	 * you can build a tree. This will not contain the binary data for files.
 	 * 

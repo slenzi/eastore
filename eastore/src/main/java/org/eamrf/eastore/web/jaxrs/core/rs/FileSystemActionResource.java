@@ -505,7 +505,55 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	return store;
     	
-    }    
+    }
+    
+    /**
+     * Update a store
+     * 
+     * @param storeId
+     * @param storeName
+     * @param storeDesc
+     * @param rootDirName
+     * @param rootDirDesc
+     * @param rootDirReadGroup1
+     * @param rootDirWriteGroup1
+     * @param rootDirExecuteGroup1
+     * @param userId
+     * @return
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/updateStore")
+    @Produces(MediaType.APPLICATION_JSON)    
+	public Response updateStore(
+			@QueryParam("storeId") Long storeId,
+			@QueryParam("storeName") String storeName,
+			@QueryParam("storeDesc") String storeDesc,
+			@QueryParam("rootDirName") String rootDirName, 
+			@QueryParam("rootDirDesc") String rootDirDesc, 
+    		@QueryParam("rootDirReadGroup1") String rootDirReadGroup1,
+    		@QueryParam("rootDirWriteGroup1") String rootDirWriteGroup1,
+    		@QueryParam("rootDirExecuteGroup1") String rootDirExecuteGroup1,
+			@QueryParam("userId") String userId) throws WebServiceException {
+		
+		if(storeId == null || StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc, 
+				rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId)) {
+			
+    		handleError("Missing required params to update store", WebExceptionType.CODE_IO_ERROR);			
+			
+		}
+		
+		try {
+			pathResourceTreeService.updateStore(storeId, storeName, storeDesc, rootDirName, rootDirDesc, 
+					rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId);
+		} catch (ServiceException e) {
+			handleError("Error updating store, id=" + storeId + ", " + 
+					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+		
+		return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();		
+		
+	}
   
     /**
      * Delete a file

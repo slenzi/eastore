@@ -311,7 +311,7 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	String htmlTree = buildPathResourceTreeHtml(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree, userId);
 
     	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
@@ -351,7 +351,7 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	String htmlTree = buildPathResourceTreeHtml(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree, userId);
     	
     	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
@@ -387,7 +387,7 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for nodeId => " + nodeId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	String htmlTree = buildPathResourceTreeHtml(tree);
+    	String htmlTree = buildPathResourceTreeHtml(tree, userId);
 
     	return Response.ok(htmlTree, MediaType.TEXT_HTML).build();
     	
@@ -467,7 +467,7 @@ public class TreeResource extends BaseResourceHandler {
     		handleError("Tree object was null for dirId => " + dirId, WebExceptionType.CODE_IO_ERROR);
     	}
     	
-    	String htmlTree = buildPathResourceTreeDownload(tree);
+    	String htmlTree = buildPathResourceTreeDownload(tree, userId);
     	
     	StringBuffer htmlResponse = new StringBuffer();
     	
@@ -492,10 +492,11 @@ public class TreeResource extends BaseResourceHandler {
      * This method also logs the tree.
      * 
      * @param tree
+     * @param userId - id of user completing the action
      * @return
      * @throws WebServiceException
      */
-    private String buildPathResourceTreeHtml(Tree<PathResource> tree) throws WebServiceException {
+    private String buildPathResourceTreeHtml(Tree<PathResource> tree, String userId) throws WebServiceException {
     	
     	if(tree == null){
     		return "null tree";
@@ -505,7 +506,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.getStore(rootNode);
+			store = pathResourceTreeService.getStore(rootNode, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -535,10 +536,11 @@ public class TreeResource extends BaseResourceHandler {
      * This method also logs the tree.
      * 
      * @param tree
+     * @param userId - id of user completing the action
      * @return
      * @throws WebServiceException
      */
-    private String buildPathResourceTreeDownload(Tree<PathResource> tree) throws WebServiceException {
+    private String buildPathResourceTreeDownload(Tree<PathResource> tree, String userId) throws WebServiceException {
     	
     	if(tree == null){
     		return "null tree";
@@ -548,7 +550,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.getStore(rootNode);
+			store = pathResourceTreeService.getStore(rootNode, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

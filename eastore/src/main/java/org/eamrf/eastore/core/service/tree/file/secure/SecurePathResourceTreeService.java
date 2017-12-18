@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CodeTimer;
+import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
@@ -29,6 +31,7 @@ import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.messaging.ResourceChangeService;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
 import org.eamrf.eastore.core.tree.Tree;
@@ -83,7 +86,10 @@ public class SecurePathResourceTreeService {
     private SecurePathResourceTreeBuilder securePathResourceUtil;
     
     @Autowired
-    private ResourceChangeService resChangeService;    
+    private ResourceChangeService resChangeService;
+    
+    @Autowired
+    private GatekeeperService gatekeeperService;    
     
     // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
@@ -109,7 +115,7 @@ public class SecurePathResourceTreeService {
 		List<Store> stores = null;
 		
 		try {
-			stores = getStores();
+			stores = getStores(null);
 		} catch (ServiceException e) {
 			logger.error("Failed to fetch list of stores. Cannot initialize task managers. " + e.getMessage(), e);
 			return;
@@ -370,17 +376,45 @@ public class SecurePathResourceTreeService {
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getBinaryTaskManager();
 		
-	}	
+	}
+	
+	/**
+	 * Set the access bits (read, write, execute) on the directory using the set of groups codes to determine access.
+	 * 
+	 * @param userGroupCodes
+	 * @param dir
+	 */
+	private void setAccessBits(Set<String> userGroupCodes, DirectoryResource dir) {
+		if(dir == null) {
+			return;
+		}
+		if(CollectionUtil.isEmpty(userGroupCodes)) {
+			dir.setCanRead(false);
+			dir.setCanWrite(false);
+			dir.setCanExecute(false);
+			return;
+		}
+		if(dir.getReadGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanRead(true);
+		}
+		if(dir.getWriteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanWrite(true);
+		}
+		if(dir.getExecuteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanExecute(true);
+		}		
+	}
 	
 	/**
 	 * fetch a store by id
 	 * 
 	 * @param storeId
+	 * @param userId - is of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
-	public Store getStoreById(Long storeId) throws ServiceException {
+	@MethodTimer
+	public Store getStoreById(Long storeId, String userId) throws ServiceException {
 		
 		Store store = null;
 		try {
@@ -388,6 +422,14 @@ public class SecurePathResourceTreeService {
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get store for store id => " + storeId, e);
 		}
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = store.getRootDir();
+			this.setAccessBits(userGroupCodes, rootDir);
+		}
+		
 		return store;
 		
 	}
@@ -396,11 +438,12 @@ public class SecurePathResourceTreeService {
 	 * fetch a store by name
 	 * 
 	 * @param storeName
+	 * @param userId - is of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
-	public Store getStoreByName(String storeName) throws ServiceException {
+	@MethodTimer
+	public Store getStoreByName(String storeName, String userId) throws ServiceException {
 		
 		String lowerStoreName = storeName.toLowerCase();
 		
@@ -410,6 +453,14 @@ public class SecurePathResourceTreeService {
 		} catch (Exception e) {
 			throw new ServiceException("Failed to get store for store name => " + storeName, e);
 		}
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = store.getRootDir();
+			this.setAccessBits(userGroupCodes, rootDir);
+		}		
+		
 		return store;
 		
 	}	
@@ -419,11 +470,12 @@ public class SecurePathResourceTreeService {
 	 * this method will attempt to fetch it from the database using the store id.
 	 * 
 	 * @param r
+	 * @param userId - is of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
-	public Store getStore(PathResource r) throws ServiceException {
+	@MethodTimer
+	public Store getStore(PathResource r, String userId) throws ServiceException {
 		
 		if(r == null){
 			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
@@ -435,18 +487,19 @@ public class SecurePathResourceTreeService {
 		if(r.getStoreId() == null){
 			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
 		}
-		return getStoreById(r.getStoreId());
+		return getStoreById(r.getStoreId(), userId);
 		
 	}	
 	
 	/**
 	 * Fetch all stores
 	 * 
+	 * @param userId - id of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
-	//@MethodTimer
-	public List<Store> getStores() throws ServiceException {
+	@MethodTimer
+	public List<Store> getStores(String userId) throws ServiceException {
 		
 		List<Store> stores = null;
 		try {
@@ -454,8 +507,19 @@ public class SecurePathResourceTreeService {
 		} catch (Exception e) {
 			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
 		}
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = null;
+			for(Store nextStore : stores) {
+				rootDir = nextStore.getRootDir();
+				this.setAccessBits(userGroupCodes, rootDir);
+			}
+		}
+		
 		return stores;
-	}	
+	}
 	
 	/**
 	 * Fetch a PathResource by Id, and evaluate the permissions.
@@ -762,7 +826,7 @@ public class SecurePathResourceTreeService {
 		if(resource.getResourceType() == ResourceType.FILE){
 			FileMetaResource fileMeta = (FileMetaResource)resource;
 			if(includeBinary){
-				fileMeta = populateWithBinaryData(fileMeta);
+				fileMeta = populateWithBinaryData(fileMeta, userId);
 			}
 			return fileMeta;
 		}else{
@@ -780,6 +844,7 @@ public class SecurePathResourceTreeService {
 	 * 
 	 * @param storeName
 	 * @param relativePath
+	 * @param userId - id of user completing the action
 	 * @param includeBinary
 	 * @return
 	 * @throws Exception
@@ -795,7 +860,7 @@ public class SecurePathResourceTreeService {
 		if(resource.getResourceType() == ResourceType.FILE){
 			FileMetaResource fileMeta = (FileMetaResource)resource;
 			if(includeBinary){
-				fileMeta = populateWithBinaryData(fileMeta);
+				fileMeta = populateWithBinaryData(fileMeta, userId);
 			}
 			return fileMeta;
 		}else{
@@ -811,10 +876,11 @@ public class SecurePathResourceTreeService {
 	 * the database (if it exists) or from the local file system.
 	 * 
 	 * @param resource
+	 * @param userId - id of user completing the action
 	 * @return
 	 * @throws Exception
 	 */
-	private FileMetaResource populateWithBinaryData(FileMetaResource resource) throws ServiceException {
+	private FileMetaResource populateWithBinaryData(FileMetaResource resource, String userId) throws ServiceException {
 		
 		// error checking
 		if(resource == null){
@@ -847,7 +913,7 @@ public class SecurePathResourceTreeService {
 					throw new ServiceException("FileMetaResource storeId value is null. Need store path information to read file "
 							+ "data from local file system. Cannot populate FileMetaResource with binary data.");
 				}
-				store = getStoreById(storeId);
+				store = getStoreById(storeId, userId);
 				if(store == null){
 					throw new ServiceException("Failed to fetch store from DB for FileMetaResource, returned store object "
 							+ "was null, storeId => " + storeId + " Cannot populate FileMetaResource with binary data.");
@@ -922,7 +988,8 @@ public class SecurePathResourceTreeService {
 		}
 		
 		// make sure there doesn't exist already a store with the same name (case insensitive)
-		Store store = getStoreByName(storeName);
+		// TOOO - pass in userId
+		Store store = getStoreByName(storeName, null);
 		if(store != null){
 			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
 		}
@@ -961,6 +1028,63 @@ public class SecurePathResourceTreeService {
 		return store;
 		
 	}
+	
+	/**
+	 * Update a store (add ability to change store path at a later date.)
+	 * 
+	 * @param storeId - if of store to update
+	 * @param storeName - new name for store
+	 * @param storeDesc - new description for store
+	 * @param rootDirName - new name for root directory
+	 * @param rootDirDesc - new description for root directory
+	 * @param readGroup1 - new read group for root directory
+	 * @param writeGroup1 - new write group for root directory
+	 * @param executeGroup1 - new execute group for root directory
+	 * @param userId - id of user completing the action
+	 * @throws ServiceException
+	 */
+	public void updateStore(
+			Long storeId,
+			String storeName,
+			String storeDesc,
+			String rootDirName, 
+			String rootDirDesc, 
+			String readGroup1, 
+			String writeGroup1, 
+			String executeGroup1, 
+			String userId) throws ServiceException {
+		
+		// fetch store
+		Store storeToEdit = this.getStoreById(storeId, userId);
+		Long rootDirId = storeToEdit.getRootDir().getNodeId();
+		DirectoryResource rootDir = this.getDirectory(rootDirId, userId);
+		
+		// need execute permission on root directory of store in order to edit store
+		if(!rootDir.getCanExecute()) {
+			logger.info("No execute permission for store root directory. Permission to edit store denied.");
+			this.handlePermissionDenied(PermissionError.EXECUTE, rootDir, userId);
+		}
+		
+		// TODO - the following to function calls *should* be an atomic operation (currently not.)
+		
+		// make sure there doesn't exist already a store with the same name (excluding store we're editing in case we're 
+		// simply changing the case (upper/lower) of the store)
+		Store existingStore = getStoreByName(storeName, userId);
+		if(existingStore != null && !storeId.equals(existingStore.getId())){
+			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
+		}		
+		
+		// update store name & description
+		this.fileSystemRepository.updateStore(storeToEdit, storeName, storeDesc);
+		
+		// update root directory
+		this.updateDirectory(rootDirId, rootDirName, rootDirDesc, readGroup1, writeGroup1, executeGroup1, userId);
+		
+		
+		// TODO - rename task managers
+		
+		
+	}	
 	
 	/**
 	 * Adds new file to the database, waiting until complete. After file meta data is added it spawns a non-blocking child task for adding/refreshing the
@@ -1025,7 +1149,7 @@ public class SecurePathResourceTreeService {
 			this.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 		}		
 		
-		final Store store = getStore(toDir);
+		final Store store = getStore(toDir, userId);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);		
 		
@@ -1182,7 +1306,7 @@ public class SecurePathResourceTreeService {
 			this.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 		}		
 		
-		final Store store = getStore(toDir);
+		final Store store = getStore(toDir, userId);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);		
 		
@@ -1329,7 +1453,7 @@ public class SecurePathResourceTreeService {
 			throw new ServiceException("Error fetching parent directory file file resource with node id = " + fileNodeId);		
 		}
 		
-		final Store store = getStore(file);
+		final Store store = getStore(file, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -1447,7 +1571,7 @@ public class SecurePathResourceTreeService {
 			this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 		}		
 		
-		final Store store = getStore(parentDir);
+		final Store store = getStore(parentDir, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
 	
 		class Task extends AbstractQueuedTask<DirectoryResource> {
@@ -1507,11 +1631,11 @@ public class SecurePathResourceTreeService {
 		// need execute & write permission on directory
 		DirectoryResource dir = this.getDirectory(dirNodeId, userId);
 		if(!dir.getCanExecute()) {
-			logger.info("No execute permission");
+			logger.info("No execute permission on directory");
 			this.handlePermissionDenied(PermissionError.EXECUTE, dir, userId);
 		}
 		if(!dir.getCanWrite()) {
-			logger.info("No write permission");
+			logger.info("No write permission on directory");
 			this.handlePermissionDenied(PermissionError.WRITE, dir, userId);
 		}		
 		
@@ -1535,7 +1659,7 @@ public class SecurePathResourceTreeService {
 			}			
 		}
 		
-		final Store store = getStore(dir);
+		final Store store = getStore(dir, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -1638,7 +1762,7 @@ public class SecurePathResourceTreeService {
 			this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
 		}		
 		
-		final Store store = getStore(fileMetaResource);
+		final Store store = getStore(fileMetaResource, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -1695,7 +1819,7 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public void removeDirectory(DirectoryResource dirToDelete, String userId) throws ServiceException {
 		
-		final Store store = getStore(dirToDelete);
+		final Store store = getStore(dirToDelete, userId);
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
@@ -1808,7 +1932,7 @@ public class SecurePathResourceTreeService {
 			handlePermissionDenied(PermissionError.READ, fileToCopy, userId);
 		}
 		
-		Store soureStore = getStore(fileToCopy);
+		Store soureStore = getStore(fileToCopy, userId);
 		Path sourceFilePath = fileSystemUtil.buildPath(soureStore, fileToCopy);
 		
 		// can't copy a file to the directory it's already in
@@ -1867,8 +1991,8 @@ public class SecurePathResourceTreeService {
 		
 		final DirectoryResource fromDir = this.getDirectory(copyDirNodeId, userId);
 		final DirectoryResource toDir = this.getDirectory(destDirNodeId, userId);
-		final Store fromStore = getStore(fromDir);
-		final Store toStore = getStore(fromDir);
+		final Store fromStore = getStore(fromDir, userId);
+		final Store toStore = getStore(fromDir, userId);
 
 		final Tree<PathResource> fromTree = this.buildPathResourceTree(fromDir, userId);
 		
@@ -2021,7 +2145,7 @@ public class SecurePathResourceTreeService {
 			handlePermissionDenied(PermissionError.WRITE, fileToMove, userId);
 		}
 		
-		final Store store = getStore(destDir);
+		final Store store = getStore(destDir, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
 		
 		class Task extends AbstractQueuedTask<Void> {
@@ -2108,8 +2232,8 @@ public class SecurePathResourceTreeService {
 		final Tree<PathResource> fromTree = this.buildPathResourceTree(dirToMove, userId);
 		
 		DirectoryResource toDir = this.getDirectory(destDirId, userId);
-		final Store fromStore = getStore(dirToMove);
-		final Store toStore = getStore(toDir);
+		final Store fromStore = getStore(dirToMove, userId);
+		final Store toStore = getStore(toDir, userId);
 		
 		// walk the tree top-down and copy over directories one at a time, then use
 		// existing moveFile method.
