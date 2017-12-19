@@ -35,8 +35,27 @@ public class QueuedTaskManager implements TaskManager {
 	
 	private String managerName = QueuedTaskManager.class.getName();
 	
+	// amount of time to wait in milliseconds before consuming next item in queue
+	private long consumeFrequency = 0L;
+	
+	/**
+	 * Create a queued task manager that will consume tasks one a time, where the
+	 * next task will be consume and process immediately after the preceding task
+	 * is completed (zero wait time.)
+	 */
 	public QueuedTaskManager() {
 		
+	}
+	
+	/**
+	 * Create a queued task manager that will consume tasks one a time, where the next
+	 * task will be consumed and processed at a predefined time after the preceding task
+	 * is completed.  
+	 * 
+	 * @param consumeFrequency - how long to wait in milliseconds before consuming the next task
+	 */
+	public QueuedTaskManager(long consumeFrequency) {
+		this.consumeFrequency = consumeFrequency;
 	}
 	
 	/**
@@ -74,7 +93,7 @@ public class QueuedTaskManager implements TaskManager {
 		
 		//this.executorService.submit(this);
 		this.executorService.execute(this);
-		
+
 	}
 
 	/**
@@ -140,12 +159,28 @@ public class QueuedTaskManager implements TaskManager {
 		
 	}
 
+	/**
+	 * Check if the task manager is already running
+	 * 
+	 * @return
+	 */
 	public boolean isRunning() {
 		return isRunning;
 	}
 	
 	/**
-	 * Run this manager
+	 * Check if the task manager already contains a task ( comparing tasks using equals() )
+	 * 
+	 * @param task
+	 * @return
+	 */
+	public boolean contains(QueuedTask<?> task) {
+		logger.info("Checking if queue contains existing task. Current queue size = " + queue.size());
+		return queue.contains(task);
+	}
+	
+	/**
+	 * Run this task manager
 	 */
 	@Override
 	public void run() {
@@ -166,6 +201,10 @@ public class QueuedTaskManager implements TaskManager {
 				
 				// wait 5 seconds for next item in queue
 				consume(queue.poll(5000, TimeUnit.MILLISECONDS));
+				
+				if(consumeFrequency > 0L) {
+					Thread.sleep(consumeFrequency);
+				}
 				
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();

@@ -20,10 +20,8 @@ public class ResourceChangeMessage implements Serializable {
 	private LocalDate date = null;
 	private LocalTime time = null;	
 
-	public ResourceChangeMessage(/*EventCode eventCode, Long nodeId*/) {
-		//this.code = eventCode.getCodeString();
-		//this.message = EventCode.getCodeMessage(this.code);
-		//this.nodeId = nodeId;
+	public ResourceChangeMessage() {
+
 	}
 
 	public String getCode() {

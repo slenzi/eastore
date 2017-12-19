@@ -43,5 +43,26 @@ public class TaskManagerProvider {
 		return manager;
 		
 	}
+	
+	/**
+	 * Create a new singleton instance of QueuedTaskManager 
+	 * 
+	 * @param consumeFrequency - how long to wait in milliseconds between consuming each task in the queue
+	 * @return
+	 */
+	@Bean
+	public QueuedTaskManager createQueuedTaskManager(long consumeFrequency){
+		
+		logger.info("Creating new " + QueuedTaskManager.class.getName());
+		
+		QueuedTaskManager manager = new QueuedTaskManager(consumeFrequency);
+		
+		// for some reason our BeanPostProcessor is not running, so we manually wire the logger dependency.
+		// bad hack... figure this out later.
+		manager.setLogger(LoggerFactory.getLogger(QueuedTaskManager.class));
+		
+		return manager;
+		
+	}	
 
 }

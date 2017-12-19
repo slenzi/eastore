@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.concurrent.task.QueuedTaskManager;
@@ -145,6 +146,19 @@ public class SecurePathResourceTreeService {
 			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
 			storeTaskManagerMap.put(store, mapEntry);
 			
+		}
+		
+	}
+	
+	/**
+	 * Stop queued task managers
+	 */
+	@PreDestroy
+	public void cleanup() {
+		
+		for(StoreTaskManagerMap map : storeTaskManagerMap.values()) {
+			map.getBinaryTaskManager().stopTaskManager();
+			map.getGeneralTaskManager().stopTaskManager();
 		}
 		
 	}	
@@ -1595,6 +1609,8 @@ public class SecurePathResourceTreeService {
 				// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
 				DirectoryResource evaluatedDir = getDirectory(dirResource.getNodeId(), userId);
 				
+				resChangeService.directoryContentsChanged(parentDir.getNodeId());
+				
 				return evaluatedDir;				
 				
 			}
@@ -1680,6 +1696,8 @@ public class SecurePathResourceTreeService {
 					throw new ServiceException("Error updating directory with node id => " + dir.getNodeId() + ". " + e.getMessage(), e);
 				}
 				
+				resChangeService.directoryContentsChanged(parentDir.getNodeId());
+				
 				return null;
 				
 			}
@@ -1759,13 +1777,22 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public void removeFile(FileMetaResource fileMetaResource, String userId) throws ServiceException {
 		
+		DirectoryResource parentDir = this.getParentDirectory(fileMetaResource.getNodeId(), userId);
+		
 		// user must have read & write access on parent directory
 		// file resource inherits permission from parent directory, so this works.
-		if(!fileMetaResource.getCanRead()) {
-			this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
+		//if(!fileMetaResource.getCanRead()) {
+		//	this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
+		//}		
+		//if(!fileMetaResource.getCanWrite()) {
+		//	this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
+		//}
+		
+		if(!parentDir.getCanRead()) {
+			this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
 		}		
-		if(!fileMetaResource.getCanWrite()) {
-			this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
+		if(!parentDir.getCanWrite()) {
+			this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 		}		
 		
 		final Store store = getStore(fileMetaResource, userId);
@@ -1781,6 +1808,8 @@ public class SecurePathResourceTreeService {
 				} catch (Exception e) {
 					throw new ServiceException("Error removing file with node id => " + fileMetaResource.getNodeId() + ". " + e.getMessage(), e);
 				}
+				
+				resChangeService.directoryContentsChanged(parentDir.getNodeId());
 				
 				return null;
 				
@@ -1846,7 +1875,7 @@ public class SecurePathResourceTreeService {
 							+ "You cannot use this method to remove a root directory.");
 				}				
 				
-				pathResTreeLogger.logTree(tree);
+				//pathResTreeLogger.logTree(tree);
 				
 				try {
 					
@@ -2142,13 +2171,14 @@ public class SecurePathResourceTreeService {
 		if(!destDir.getCanWrite()){
 			handlePermissionDenied(PermissionError.WRITE, destDir, userId);
 		}
+		
 		// user must have read and write on parent directory of file being moved
-		// file resource inherits permission from parent directory, so this works.		
-		if(!fileToMove.getCanRead()) {
-			handlePermissionDenied(PermissionError.READ, fileToMove, userId);
+		DirectoryResource sourceDir = this.getParentDirectory(fileToMove.getChildNodeId(), userId);	
+		if(!sourceDir.getCanRead()) {
+			handlePermissionDenied(PermissionError.READ, sourceDir, userId);
 		}
-		if(!fileToMove.getCanWrite()) {
-			handlePermissionDenied(PermissionError.WRITE, fileToMove, userId);
+		if(!sourceDir.getCanWrite()) {
+			handlePermissionDenied(PermissionError.WRITE, sourceDir, userId);
 		}
 		
 		final Store store = getStore(destDir, userId);
@@ -2165,6 +2195,9 @@ public class SecurePathResourceTreeService {
 					throw new ServiceException("Error moving file " + fileToMove.getNodeId() + " to directory " + 
 							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 				}
+				
+				resChangeService.directoryContentsChanged(sourceDir.getNodeId());
+				resChangeService.directoryContentsChanged(destDir.getNodeId());
 				
 				return null;
 				
