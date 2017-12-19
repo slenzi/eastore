@@ -4,7 +4,10 @@
 package org.eamrf.eastore.core.config;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.StringUtil;
+import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer;
@@ -25,7 +28,10 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 
 	@InjectLogger
-	private Logger logger;	
+	private Logger logger;
+	
+    @Autowired
+    private ManagedProperties appProps;		
 	
 	public WebSocketConfig() {
 		
@@ -58,8 +64,18 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		// (replace 45001 with whatever 'server.port' value you specified in the build properties file)
 		StompWebSocketEndpointRegistration endpoint = registry.addEndpoint("/stomp-service");
 		
+		String originsString = StringUtil.changeNull(appProps.getProperty("cors.allowed.origins")).trim();
+		String[] allowedOrigins = new String[0];
+		if(!originsString.equals("")) {
+			allowedOrigins = originsString.split(",");
+			for(int i=0; i<allowedOrigins.length; i++) {
+				allowedOrigins[i] = allowedOrigins[i].trim();
+				logger.info("Allowed CORS origin = " + allowedOrigins[i]);
+			}
+		}
+		
 		endpoint
-			.setAllowedOrigins("*") // allow access from all origins for now
+			.setAllowedOrigins(allowedOrigins)
 			.setHandshakeHandler(handshakeHandler);
 		
 		SockJsServiceRegistration sockReg = endpoint.withSockJS();
