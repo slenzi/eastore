@@ -1488,6 +1488,8 @@ public class SecurePathResourceTreeService {
 					throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 				}
 				
+				resChangeService.directoryContentsChanged(parentDir.getNodeId());
+				
 				return null;
 				
 			}
