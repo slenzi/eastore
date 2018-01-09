@@ -1655,9 +1655,9 @@ public class FileSystemRepository {
 	public void updateDirectory(DirectoryResource dir, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1) throws Exception {
 		
 		// perform recursive rename, if name is actually different
-		if(!dir.getPathName().equals(name)) {
-			this.renamePathResource(dir, name);
-		}
+		//if(!dir.getPathName().equals(name)) {
+		this.renamePathResource(dir, name);
+		//}
 		
 		// update other fields
 		jdbcTemplate.update("update eas_path_resource set path_desc = ?, read_group_1 = ?, write_group_1 = ?, execute_group_1 = ? where node_id = ?",
@@ -1676,9 +1676,9 @@ public class FileSystemRepository {
 	public void updateFile(FileMetaResource file, String newName, String newDesc) throws Exception {
 		
 		// perform rename, if name is actually different
-		if(!file.getPathName().equals(newName)) {
-			this.renamePathResource(file, newName);
-		}
+		//if(!file.getPathName().equals(newName)) {
+		this.renamePathResource(file, newName);
+		//}
 		
 		// update other fields
 		jdbcTemplate.update("update eas_path_resource set path_desc = ? where node_id = ?",
