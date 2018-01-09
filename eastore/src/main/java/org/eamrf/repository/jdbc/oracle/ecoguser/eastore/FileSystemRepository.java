@@ -1358,7 +1358,7 @@ public class FileSystemRepository {
 		List<PathResource> childResources = getPathResourceTree(dirNodeId, 1);
 		if(childResources != null && childResources.size() > 0){
 			for(PathResource pr : childResources){
-				if(ignoreChildId != null && pr.getNodeId() == ignoreChildId) {
+				if(ignoreChildId != null && pr.getNodeId().equals(ignoreChildId)) {
 					// ignore this child
 					continue;
 				}
