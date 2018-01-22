@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import javax.activation.DataHandler;
 
+import org.apache.commons.io.FilenameUtils;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
@@ -64,7 +65,7 @@ public class UploadPipeline {
 			boolean replaceExisting,
 			String userId) throws ServiceException {
 		
-		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
+		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
 		pathResourceTreeService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId);
 		
@@ -91,7 +92,7 @@ public class UploadPipeline {
 			boolean replaceExisting,
 			String userId) throws ServiceException {	
 		
-		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler);
+		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
 		pathResourceTreeService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId);
 		
@@ -102,10 +103,12 @@ public class UploadPipeline {
 	 * 
 	 * @param fileName
 	 * @param dataHandler
+	 * @param cleanFileName - Pass true to clean the file name by removing non-alphanumeric characters, 
+	 * 	preserving period, underscore, and dash (._-). Pass false not to clean the file name.
 	 * @return
 	 * @throws ServiceException
 	 */
-	private Path saveIncomingDataToTempDir(String fileName, DataHandler dataHandler) throws ServiceException {
+	private Path saveIncomingDataToTempDir(String fileName, DataHandler dataHandler, boolean cleanFileName) throws ServiceException {
 		
 		Path tempDir = createTempDir();
 		
@@ -116,7 +119,12 @@ public class UploadPipeline {
 			throw new ServiceException("Upload pipeline error, failed to get InputStream from DataHandler, " + e.getMessage(), e);
 		}
 		
-		Path destFile = Paths.get(tempDir.toString() + File.separator + fileName);
+		String fileExtension = FilenameUtils.getExtension(fileName);
+		String fileBaseName = FilenameUtils.getBaseName(fileName);
+		String cleanBaseName = fileBaseName.replaceAll("[^a-zA-Z0-9._-]", " ").replaceAll(" +", " ");
+		String cleanName = cleanBaseName + "." + fileExtension;
+		
+		Path destFile = Paths.get(tempDir.toString() + File.separator + cleanName);
 		
 		try {
 			Files.copy(inStream, destFile);
