@@ -79,6 +79,13 @@ public class TreeResource extends BaseResourceHandler {
 	// File size, update date, and mime type are also displayed
 	// DirectoryResources are simple bold text
 	private class PathResourceHtmlAhrefDownloadToString implements ToString<PathResource>{
+		
+		private String userId = "";
+		
+		public PathResourceHtmlAhrefDownloadToString(String userId) {
+			this.userId = userId;
+		}
+		
 		@Override
 		public String toString(PathResource resource) {
 			
@@ -94,7 +101,7 @@ public class TreeResource extends BaseResourceHandler {
 				String downloadUrlPrefix = appProps.getProperty("rest.endpoint.fsys.action") + "/download";
 				String storeName = resource.getStore().getName();
 				String relPath = resource.getRelativePath();
-				String downloadUrl = downloadUrlPrefix + "/" + storeName + relPath;
+				String downloadUrl = downloadUrlPrefix + "/userId/" + userId +  "/" + storeName + relPath;
 				
 				String fileByteFormat = FileUtil.humanReadableByteCount( ((FileMetaResource)resource).getFileSize(), true);
 				String fileMimeType = ((FileMetaResource)resource).getMimeType();
@@ -102,7 +109,10 @@ public class TreeResource extends BaseResourceHandler {
 				
 				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a>" +
 					" (" + fileMimeType + ", " + fileByteFormat + ", " + fileUpdateDate + ") - " +
-					"[id=" + resource.getNodeId() + "]";
+					"[id=" + resource.getNodeId() + 
+					", read=" + resource.getCanRead() + 
+					", write=" + resource.getCanWrite() + 
+					", execute=" + resource.getCanExecute() + "]";
 				
 			}
 			
@@ -575,7 +585,7 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append("<span style=\"font-weight: bold;\">" + store.getName() + "</span>");
     	buf.append("[id=" + store.getId() + ", path=" + store.getPath() + ", diskUsage=" + 
-    			FileUtil.humanReadableByteCount(totalSize.get(), true)+ "]<br>");
+    			FileUtil.humanReadableByteCount(totalSize.get(), true)+ ", userId=" + userId + "]<br>");
     	buf.append("[<br>");
     	buf.append(store.getDescription() + "<br>");
     	buf.append("]<br>");
@@ -583,7 +593,7 @@ public class TreeResource extends BaseResourceHandler {
     		// the root node of the tree is not a root node of a store (there are some other directories in-between)
     		buf.append("[...other directories here...]<br>");
     	} 
-    	buf.append( tree.printHtmlTree(new PathResourceHtmlAhrefDownloadToString()) );
+    	buf.append( tree.printHtmlTree(new PathResourceHtmlAhrefDownloadToString(userId)) );
     	
     	//pathResourceTreeService.logTree(tree);
     	
