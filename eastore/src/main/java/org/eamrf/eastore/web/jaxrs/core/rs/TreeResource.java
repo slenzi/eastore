@@ -4,6 +4,7 @@
 package org.eamrf.eastore.web.jaxrs.core.rs;
 
 import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.ws.rs.GET;
@@ -16,6 +17,7 @@ import javax.ws.rs.core.Response;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.core.util.FileUtil;
+import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.tree.NodeTreeService;
@@ -91,8 +93,12 @@ public class TreeResource extends BaseResourceHandler {
 			
 			if(resource.getResourceType() == ResourceType.DIRECTORY){
 				
-				return "<span style=\"font-weight: bold;\">" + resource.getPathName() + "</span> - " +
-						"[id=" + resource.getNodeId() + "]";
+				return "<span style=\"font-weight: bold;\">" + resource.getPathName() + " (" + resource.getRelativePath() + ")</span> - " +
+						"[id=" + resource.getNodeId() + 
+						", readGroup1=" + StringUtil.changeNull(resource.getReadGroup1()) +
+						", writeGroup1=" + StringUtil.changeNull(resource.getWriteGroup1()) +
+						", executeGroup1=" + StringUtil.changeNull(resource.getExecuteGroup1()) +
+						"]";
 				
 			}else if(resource.getResourceType() == ResourceType.FILE){
 				
@@ -110,9 +116,10 @@ public class TreeResource extends BaseResourceHandler {
 				return "<a href=\"" + downloadUrl + "\">" + resource.getPathName() + "</a>" +
 					" (" + fileMimeType + ", " + fileByteFormat + ", " + fileUpdateDate + ") - " +
 					"[id=" + resource.getNodeId() + 
-					", read=" + resource.getCanRead() + 
-					", write=" + resource.getCanWrite() + 
-					", execute=" + resource.getCanExecute() + "]";
+					", permissions=" + 
+					((resource.getCanRead()) ? "+r" : "-r") + 
+					((resource.getCanWrite()) ? "+w" : "-w") + 
+					((resource.getCanExecute()) ? "+x" : "-x") + "]";
 				
 			}
 			
@@ -568,13 +575,21 @@ public class TreeResource extends BaseResourceHandler {
     	// sort by resource type so files appear before directories, then sort by resource name
     	Trees.sortChildren(tree.getRootNode(), nodePathResourceCompare);    	
     	
-    	// get total size of all files in the store
+    	// walk the tree and calculate the following items:
+    	// 1. total size of all files
+    	// 2. number of files
+    	// 3. number of directories
+    	AtomicInteger fileCount = new AtomicInteger();
+    	AtomicInteger directoryCount = new AtomicInteger();
     	AtomicLong totalSize = new AtomicLong();
     	try {
 			Trees.walkTree(tree, (treeNode) -> {
 				PathResource r = treeNode.getData();
 				if(r.getResourceType() == ResourceType.FILE){
+					fileCount.addAndGet(1);
 					totalSize.addAndGet(((FileMetaResource)r).getFileSize());
+				}else if(r.getResourceType() == ResourceType.DIRECTORY) {
+					directoryCount.addAndGet(1);
 				}
 			}, WalkOption.PRE_ORDER_TRAVERSAL);
 		} catch (TreeNodeVisitException e) {
@@ -585,7 +600,8 @@ public class TreeResource extends BaseResourceHandler {
     	StringBuffer buf = new StringBuffer();
     	buf.append("<span style=\"font-weight: bold;\">" + store.getName() + "</span>");
     	buf.append("[id=" + store.getId() + ", path=" + store.getPath() + ", diskUsage=" + 
-    			FileUtil.humanReadableByteCount(totalSize.get(), true)+ ", userId=" + userId + "]<br>");
+    			FileUtil.humanReadableByteCount(totalSize.get(), true)+ ", fileCount=" + fileCount.get() + 
+    			", directoryCount=" + directoryCount.get() + ", userId=" + userId + "]<br>");
     	buf.append("[<br>");
     	buf.append(store.getDescription() + "<br>");
     	buf.append("]<br>");
