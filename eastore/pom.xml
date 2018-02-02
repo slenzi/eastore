@@ -30,14 +30,17 @@
 		<version.spring.boot.starter>1.5.7.RELEASE</version.spring.boot.starter> <!-- was 1.5.3.RELEASE -->
 		<version.spring>4.3.12.RELEASE</version.spring> <!-- was 4.3.8.RELEASE -->		
   		<version.apache.cxf>3.2.0</version.apache.cxf> <!-- was 3.1.11 -->
-  		<version.apache.tika>1.16</version.apache.tika> <!-- was 1.14 -->
-  		<version.apache.commons.io>2.5</version.apache.commons.io>
+  		<version.apache.tika>1.17</version.apache.tika> <!-- was 1.14 -->
+  		<version.apache.commons.io>2.6</version.apache.commons.io>
   		<version.apache.commons.codec>1.10</version.apache.commons.codec>
+  		<version.apache.pdfbox>2.0.8</version.apache.pdfbox>
+  		<version.apache.poi>3.17</version.apache.poi>
   		<version.jackson.json.provider>2.9.2</version.jackson.json.provider> <!-- was 2.8.8 -->
 		<version.gson>2.8.2</version.gson> <!-- was 2.8.0 -->
 		<version.jodatime>2.9.9</version.jodatime> <!-- was 2.9.7 -->
 		<version.javax.mail>1.5.6</version.javax.mail>
 		<version.javax.mail.api>1.5.6</version.javax.mail.api>
+		<version.lucene>7.2.1</version.lucene>
 		
 		<!-- requires Java >=1.8 -->
 		<version.google.guava>23.5-jre</version.google.guava>
@@ -330,6 +333,54 @@
 		    <version>${version.google.guava}</version>
 		</dependency>
 						
+		<!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-core -->
+		<dependency>
+		    <groupId>org.apache.lucene</groupId>
+		    <artifactId>lucene-core</artifactId>
+		    <version>${version.lucene}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-analyzers-common -->
+		<dependency>
+		    <groupId>org.apache.lucene</groupId>
+		    <artifactId>lucene-analyzers-common</artifactId>
+		    <version>${version.lucene}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-queryparser -->
+		<dependency>
+		    <groupId>org.apache.lucene</groupId>
+		    <artifactId>lucene-queryparser</artifactId>
+		    <version>${version.lucene}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi -->
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi</artifactId>
+		    <version>${version.apache.poi}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml -->
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi-ooxml</artifactId>
+		    <version>${version.apache.poi}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-scratchpad -->
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi-scratchpad</artifactId>
+		    <version>${version.apache.poi}</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox -->
+		<dependency>
+		    <groupId>org.apache.pdfbox</groupId>
+		    <artifactId>pdfbox</artifactId>
+		    <version>${version.apache.pdfbox}</version>
+		</dependency>					
 	
 	</dependencies>
 	
