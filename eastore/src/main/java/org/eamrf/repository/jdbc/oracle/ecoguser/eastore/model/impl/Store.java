@@ -16,6 +16,11 @@ public class Store implements Serializable {
 
 	private static final long serialVersionUID = 2510915862464361107L;
 	
+	// directory in which all the files for the store are located.
+	public static final String STORE_FILES_DIRECTORY = "files";
+	// directory in which the lucene search index for the store is located.
+	public static final String STORE_LUCENE_DIRECTORY = "lucene";
+	
 	public static enum AccessRule {
 		
 		// nodes with no read/write groups are by default open to everyone.

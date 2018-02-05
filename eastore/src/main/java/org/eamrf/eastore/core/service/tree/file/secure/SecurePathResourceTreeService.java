@@ -1014,11 +1014,14 @@ public class SecurePathResourceTreeService {
 			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
 		}
 		
+		// all files for the store are kept within a /files directory under the store directory
+		cleanStorePath = Paths.get(cleanStorePath.toString(), Store.STORE_FILES_DIRECTORY);
+		
 		try {
 			store = fileSystemRepository.addStore(
 					storeName, 
 					storeDesc, 
-					storePath, 
+					cleanStorePath,
 					rootDirName, 
 					rootDirDesc, 
 					maxFileSizeDb,
@@ -1027,7 +1030,7 @@ public class SecurePathResourceTreeService {
 					executeGroup,
 					rule);
 		} catch (Exception e) {
-			throw new ServiceException("Error creating new store '" + storeName + "' at " + storePath.toString(), e);
+			throw new ServiceException("Error creating new store '" + storeName + "' at " + cleanStorePath.toString(), e);
 		}
 		
 		QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
