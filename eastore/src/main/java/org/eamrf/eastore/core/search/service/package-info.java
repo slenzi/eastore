@@ -5,4 +5,4 @@
  * @author slenzi
  *
  */
-package org.eamrf.eastore.core.service.search;
+package org.eamrf.eastore.core.search.service;

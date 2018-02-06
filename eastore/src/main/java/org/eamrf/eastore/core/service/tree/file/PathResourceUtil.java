@@ -14,30 +14,30 @@ import org.springframework.stereotype.Service;
  * 
  * @author slenzi
  */
-@Service
-public class FileSystemUtil {
+//@Service
+public abstract class PathResourceUtil {
 
-	public Path buildPath(Path path, PathResource resource){
+	public static Path buildPath(Path path, PathResource resource){
 		return Paths.get(path + resource.getRelativePath());
 	}
 	
-	public Path buildPath(Store store, String relativePath){
+	public static Path buildPath(Store store, String relativePath){
 		return Paths.get(store.getPath() + cleanRelativePath(relativePath));
 	}	
 	
-	public Path buildPath(Store store, PathResource resource){
+	public static Path buildPath(Store store, PathResource resource){
 		return Paths.get(store.getPath() + resource.getRelativePath());
 	}
 	
-	public Path buildPath(Store store, DirectoryResource dirResource, String fileName){
+	public static Path buildPath(Store store, DirectoryResource dirResource, String fileName){
 		return Paths.get(store.getPath() + dirResource.getRelativePath() + File.separator + fileName);
 	}	
 	
-	public String buildRelativePath(DirectoryResource dirResource, String fileName){
+	public static String buildRelativePath(DirectoryResource dirResource, String fileName){
 		return (dirResource.getRelativePath() + File.separator + fileName).replace("\\", "/");
 	}
 	
-	public String cleanFullPath(String path){
+	public static String cleanFullPath(String path){
 		if(path == null){
 			return null;
 		}
@@ -49,7 +49,7 @@ public class FileSystemUtil {
 		return path;
 	}	
 	
-	public String cleanRelativePath(String path){
+	public static String cleanRelativePath(String path){
 		if(path == null){
 			return null;
 		}

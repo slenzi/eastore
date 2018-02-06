@@ -32,8 +32,10 @@ import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.messaging.ResourceChangeService;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.search.lucene.StoreIndexer;
+import org.eamrf.eastore.core.search.service.IndexerService;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
-import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
+import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
@@ -75,25 +77,25 @@ public class SecurePathResourceTreeService {
     private FileSystemRepository fileSystemRepository;
     
     @Autowired
-    private FileSystemUtil fileSystemUtil;    
+    private TaskManagerProvider taskManagerProvider;  
     
     @Autowired
-    private TaskManagerProvider taskManagerProvider;
-    
-    @Autowired
-    private PathResourceTreeLogger pathResTreeLogger;    
-    
-    @Autowired
-    private SecurePathResourceTreeBuilder securePathResourceUtil;
+    private SecurePathResourceTreeBuilder securePathResourceTreeBuilder;
     
     @Autowired
     private ResourceChangeService resChangeService;
     
     @Autowired
-    private GatekeeperService gatekeeperService;    
+    private GatekeeperService gatekeeperService;
+    
+    @Autowired
+    private IndexerService indexerService;
     
     // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
+    
+    // maps all stores to their lucene search indexer
+    private Map<Store,StoreIndexer> storeIndexerMap = new HashMap<Store,StoreIndexer>();
 	    
 	
 	/**
@@ -104,12 +106,8 @@ public class SecurePathResourceTreeService {
 	}
 	
 	/**
-	 * Create queued task managers for all stores. Any SQL update operations are queued per store.
-	 * 
-	 * Each store gets two task managers, one manager for tasks that involve adding binary data
-	 * to the database, and one manager for everything else.
+	 * Initialize the service for use.
 	 */
-	//@MethodTimer
 	@PostConstruct
 	public void init(){
 		
@@ -126,6 +124,27 @@ public class SecurePathResourceTreeService {
 			logger.warn("No stores found when initializing File System Service...");
 			return;
 		}
+		
+		initializeTaskManagers(stores);
+		
+		try {
+			initializeSearchIndexers(stores);
+		} catch (IOException e) {
+			logger.error("Failed to initialize lucene indexes for all stores, " + e.getMessage(), e);
+			return;
+		}
+		
+	}
+
+	/**
+	 * Initialize the task managers for each store.
+	 * 
+	 * Each store gets two task managers, one manager for tasks that involve adding binary data
+	 * to the database, and one manager for everything else.
+	 * 
+	 * @param stores
+	 */
+	private void initializeTaskManagers(List<Store> stores) {
 		
 		for(Store store : stores){
 			
@@ -146,15 +165,37 @@ public class SecurePathResourceTreeService {
 			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
 			storeTaskManagerMap.put(store, mapEntry);
 			
-		}
+		}		
 		
 	}
 	
 	/**
-	 * Stop queued task managers
+	 * Initialize lucene indexer for each store
+	 * 
+	 * @param stores
+	 */
+	private void initializeSearchIndexers(List<Store> stores) throws IOException {
+		StoreIndexer storeIndexer = null;
+		for(Store store : stores){
+			storeIndexer = indexerService.getOrCreateStoreIndex(store);
+			storeIndexerMap.put(store, storeIndexer);
+		}
+	}	
+	
+	/**
+	 * Stop queued task managers and shutdown lucene search indexers
 	 */
 	@PreDestroy
 	public void cleanup() {
+		
+		for(StoreIndexer indexer : storeIndexerMap.values()) {
+			try {
+				indexer.destroy();
+			} catch (IOException e) {
+				logger.error("Failed to shutdown lucene indexer for store " + indexer.getStore().getName());
+				e.printStackTrace();
+			}
+		}
 		
 		for(StoreTaskManagerMap map : storeTaskManagerMap.values()) {
 			map.getBinaryTaskManager().stopTaskManager();
@@ -242,7 +283,7 @@ public class SecurePathResourceTreeService {
 					". Returned list was null or empty.");
 		}
 		
-		return securePathResourceUtil.buildPathResourceTree(resources, userId, dirResource);		
+		return securePathResourceTreeBuilder.buildPathResourceTree(resources, userId, dirResource);		
 		
 	}
 	
@@ -287,7 +328,7 @@ public class SecurePathResourceTreeService {
 					". Returned list was null or empty.");
 		}
 		
-		return securePathResourceUtil.buildParentPathResourceTree(resources, userId, reverse);		
+		return securePathResourceTreeBuilder.buildParentPathResourceTree(resources, userId, reverse);		
 		
 	}
 
@@ -940,7 +981,7 @@ public class SecurePathResourceTreeService {
 				}
 				resource.setStore(store);
 			}
-			Path pathToFile = fileSystemUtil.buildPath(store, resource);
+			Path pathToFile = PathResourceUtil.buildPath(store, resource);
 			if(!Files.exists(pathToFile)){
 				throw new ServiceException("Error, file on local file system does not exist for FileMetaResource "
 						+ "with file node id => " + resource.getNodeId() + ", path => " + pathToFile.toString() +
@@ -1976,7 +2017,7 @@ public class SecurePathResourceTreeService {
 		}
 		
 		Store soureStore = getStore(fileToCopy, userId);
-		Path sourceFilePath = fileSystemUtil.buildPath(soureStore, fileToCopy);
+		Path sourceFilePath = PathResourceUtil.buildPath(soureStore, fileToCopy);
 		
 		// can't copy a file to the directory it's already in
 		if(fileToCopy.getParentNodeId().equals(toDir.getNodeId())){
@@ -2424,7 +2465,7 @@ public class SecurePathResourceTreeService {
 		String userId = appProps.getProperty("store.test.user.id");
 		String testStoreName = appProps.getProperty("store.test.name");
 		String testStoreDesc = appProps.getProperty("store.test.desc");
-		String testStorePath = fileSystemUtil.cleanFullPath(appProps.getProperty("store.test.path"));
+		String testStorePath = PathResourceUtil.cleanFullPath(appProps.getProperty("store.test.path"));
 		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
 		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
 		String testStoreRootDirDesc = appProps.getProperty("store.test.root.dir.desc");

@@ -61,18 +61,25 @@ public abstract class FileUtil {
 	 * @throws IOException
 	 */
 	public static String detectMimeType(final Path file) throws IOException {
-	    TikaInputStream tikaIS = null;
+	   
+		try(TikaInputStream tikaIS = TikaInputStream.get(file)){
+	    	final Metadata metadata = new Metadata();
+	    	metadata.set(Metadata.RESOURCE_NAME_KEY, file.toString());
+	    	return DETECTOR.detect(tikaIS, metadata).toString();
+	    }
+		
+		/*
+		TikaInputStream tikaIS = null;
 	    try {
 	        //tikaIS = TikaInputStream.get(file.toFile());
 	        tikaIS = TikaInputStream.get(file);
-	        /*
-	         * You might not want to provide the file's name. If you provide an Excel
-	         * document with a .xls extension, it will get it correct right away; but
-	         * if you provide an Excel document with .doc extension, it will guess it
-	         * to be a Word document
-	         */
+	        //You might not want to provide the file's name. If you provide an Excel
+	        //document with a .xls extension, it will get it correct right away; but
+	        //if you provide an Excel document with .doc extension, it will guess it
+	        //to be a Word document
 	        final Metadata metadata = new Metadata();
-	        // metadata.set(Metadata.RESOURCE_NAME_KEY, file.getName());
+	        
+	        metadata.set(Metadata.RESOURCE_NAME_KEY, file.toString());
 
 	        return DETECTOR.detect(tikaIS, metadata).toString();
 	        
@@ -81,6 +88,7 @@ public abstract class FileUtil {
 	            tikaIS.close();
 	        }
 	    }
+	    */
 	}
 	
 	/**

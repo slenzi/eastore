@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
@@ -20,7 +19,6 @@ import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,9 +30,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SecurePathResourceTreeBuilder {
-
-    @InjectLogger
-    private Logger logger;
     
     @Autowired
     private GatekeeperService gatekeeperService;
@@ -104,7 +99,8 @@ public class SecurePathResourceTreeBuilder {
 	 * to a specified number of levels.
 	 * 
 	 * @param resources - all bottom-up PathResource data for the tree
-	 * @param userId - User ID used to evaluate access permissions (e.g. CTEP ID). 
+	 * @param userId - User ID used to evaluate access permissions (e.g. CTEP ID).
+	 * @param reverese - pass true to return the tree in reverse order (leaf node becomes root,a nd root becomes leaf)
 	 * @return
 	 * @throws ServiceException
 	 */

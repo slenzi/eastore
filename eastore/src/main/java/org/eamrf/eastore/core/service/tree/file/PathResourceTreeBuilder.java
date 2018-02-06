@@ -5,13 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
-import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,10 +18,7 @@ import org.springframework.stereotype.Service;
  * @author slenzi
  */
 @Service
-public class PathResourceTreeBuilder {
-
-    @InjectLogger
-    private Logger logger;	
+public class PathResourceTreeBuilder {	
 	
 	public PathResourceTreeBuilder() {
 		

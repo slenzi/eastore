@@ -36,7 +36,7 @@ import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.tree.file.FileSystemUtil;
+import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
@@ -62,8 +62,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @InjectLogger
     private Logger logger;
     
-    @Autowired
-    private FileSystemUtil fileSystemUtil;    
+    //@Autowired
+    //private PathResourceUtil pathResourceUtil;
+    //private PathResourceUtil pathResourceUtil = new PathResourceUtil();
     
     @Autowired
     private UploadPipeline uploadPipeline;
@@ -220,7 +221,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 			relativePath.append(File.separator + ps.getPath().trim());
 		}
 		
-		return fileSystemUtil.cleanRelativePath(relativePath.toString());
+		return PathResourceUtil.cleanRelativePath(relativePath.toString());
 		
 	}
 	
