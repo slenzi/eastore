@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +72,7 @@ public class StoreIndexer {
 		IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
 		config.setOpenMode(OpenMode.CREATE_OR_APPEND);
 		indexWriter = new IndexWriter(dir, config);
+		scheduledExecutor = Executors.newScheduledThreadPool(1);
         commitFuture = scheduledExecutor.scheduleWithFixedDelay(() -> {
             try {
                 indexWriter.commit();
@@ -238,7 +240,8 @@ public class StoreIndexer {
 	 */
 	public void destroy() throws IOException {
 		commitFuture.cancel(false);
-        indexWriter.close();		
+        indexWriter.close();
+        scheduledExecutor.shutdown();
 	}
 	
 	/**

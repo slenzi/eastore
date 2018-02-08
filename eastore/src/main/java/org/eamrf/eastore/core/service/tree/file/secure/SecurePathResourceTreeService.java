@@ -32,11 +32,9 @@ import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.messaging.ResourceChangeService;
 import org.eamrf.eastore.core.properties.ManagedProperties;
-import org.eamrf.eastore.core.search.lucene.StoreIndexer;
-import org.eamrf.eastore.core.search.service.IndexerService;
+import org.eamrf.eastore.core.search.service.StoreIndexerService;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
-import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
@@ -89,13 +87,10 @@ public class SecurePathResourceTreeService {
     private GatekeeperService gatekeeperService;
     
     @Autowired
-    private IndexerService indexerService;
+    private StoreIndexerService indexerService;
     
     // maps all stores to their task manager
     private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();
-    
-    // maps all stores to their lucene search indexer
-    private Map<Store,StoreIndexer> storeIndexerMap = new HashMap<Store,StoreIndexer>();
 	    
 	
 	/**
@@ -175,10 +170,9 @@ public class SecurePathResourceTreeService {
 	 * @param stores
 	 */
 	private void initializeSearchIndexers(List<Store> stores) throws IOException {
-		StoreIndexer storeIndexer = null;
 		for(Store store : stores){
-			storeIndexer = indexerService.getOrCreateStoreIndex(store);
-			storeIndexerMap.put(store, storeIndexer);
+			indexerService.initializeIndexerForStore(store);
+			logger.info("Initialized lucene index for store " + store.getName() + ", at " + store.getPath().toString());
 		}
 	}	
 	
@@ -187,15 +181,6 @@ public class SecurePathResourceTreeService {
 	 */
 	@PreDestroy
 	public void cleanup() {
-		
-		for(StoreIndexer indexer : storeIndexerMap.values()) {
-			try {
-				indexer.destroy();
-			} catch (IOException e) {
-				logger.error("Failed to shutdown lucene indexer for store " + indexer.getStore().getName());
-				e.printStackTrace();
-			}
-		}
 		
 		for(StoreTaskManagerMap map : storeTaskManagerMap.values()) {
 			map.getBinaryTaskManager().stopTaskManager();
