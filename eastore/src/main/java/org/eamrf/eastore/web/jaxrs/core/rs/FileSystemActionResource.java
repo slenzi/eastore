@@ -36,8 +36,8 @@ import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
-import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
@@ -62,15 +62,11 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @InjectLogger
     private Logger logger;
     
-    //@Autowired
-    //private PathResourceUtil pathResourceUtil;
-    //private PathResourceUtil pathResourceUtil = new PathResourceUtil();
-    
     @Autowired
     private UploadPipeline uploadPipeline;
     
     @Autowired
-    private SecurePathResourceTreeService pathResourceTreeService;    
+    private FileService fileService;    
     
     @Autowired
     private HttpSession session;
@@ -112,7 +108,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = pathResourceTreeService.getFileMetaResource(fileId, userId, true);
+			fileMeta = fileService.getFileMetaResource(fileId, userId, true);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -154,7 +150,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = pathResourceTreeService.getFileMetaResource(storeName, relPath, userId, true);
+			fileMeta = fileService.getFileMetaResource(storeName, relPath, userId, true);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -345,7 +341,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.updateFile(fileNodeId, name, desc, userId);
+			fileService.updateFile(fileNodeId, name, desc, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -389,7 +385,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	DirectoryResource dirResource = null;
     	try {
-    		dirResource = pathResourceTreeService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+    		dirResource = fileService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -431,7 +427,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+			fileService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -497,7 +493,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.addStore(storeName, storeDesc, storeFilePath, rootDirName, rootDirDesc, maxFileSizeBytes, 
+			store = fileService.addStore(storeName, storeDesc, storeFilePath, rootDirName, rootDirDesc, maxFileSizeBytes, 
 					readGroup1, writeGroup1, executeGroup1, AccessRule.DENY);
 		} catch (ServiceException e) {
 			handleError("Error creating new store, name=" + storeName + ", " + 
@@ -545,7 +541,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		}
 		
 		try {
-			pathResourceTreeService.updateStore(storeId, storeName, storeDesc, rootDirName, rootDirDesc, 
+			fileService.updateStore(storeId, storeName, storeDesc, rootDirName, rootDirDesc, 
 					rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId);
 		} catch (ServiceException e) {
 			handleError("Error updating store, id=" + storeId + ", " + 
@@ -577,7 +573,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-    		pathResourceTreeService.removeFile(fileNodeId, userId);
+    		fileService.removeFile(fileNodeId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -605,7 +601,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.removeDirectory(dirNodeId, userId);
+			fileService.removeDirectory(dirNodeId, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -643,7 +639,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -678,7 +674,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -716,7 +712,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -751,7 +747,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -776,7 +772,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			pathResourceTreeService.renamePathResource(nodeId, newName, userId);
+			fileService.renamePathResource(nodeId, newName, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -799,7 +795,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	Store testStore = null;
     	try {
-			testStore = pathResourceTreeService.createTestStore();
+			testStore = fileService.createTestStore();
 		} catch (ServiceException e) {
 			handleError("Error creating test store, " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

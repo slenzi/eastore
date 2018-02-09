@@ -14,6 +14,7 @@ import javax.ws.rs.core.PathSegment;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
@@ -40,10 +41,13 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
-    
+
     @Autowired
-    private SecurePathResourceTreeService pathResourceTreeService;
+    private FileService fileService;     
 	
+    @Autowired
+    private SecurePathResourceTreeService securePathResourceService;
+    
 	public FileSystemJsonResource() {
 		
 	}
@@ -75,7 +79,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(nodeId, userId);
+			resource = securePathResourceService.getPathResource(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -123,7 +127,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
+			resource = securePathResourceService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -163,7 +167,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = pathResourceTreeService.getStoreByName(storeName, userId);
+			store = fileService.getStoreByName(storeName, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -171,7 +175,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(store.getNodeId(), userId);
+			resource = securePathResourceService.getPathResource(store.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -205,7 +209,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getParentPathResource(nodeId, userId);
+			resource = securePathResourceService.getParentPathResource(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching parent path resource for node " + nodeId + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -252,7 +256,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
+			resource = securePathResourceService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -266,7 +270,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch it's parent
 		PathResource parentResource = null;
 		try {
-			parentResource = pathResourceTreeService.getParentPathResource(resource.getNodeId(), userId);
+			parentResource = securePathResourceService.getParentPathResource(resource.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching parent path resource for node " + 
 					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
@@ -300,7 +304,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		List<PathResource> children = null;
 		try {
-			children = pathResourceTreeService.getChildPathResources(nodeId, userId);
+			children = securePathResourceService.getChildPathResources(nodeId, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching child path resources for node " + nodeId + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -346,7 +350,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
+			resource = securePathResourceService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -360,7 +364,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch all the first-level resources under the resource
 		List<PathResource> children = null;
 		try {
-			children = pathResourceTreeService.getChildPathResources(resource.getNodeId(), userId);
+			children = securePathResourceService.getChildPathResources(resource.getNodeId(), userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching child path resources for node " + 
 					resource.getNodeId() + ", storeName=" + storeName + ", rePath=" + relPath + ", " + 
@@ -395,7 +399,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(nodeId, userId, false);
+    		tree = securePathResourceService.buildParentPathResourceTree(nodeId, userId, false);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -450,7 +454,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		// fetch the resource
 		PathResource resource = null;
 		try {
-			resource = pathResourceTreeService.getPathResource(storeName, relPath, userId);
+			resource = securePathResourceService.getPathResource(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching path resource, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -463,7 +467,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
     	
     	Tree<PathResource> tree = null;
     	try {
-    		tree = pathResourceTreeService.buildParentPathResourceTree(resource.getNodeId(), userId, false);
+    		tree = securePathResourceService.buildParentPathResourceTree(resource.getNodeId(), userId, false);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -511,7 +515,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		Store store = null;
 		try {
-			store = pathResourceTreeService.getStoreByName(storeName, userId);
+			store = fileService.getStoreByName(storeName, userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching store, storeName=" + storeName + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -537,7 +541,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 		
 		List<Store> stores = null;
 		try {
-			stores = pathResourceTreeService.getStores(userId);
+			stores = fileService.getStores(userId);
 		} catch (ServiceException e) {
 			handleError("Error fetching stores, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);

@@ -20,6 +20,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.NodeTreeService;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.ToString;
@@ -57,6 +58,9 @@ public class TreeResource extends BaseResourceHandler {
     
     @Autowired
     private NodeTreeService nodeTreeService;
+    
+    @Autowired
+    private FileService fileService;    
     
     @Autowired
     private SecurePathResourceTreeService pathResourceTreeService;
@@ -523,7 +527,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.getStore(rootNode, userId);
+			store = fileService.getStore(rootNode, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -567,7 +571,7 @@ public class TreeResource extends BaseResourceHandler {
     	
     	Store store = null;
     	try {
-			store = pathResourceTreeService.getStore(rootNode, userId);
+			store = fileService.getStore(rootNode, userId);
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

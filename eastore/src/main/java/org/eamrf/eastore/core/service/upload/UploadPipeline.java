@@ -19,7 +19,7 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
-import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
+import org.eamrf.eastore.core.service.file.FileService;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -37,11 +37,11 @@ public class UploadPipeline {
     private Logger logger;
     
     @Autowired
-    private ManagedProperties appProps;
-    
-    @Autowired
-    private SecurePathResourceTreeService pathResourceTreeService;    
+    private ManagedProperties appProps;    
 	
+    @Autowired
+    private FileService fileService;
+    
 	public UploadPipeline() {
 		
 	}
@@ -67,7 +67,7 @@ public class UploadPipeline {
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
-		pathResourceTreeService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId);
+		fileService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId);
 		
 	}
 	
@@ -94,7 +94,7 @@ public class UploadPipeline {
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
-		pathResourceTreeService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId);
+		fileService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId);
 		
 	}
 	

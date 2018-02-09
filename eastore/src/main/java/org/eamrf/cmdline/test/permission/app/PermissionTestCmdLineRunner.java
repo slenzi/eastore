@@ -9,7 +9,7 @@ import java.util.List;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
-import org.eamrf.eastore.core.service.tree.file.PathResourceTreeLogger;
+import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
@@ -38,6 +38,9 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
     
     @Autowired
     private SecurePathResourceTreeService securePathTreeService;
+    
+    @Autowired
+    private FileService fileService;    
 	
 	public PermissionTestCmdLineRunner() {
 
@@ -127,7 +130,7 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 	
 	private void createTestStore() throws ServiceException {
 		
-		securePathTreeService.createTestStore();
+		fileService.createTestStore();
 		
 	}	
 	
@@ -144,12 +147,12 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
 	}
 	
 	private void doGetFileMetaResourceById(long nodeId, String userId) throws ServiceException {
-		FileMetaResource resource = securePathTreeService.getFileMetaResource(nodeId, userId, false);
+		FileMetaResource resource = fileService.getFileMetaResource(nodeId, userId, false);
 		logger.info("File meta resoure for node " + nodeId + " = " + ((resource != null) ? resource.simpleToString() : "no file"));
 	}
 	
 	private void doGetDirectoryResourceById(long nodeId, String userId) throws ServiceException {
-		DirectoryResource resource = securePathTreeService.getDirectory(nodeId, userId);
+		DirectoryResource resource = fileService.getDirectory(nodeId, userId);
 		logger.info("Directory resoure for node " + nodeId + " = " + ((resource != null) ? resource.simpleToString() : "no directory"));
 	}	
 	
