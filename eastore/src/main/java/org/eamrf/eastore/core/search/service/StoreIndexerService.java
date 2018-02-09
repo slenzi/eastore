@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 public class StoreIndexerService {
 	
     @InjectLogger
-    private Logger logger;	
+    private Logger logger;  
 
 	// add more extractors for additional file/mime types
 	private final List<FileTextExtractor> fileExtractors = Arrays.asList(

@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,6 +27,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.search.extract.FileTextExtractor;
@@ -49,6 +51,8 @@ public class StoreIndexer {
     
     private Map<String,FileTextExtractor> extractorMap = new HashMap<String,FileTextExtractor>();
     private Collection<FileTextExtractor> allExtractors = null;
+    
+	ExecutorService executorService = Executors.newSingleThreadExecutor(); 
 	
 	public StoreIndexer(Store store, Collection<FileTextExtractor> extractors) {
 		this.store = store;

@@ -98,7 +98,7 @@ public class SecurePathResourceTreeService {
 		//DirectoryResource dirResource = this.getDirectory(dirNodeId, userId);
 		PathResource resource = getPathResource(nodeId, userId);
 		
-		return this.buildPathResourceTree(resource, userId, Integer.MAX_VALUE);		
+		return this.buildPathResourceTree(resource, userId, depth);	// TODO - was Integer.MAX_VALUE. A bug I think.
 		
 	}	
 	

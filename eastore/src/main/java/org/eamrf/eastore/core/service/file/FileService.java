@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.messaging.ResourceChangeService;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.search.lucene.StoreIndexer;
 import org.eamrf.eastore.core.search.service.StoreIndexerService;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
@@ -44,6 +46,7 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
+import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -231,7 +234,61 @@ public class FileService {
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getBinaryTaskManager();
 		
-	}	
+	}
+	
+	/**
+	 * Rebuilds the lucene search index by clearing all existing documents and re-adding all the ones from the store.
+	 * 
+	 * @param storeId
+	 * @throws ServiceException 
+	 */
+	public void rebuildSearchIndex(Long storeId, String userId) throws ServiceException {
+		
+		Executors.newSingleThreadExecutor().submit(() ->{
+			
+		});
+		
+		final Store store = this.getStoreById(storeId, userId);
+		
+    	Tree<PathResource> tree = secureTreeService.buildPathResourceTree(store.getRootDir().getNodeId(), userId);
+    	
+    	List<FileMetaResource> filePaths = new ArrayList<FileMetaResource>();
+    	try {
+			Trees.walkTree(tree, (treeNode) -> {
+				PathResource resource = treeNode.getData();
+				if(resource.getResourceType() == ResourceType.FILE){
+					filePaths.add((FileMetaResource)resource);
+				}
+			}, WalkOption.PRE_ORDER_TRAVERSAL);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Error walking file tree to get list of all files, " + e.getMessage());
+		}
+    	
+    	logger.info("Store [id='" + store.getId() + "', name='" + store.getName() + "'] has " + 
+    			filePaths.size() + " files to be added to lucene search index.");
+    	
+    	StoreIndexer indexer = null;
+    	try {
+			indexer = indexerService.getIndexerForStore(store);
+		} catch (IOException e) {
+			throw new ServiceException("Error fetching store indexer for store [id='" + 
+					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
+		}
+    	
+    	try {
+    		int fileIndex = 1;
+			indexer.deleteAll();
+			for(FileMetaResource fileResource : filePaths) {
+				logger.info("Adding file " + fileIndex + " of " + filePaths.size() + " to lucene index for store " + store.getName() + ", " + 
+						PathResourceUtil.buildPath(store, fileResource.getRelativePath()).toString() );
+				indexer.add(fileResource);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 	
 	/**
 	 * Fetch the store object from the PathResource object. If the store object is null then
