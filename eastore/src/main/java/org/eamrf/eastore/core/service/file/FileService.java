@@ -9,8 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -242,13 +244,10 @@ public class FileService {
 	 * @param storeId
 	 * @throws ServiceException 
 	 */
-	public void rebuildSearchIndex(Long storeId, String userId) throws ServiceException {
+	public void rebuildStoreSearchIndex(Long storeId, String userId) throws ServiceException {
 		
-		Executors.newSingleThreadExecutor().submit(() ->{
-			
-		});
-		
-		final Store store = this.getStoreById(storeId, userId);
+		final Store store = getStoreById(storeId, userId);
+		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		
     	Tree<PathResource> tree = secureTreeService.buildPathResourceTree(store.getRootDir().getNodeId(), userId);
     	
@@ -276,17 +275,46 @@ public class FileService {
 		}
     	
     	try {
-    		int fileIndex = 1;
 			indexer.deleteAll();
-			for(FileMetaResource fileResource : filePaths) {
-				logger.info("Adding file " + fileIndex + " of " + filePaths.size() + " to lucene index for store " + store.getName() + ", " + 
-						PathResourceUtil.buildPath(store, fileResource.getRelativePath()).toString() );
-				indexer.add(fileResource);
-			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new ServiceException("Error clearing existing index for store [id='" + 
+					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
 		}
+    	
+    	Future<Boolean> future = indexer.addAll(filePaths);
+    	
+    	/*
+    	Boolean ok;
+		try {
+			ok = future.get();
+		} catch (InterruptedException e) {
+			throw new ServiceException("InterruptedException thrown when reindexing index for store [id='" + 
+					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
+		} catch (ExecutionException e) {
+			throw new ServiceException("ExecutionException thrown when reindexing index for store [id='" + 
+					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
+		}
+  		*/
+		
+		/*
+		class RebuildIndexTask extends AbstractQueuedTask<Boolean> {
+			
+			public Boolean doWork() throws ServiceException {
+				
+
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+		}
+		
+		RebuildIndexTask indexTask = new RebuildIndexTask();
+		indexTask.setName("Rebuild search index for store [storeId=" + storeId + ", name=" + store.getName() + "]");
+		generalTaskManager.addTask(indexTask);
+		*/
 		
 	}
 	

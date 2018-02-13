@@ -7,11 +7,13 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -23,11 +25,10 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.eamrf.concurrent.task.QueuedTaskManager;
+import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.search.extract.FileTextExtractor;
@@ -35,6 +36,8 @@ import org.eamrf.eastore.core.search.service.SearchConstants;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages the lucene index for a store, including writing and updating documents
@@ -44,7 +47,9 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
  */
 public class StoreIndexer {
 
-    private IndexWriter indexWriter = null;
+	private static final Logger logger = LoggerFactory.getLogger(StoreIndexer.class);
+
+	private IndexWriter indexWriter = null;
     private Future commitFuture = null;
     private Store store = null;
     private ScheduledExecutorService scheduledExecutor = null;
@@ -52,7 +57,9 @@ public class StoreIndexer {
     private Map<String,FileTextExtractor> extractorMap = new HashMap<String,FileTextExtractor>();
     private Collection<FileTextExtractor> allExtractors = null;
     
-	ExecutorService executorService = Executors.newSingleThreadExecutor(); 
+	ExecutorService executorService = Executors.newSingleThreadExecutor();
+	
+	//private boolean rebuildingIndex = false;
 	
 	public StoreIndexer(Store store, Collection<FileTextExtractor> extractors) {
 		this.store = store;
@@ -192,6 +199,54 @@ public class StoreIndexer {
 		
 		indexWriter.addDocument(doc);
 		
+	}
+	
+	/**
+	 * Create a task that adds all files to the lucene index. The task is submitted to an executor for execution.
+	 * 
+	 * @param fileResources
+	 * @return A future for the task.
+	 * @throws IOException
+	 */
+	public Future<Boolean> addAll(final Collection<FileMetaResource> fileResources) {
+		
+		if(CollectionUtil.isEmpty(fileResources)) {
+			return null;
+		}
+		
+		AtomicBoolean wasError = new AtomicBoolean(false);
+		StringBuffer errors = new StringBuffer();
+		
+		Callable<Boolean> callableTask = () -> {
+			for(FileMetaResource resource : fileResources) {
+				try {
+					if(!resource.getStore().getId().equals(getStore().getId())) {
+						wasError.set(true);
+						errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
+								". Resource belongs to different store with id " + resource.getStore().getId() + ".\n");						
+					}else {
+						add(resource);
+					}
+				} catch (IOException e) {
+					wasError.set(true);
+					errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
+							", " + e.getMessage() + ".\n");
+				}
+			}
+			if(wasError.get()) {
+				logger.error("Error adding all " + fileResources.size() + " resources to lucene index for store [id=" + getStore().getId() + 
+						", name=" + getStore().getName() + "]\n");
+				logger.error(errors.toString());
+				return false;
+			} else {
+				return true;
+			}
+		};		
+		
+		Future<Boolean> future = executorService.submit(callableTask);
+		
+		return future;
+	
 	}
 	
 	/**
