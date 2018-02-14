@@ -123,17 +123,17 @@ public class QueuedTaskManager implements TaskManager {
 
 		try {
 
-			logger.info("Awaiting termination for 30 seconds...");
+			logger.info("Awaiting termination for 10 seconds...");
 
-			if (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
+			if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
 
 				logger.info("Calling shutdownNow() on executor service...");
 
 				executorService.shutdownNow();
 
-				logger.info("Awaiting termination for additional 60 seconds...");
+				logger.info("Awaiting termination for additional 10 seconds...");
 
-				if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+				if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
 					logger.error("Executor service did not terminate");
 				}
 			}

@@ -172,7 +172,7 @@ public class StoreIndexer {
 		
 		if(!isInitialized()) {
 			return;
-		}
+		}		
 		
 		Document doc = new Document();
 		
@@ -225,6 +225,10 @@ public class StoreIndexer {
 						errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
 								". Resource belongs to different store with id " + resource.getStore().getId() + ".\n");						
 					}else {
+						
+						logger.info("Adding file " + resource.getRelativePath() + " to store index [id=" + getStore().getId() + 
+								", name=" + getStore().getName() + "]");						
+						
 						add(resource);
 					}
 				} catch (IOException e) {
@@ -288,8 +292,13 @@ public class StoreIndexer {
 	 * @throws IOException
 	 */
 	public void deleteAll() throws IOException {
+		
+		logger.info("Deleting all documents in search index for store [id=" + getStore().getId() + 
+						", name=" + getStore().getName() + "]");
+		
 		indexWriter.deleteAll();
 		indexWriter.commit();
+		
 	}
 	
 	/**

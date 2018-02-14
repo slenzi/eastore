@@ -805,6 +805,35 @@ public class FileSystemActionResource extends BaseResourceHandler {
     }
     
     /**
+     * Trigger the process to rebuild the store search (Lucene) index.
+     * 
+     * @param storeId - ID of the store.
+     * @param userId - ID of user triggering the process.
+     * @return A JSON OK response.
+     * @throws WebServiceException
+     */
+    @POST
+    @Path("/store/reindex")
+    @Produces(MediaType.APPLICATION_JSON)     
+    public Response rebuildStoreIndex(@QueryParam("storeId") Long storeId, @QueryParam("userId") String userId) throws WebServiceException {
+    	
+    	validateUserId(userId);
+    	
+    	if(storeId == null) {
+    		handleError("Missing storeId param.", WebExceptionType.CODE_IO_ERROR);
+    	}
+    	
+    	try {
+			fileService.rebuildStoreSearchIndex(storeId, userId);
+		} catch (ServiceException e) {
+			handleError("Error creating test store, " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
+		}
+    	
+    	return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	
+    }
+    
+    /**
      * Fetch a string value from the multipart body
      * 
      * @param key - the attribute name from the request

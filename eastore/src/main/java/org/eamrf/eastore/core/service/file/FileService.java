@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -48,7 +47,6 @@ import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
-import org.eamrf.web.rs.exception.WebServiceException.WebExceptionType;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -160,8 +158,7 @@ public class FileService {
 	public void cleanup() {
 		
 		for(StoreTaskManagerMap map : storeTaskManagerMap.values()) {
-			map.getBinaryTaskManager().stopTaskManager();
-			map.getGeneralTaskManager().stopTaskManager();
+			map.stopAllManagers();
 		}
 		
 	}	
@@ -182,17 +179,21 @@ public class FileService {
 			
 			QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
 			QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
+			QueuedTaskManager indexWriterManager = taskManagerProvider.createQueuedTaskManager();
 			
 			generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 			binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+			indexWriterManager.setManagerName("Lucene Index Writer Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 			
 			ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
 			ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
+			ExecutorService indexWriterExecutor = Executors.newSingleThreadExecutor();
 			
 			generalManager.startTaskManager(generalExecutor);
 			binaryManager.startTaskManager(binaryExecutor);
+			indexWriterManager.startTaskManager(indexWriterExecutor);
 			
-			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
+			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager, indexWriterManager);
 			storeTaskManagerMap.put(store, mapEntry);
 			
 		}		
@@ -237,6 +238,19 @@ public class FileService {
 		return map.getBinaryTaskManager();
 		
 	}
+	
+	/**
+	 * fetch the search index writer task manager for the store.
+	 * 
+	 * @param store
+	 * @return
+	 */
+	private QueuedTaskManager getIndexWriterTaskManagerForStore(Store store){
+		
+		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
+		return map.getSearchIndexWriterTaskManager();
+		
+	}	
 	
 	/**
 	 * Rebuilds the lucene search index by clearing all existing documents and re-adding all the ones from the store.
@@ -808,17 +822,21 @@ public class FileService {
 		
 		QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
 		QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
+		QueuedTaskManager indexWriterManager = taskManagerProvider.createQueuedTaskManager();
 		
 		generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 		binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		indexWriterManager.setManagerName("Lucene Index Writer Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
 		
 		ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
 		ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
+		ExecutorService indexWriterExecutor = Executors.newSingleThreadExecutor();
 		
 		generalManager.startTaskManager(generalExecutor);
 		binaryManager.startTaskManager(binaryExecutor);
+		indexWriterManager.startTaskManager(indexWriterExecutor);
 		
-		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager);
+		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager, indexWriterManager);
 		storeTaskManagerMap.put(store, mapEntry);		
 		
 		return store;
@@ -946,7 +964,8 @@ public class FileService {
 		
 		final Store store = getStore(toDir, userId);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
-		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);		
+		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);
+		final QueuedTaskManager indexWriterManager = getIndexWriterTaskManagerForStore(store);
 		
 		//
 		// Parent task adds file meta data to database, spawns child task for refreshing binary data
@@ -959,7 +978,7 @@ public class FileService {
 				
 				String fileName = filePath.getFileName().toString();
 				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
-				boolean haveExisting = existingResource != null ? true : false;
+				final boolean haveExisting = existingResource != null ? true : false;
 				
 				FileMetaResource newOrUpdatedFileResource = null;
 				if(haveExisting && !replaceExisting) {
@@ -983,7 +1002,38 @@ public class FileService {
 				}
 				
 				// broadcast directory contents changed event
-				resChangeService.directoryContentsChanged(toDir.getNodeId());				
+				resChangeService.directoryContentsChanged(toDir.getNodeId());
+				
+				//
+				// Child task for adding document to search index
+				//
+				final FileMetaResource documentToIndex = newOrUpdatedFileResource;
+				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
+
+					@Override
+					public Void doWork() throws ServiceException {
+						try {
+							if(haveExisting) {
+								indexerService.getIndexerForStore(store).update(documentToIndex);
+							}else {
+								indexerService.getIndexerForStore(store).add(documentToIndex);
+							}
+						} catch (IOException e) {
+							logger.error("Error adding/updating document in search index, " + e.getMessage());
+						}
+						return null;
+					}
+
+					@Override
+					public Logger getLogger() {
+						return logger;
+					}
+				}
+				
+				// add to index writer task manager
+				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
+				indexTask.setName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]");
+				indexWriterManager.addTask(indexTask);
 				
 				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
 				
@@ -1103,7 +1153,8 @@ public class FileService {
 		
 		final Store store = getStore(toDir, userId);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
-		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);		
+		final QueuedTaskManager binaryTaskManager = getBinaryTaskManagerForStore(store);
+		final QueuedTaskManager indexWriterManager = getIndexWriterTaskManagerForStore(store);
 		
 		//
 		// Parent task adds file meta data to database, spawns child task for refreshing binary data
@@ -1148,6 +1199,37 @@ public class FileService {
 				logger.info("----- (END " + timer.getElapsedTime() + ") ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
 				
 				timer.reset();
+				
+				//
+				// Child task for adding document to search index
+				//
+				final FileMetaResource documentToIndex = newOrUpdatedFileResource;
+				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
+
+					@Override
+					public Void doWork() throws ServiceException {
+						try {
+							if(haveExisting) {
+								indexerService.getIndexerForStore(store).update(documentToIndex);
+							}else {
+								indexerService.getIndexerForStore(store).add(documentToIndex);
+							}
+						} catch (IOException e) {
+							logger.error("Error adding/updating document in search index, " + e.getMessage());
+						}
+						return null;
+					}
+
+					@Override
+					public Logger getLogger() {
+						return logger;
+					}
+				}
+				
+				// add to index writer task manager
+				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
+				indexTask.setName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]");
+				indexWriterManager.addTask(indexTask);
 				
 				timer.start();
 				logger.info("---- (START) ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
@@ -1250,8 +1332,9 @@ public class FileService {
 		
 		final Store store = getStore(file, userId);
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		final QueuedTaskManager indexWriterManager = getIndexWriterTaskManagerForStore(store);
 		
-		class Task extends AbstractQueuedTask<Void> {
+		class UpdateFileTask extends AbstractQueuedTask<Void> {
 
 			@Override
 			public Void doWork() throws ServiceException {
@@ -1265,6 +1348,32 @@ public class FileService {
 				
 				resChangeService.directoryContentsChanged(parentDir.getNodeId());
 				
+				//
+				// Child task for adding document to search index
+				//
+				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
+
+					@Override
+					public Void doWork() throws ServiceException {
+						try {
+							indexerService.getIndexerForStore(store).update(file);
+						} catch (IOException e) {
+							logger.error("Error updating document in search index, " + e.getMessage());
+						}
+						return null;
+					}
+
+					@Override
+					public Logger getLogger() {
+						return logger;
+					}
+				}
+				
+				// add to index writer task manager
+				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
+				indexTask.setName("Index Writer Task [" + file.toString() + "]");
+				indexWriterManager.addTask(indexTask);				
+				
 				return null;
 				
 			}
@@ -1277,7 +1386,7 @@ public class FileService {
 			
 		}
 		
-		Task task = new Task();
+		UpdateFileTask task = new UpdateFileTask();
 		task.setName("Update file [fileNodeId=" + file.getNodeId() + ", name=" + file.getNodeName() + "]");
 		taskManager.addTask(task);
 		
