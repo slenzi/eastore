@@ -60,7 +60,7 @@ public class TreeResource extends BaseResourceHandler {
     private NodeTreeService nodeTreeService;
     
     @Autowired
-    private FileService fileService;    
+    private FileService fileService;
     
     @Autowired
     private SecurePathResourceTreeService pathResourceTreeService;

@@ -40,10 +40,10 @@ import org.springframework.stereotype.Service;
 public class FileSystemJsonResource extends BaseResourceHandler {
 
     @InjectLogger
-    private Logger logger;
-
+    private Logger logger;  
+    
     @Autowired
-    private FileService fileService;     
+    private FileService fileService;
 	
     @Autowired
     private SecurePathResourceTreeService securePathResourceService;

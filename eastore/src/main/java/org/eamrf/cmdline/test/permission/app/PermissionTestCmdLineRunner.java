@@ -40,7 +40,7 @@ public class PermissionTestCmdLineRunner implements CommandLineRunner {
     private SecurePathResourceTreeService securePathTreeService;
     
     @Autowired
-    private FileService fileService;    
+    private FileService fileService;
 	
 	public PermissionTestCmdLineRunner() {
 

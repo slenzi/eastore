@@ -57,7 +57,7 @@ public class StoreIndexer {
     private Map<String,FileTextExtractor> extractorMap = new HashMap<String,FileTextExtractor>();
     private Collection<FileTextExtractor> allExtractors = null;
     
-	ExecutorService executorService = Executors.newSingleThreadExecutor();
+	private ExecutorService executorService = Executors.newSingleThreadExecutor();
 	
 	//private boolean rebuildingIndex = false;
 	
@@ -102,7 +102,14 @@ public class StoreIndexer {
 	public Store getStore() {
 		return this.store;
 	}	
-	
+
+	/**
+	 * @return the indexWriter
+	 */
+	public IndexWriter getIndexWriter() {
+		return indexWriter;
+	}
+
 	/**
 	 * Get the full path to the lucene index directory for the store
 	 * 
@@ -319,7 +326,7 @@ public class StoreIndexer {
 	 * 
 	 * @return
 	 */
-	private boolean isInitialized() {
+	public boolean isInitialized() {
 		
 		if(indexWriter != null && indexWriter.isOpen()) {
 			return true;

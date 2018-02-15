@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.PreDestroy;
-
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.search.extract.FileTextExtractor;
 import org.eamrf.eastore.core.search.extract.MsExcelExtractor;
@@ -54,8 +52,13 @@ public class StoreIndexerService {
 	 * @throws IOException
 	 */
 	public void initializeIndexerForStore(Store store) throws IOException {
+		
 		StoreIndexer indexer = storeIndexerMap.get(store);
+	
 		if(indexer == null) {
+			
+			logger.info("Initializing store indexer for store [id=" + store.getId() + ", name=" + store.getName() + "]");
+			
 			indexer = new StoreIndexer(store, fileExtractors);
 			indexer.init();
 			storeIndexerMap.put(store, indexer);			
@@ -77,7 +80,9 @@ public class StoreIndexerService {
 		return storeIndexerMap.get(store);
 	}
 	
-	@PreDestroy
+	/**
+	 * Shutdown indexer for all stores when application terminates.
+	 */
 	public void cleanup() {
 		for(StoreIndexer indexer : storeIndexerMap.values()) {
 			try {

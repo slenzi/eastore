@@ -66,7 +66,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     private UploadPipeline uploadPipeline;
     
     @Autowired
-    private FileService fileService;    
+    private FileService fileService;  
     
     @Autowired
     private HttpSession session;

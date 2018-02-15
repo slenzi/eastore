@@ -32,7 +32,7 @@ public class TaskManagerProvider {
 	@Bean
 	public QueuedTaskManager createQueuedTaskManager(){
 		
-		logger.info("Creating new " + QueuedTaskManager.class.getName());
+		//logger.info("Creating new " + QueuedTaskManager.class.getName());
 		
 		QueuedTaskManager manager = new QueuedTaskManager();
 		
@@ -53,7 +53,7 @@ public class TaskManagerProvider {
 	@Bean
 	public QueuedTaskManager createQueuedTaskManager(long consumeFrequency){
 		
-		logger.info("Creating new " + QueuedTaskManager.class.getName());
+		//logger.info("Creating new " + QueuedTaskManager.class.getName());
 		
 		QueuedTaskManager manager = new QueuedTaskManager(consumeFrequency);
 		

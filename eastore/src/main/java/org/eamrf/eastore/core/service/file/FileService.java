@@ -66,55 +66,34 @@ public class FileService {
 	
 	// Spring Boot takes care of initializing the JdbcTemplate and DataSource, so we can simply autowire it! Magic!
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate; 
     
     @Autowired
-    private ManagedProperties appProps;    
+    private ManagedProperties appProps;
 	
 	@Autowired
 	private SecurePathResourceTreeService secureTreeService;
 	
     @Autowired
-    private FileSystemRepository fileSystemRepository;	
-	
-    @Autowired
-    private GatekeeperService gatekeeperService;	
-
+    private FileSystemRepository fileSystemRepository;
+    
     @Autowired
     private TaskManagerProvider taskManagerProvider;
+    
+    @Autowired
+    private GatekeeperService gatekeeperService;
     
     @Autowired
     private StoreIndexerService indexerService;
     
     @Autowired
-    private ResourceChangeService resChangeService;    
+    private ResourceChangeService resChangeService;
+    
+    @Autowired
+    private ErrorHandler errorHandler;
     
     // maps all stores to their task manager
-    private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();    
-    
-	private enum PermissionError {
-		
-		// write, rename, delete
-		WRITE("Denied Write Permission"),
-		
-		// reading
-		READ("Denied Read Permission"),
-		
-		// administering group permissions
-		EXECUTE("Denied Execute Permission");
-		
-		private final String error;
-		
-		private PermissionError(final String error) {
-			this.error = error;
-		}
-
-		@Override
-		public String toString() {
-			return this.error;
-		}
-		
-	}    
+    private Map<Store,StoreTaskManagerMap> storeTaskManagerMap = new HashMap<Store,StoreTaskManagerMap>();     
     
 	public FileService() {
 	
@@ -142,13 +121,6 @@ public class FileService {
 		
 		initializeTaskManagers(stores);
 		
-		try {
-			initializeSearchIndexers(stores);
-		} catch (IOException e) {
-			logger.error("Failed to initialize lucene indexes for all stores, " + e.getMessage(), e);
-			return;
-		}
-		
 	}
 	
 	/**
@@ -156,12 +128,10 @@ public class FileService {
 	 */
 	@PreDestroy
 	public void cleanup() {
-		
 		for(StoreTaskManagerMap map : storeTaskManagerMap.values()) {
 			map.stopAllManagers();
 		}
-		
-	}	
+	}
 	
 	/**
 	 * Initialize the task managers for each store.
@@ -172,44 +142,44 @@ public class FileService {
 	 * @param stores
 	 */
 	private void initializeTaskManagers(List<Store> stores) {
-		
 		for(Store store : stores){
-			
-			logger.info("Creating queued task managers for store [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-			
-			QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
-			QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
-			QueuedTaskManager indexWriterManager = taskManagerProvider.createQueuedTaskManager();
-			
-			generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-			binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-			indexWriterManager.setManagerName("Lucene Index Writer Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-			
-			ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
-			ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
-			ExecutorService indexWriterExecutor = Executors.newSingleThreadExecutor();
-			
-			generalManager.startTaskManager(generalExecutor);
-			binaryManager.startTaskManager(binaryExecutor);
-			indexWriterManager.startTaskManager(indexWriterExecutor);
-			
-			StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager, indexWriterManager);
-			storeTaskManagerMap.put(store, mapEntry);
-			
-		}		
-		
-	}
+			storeTaskManagerMap.put(store, createTaskManagersForStore(store));
+		}
+	}	
 	
 	/**
-	 * Initialize lucene indexer for each store
+	 * Initializes the task managers for the store
 	 * 
-	 * @param stores
+	 * @param store
+	 * @return A new instance of StoreTaskManagerMap which contains references to all the task managers for the store.
 	 */
-	private void initializeSearchIndexers(List<Store> stores) throws IOException {
-		for(Store store : stores){
-			indexerService.initializeIndexerForStore(store);
-			logger.info("Initialized lucene index for store " + store.getName() + ", at " + store.getPath().toString());
-		}
+	private StoreTaskManagerMap createTaskManagersForStore(Store store) {
+		
+		logger.info("Creating queued task managers for store [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		
+		// for adding/updating files & directories
+		QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
+		// for adding/updating binary (BLOB) data in the database
+		QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
+		// for updating the lucene search index for the store
+		QueuedTaskManager indexWriterManager = taskManagerProvider.createQueuedTaskManager();
+		
+		generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		indexWriterManager.setManagerName("Lucene Index Writer Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
+		
+		ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
+		ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
+		ExecutorService indexWriterExecutor = Executors.newSingleThreadExecutor();
+		
+		generalManager.startTaskManager(generalExecutor);
+		binaryManager.startTaskManager(binaryExecutor);
+		indexWriterManager.startTaskManager(indexWriterExecutor);
+		
+		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager, indexWriterManager);
+		
+		return mapEntry;
+		
 	}
 	
 	/**
@@ -218,11 +188,9 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	private QueuedTaskManager getGeneralTaskManagerForStore(Store store){
-		
+	public QueuedTaskManager getGeneralTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getGeneralTaskManager();
-		
 	}
 	
 	/**
@@ -232,11 +200,9 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	private QueuedTaskManager getBinaryTaskManagerForStore(Store store){
-		
+	public QueuedTaskManager getBinaryTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getBinaryTaskManager();
-		
 	}
 	
 	/**
@@ -245,12 +211,289 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	private QueuedTaskManager getIndexWriterTaskManagerForStore(Store store){
-		
+	public QueuedTaskManager getIndexWriterTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getSearchIndexWriterTaskManager();
-		
 	}	
+	
+	/**
+	 * Fetch the store object from the PathResource object. If the store object is null then
+	 * this method will attempt to fetch it from the database using the store id.
+	 * 
+	 * @param r
+	 * @param userId - is of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStore(PathResource r, String userId) throws ServiceException {
+		
+		if(r == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
+		}
+		Store s = r.getStore();
+		if(s != null){
+			return s;
+		}
+		if(r.getStoreId() == null){
+			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
+		}
+		return getStoreById(r.getStoreId(), userId);
+		
+	}
+	
+	/**
+	 * Fetch all stores
+	 * 
+	 * @param userId - id of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public List<Store> getStores(String userId) throws ServiceException {
+		
+		List<Store> stores = null;
+		try {
+			stores = fileSystemRepository.getStores();
+		} catch (Exception e) {
+			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
+		}
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = null;
+			for(Store nextStore : stores) {
+				rootDir = nextStore.getRootDir();
+				this.setAccessBits(userGroupCodes, rootDir);
+			}
+		}
+		
+		return stores;
+	}
+	
+	/**
+	 * fetch a store by id
+	 * 
+	 * @param storeId
+	 * @param userId - is of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStoreById(Long storeId, String userId) throws ServiceException {
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreById(storeId);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store id => " + storeId, e);
+		}
+		if(store == null) {
+			return null;
+		}		
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = store.getRootDir();
+			this.setAccessBits(userGroupCodes, rootDir);
+		}
+		
+		return store;
+		
+	}
+	
+	/**
+	 * fetch a store by name
+	 * 
+	 * @param storeName
+	 * @param userId - is of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store getStoreByName(String storeName, String userId) throws ServiceException {
+		
+		String lowerStoreName = storeName.toLowerCase();
+		
+		Store store = null;
+		try {
+			store = fileSystemRepository.getStoreByName(lowerStoreName);
+		} catch (Exception e) {
+			throw new ServiceException("Failed to get store for store name => " + storeName, e);
+		}
+		if(store == null) {
+			return null;
+		}
+		
+		// validate read, write, and execute bits
+		if(!StringUtil.isNullEmpty(userId)) {
+			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
+			DirectoryResource rootDir = store.getRootDir();
+			this.setAccessBits(userGroupCodes, rootDir);
+		}		
+		
+		return store;
+		
+	}
+	
+	/**
+	 * Set the access bits (read, write, execute) on the directory using the set of groups codes to determine access.
+	 * 
+	 * @param userGroupCodes
+	 * @param dir
+	 */
+	private void setAccessBits(Set<String> userGroupCodes, DirectoryResource dir) {
+		if(dir == null) {
+			return;
+		}
+		if(CollectionUtil.isEmpty(userGroupCodes)) {
+			dir.setCanRead(false);
+			dir.setCanWrite(false);
+			dir.setCanExecute(false);
+			return;
+		}
+		if(dir.getReadGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanRead(true);
+		}
+		if(dir.getWriteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanWrite(true);
+		}
+		if(dir.getExecuteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
+			dir.setCanExecute(true);
+		}		
+	}
+	
+	/**
+	 * Create a new store, and create it's queued task manager
+	 * 
+	 * @param storeName
+	 * @param storeDesc
+	 * @param storePath
+	 * @param rootDirName
+	 * @param rootDirDesc
+	 * @param maxFileSizeDb
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public Store addStore(
+			String storeName, 
+			String storeDesc, 
+			Path storePath, 
+			String rootDirName, 
+			String rootDirDesc, 
+			Long maxFileSizeDb,
+			String readGroup,
+			String writeGroup,
+			String executeGroup,
+			AccessRule rule) throws ServiceException {
+		
+		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc, readGroup, writeGroup, executeGroup) || 
+				storePath == null || maxFileSizeDb == null){
+			
+			throw new ServiceException("Missing required parameter for creating a new store.");
+		}
+		
+		// make the last directory in the store path all lowercase, and remove any spaces
+		String storeDirName = storePath.getFileName().toString();
+		// remove all non alphanumeric characters except spaces, and convert to lowercase
+		String cleanStoreDirName = storeDirName.replaceAll("[^a-zA-Z0-9\\s]", "").toLowerCase();
+		Path storeParentPath = storePath.getParent();
+		Path cleanStorePath = Paths.get(storeParentPath.toString(), cleanStoreDirName);
+		
+		// make sure the store path does not already exist
+		if(Files.exists(cleanStorePath)) {
+			throw new ServiceException("Store path '" + cleanStorePath.toString() + "' already exists. Please provide a new directory that does not already exist.");
+		}
+		
+		// make sure there doesn't exist already a store with the same name (case insensitive)
+		// TOOO - pass in userId
+		Store store = getStoreByName(storeName, null);
+		if(store != null){
+			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
+		}
+		
+		// all files for the store are kept within a /files directory under the store directory
+		cleanStorePath = Paths.get(cleanStorePath.toString(), Store.STORE_FILES_DIRECTORY);
+		
+		try {
+			store = fileSystemRepository.addStore(
+					storeName, storeDesc, cleanStorePath, rootDirName, rootDirDesc, maxFileSizeDb,
+					readGroup, writeGroup, executeGroup, rule
+					);
+		} catch (Exception e) {
+			throw new ServiceException("Error creating new store '" + storeName + "' at " + cleanStorePath.toString(), e);
+		}
+		
+		storeTaskManagerMap.put(store, createTaskManagersForStore(store));
+		
+		try {
+			indexerService.initializeIndexerForStore(store);
+		} catch (IOException e) {
+			logger.error("Error initializing lucene indexer for new store, [id=" + store.getId() + ", name=" + store.getName() + "]");
+		}
+		
+		return store;
+		
+	}
+	
+	/**
+	 * Update a store (add ability to change store path at a later date.)
+	 * 
+	 * @param storeId - if of store to update
+	 * @param storeName - new name for store
+	 * @param storeDesc - new description for store
+	 * @param rootDirName - new name for root directory
+	 * @param rootDirDesc - new description for root directory
+	 * @param readGroup1 - new read group for root directory
+	 * @param writeGroup1 - new write group for root directory
+	 * @param executeGroup1 - new execute group for root directory
+	 * @param userId - id of user completing the action
+	 * @throws ServiceException
+	 */
+	public void updateStore(
+			Long storeId,
+			String storeName,
+			String storeDesc,
+			String rootDirName, 
+			String rootDirDesc, 
+			String readGroup1, 
+			String writeGroup1, 
+			String executeGroup1, 
+			String userId) throws ServiceException {
+		
+		// fetch store
+		Store storeToEdit = getStoreById(storeId, userId);
+		Long rootDirId = storeToEdit.getRootDir().getNodeId();
+		DirectoryResource rootDir = getDirectory(rootDirId, userId);
+		
+		// need execute permission on root directory of store in order to edit store
+		if(!rootDir.getCanExecute()) {
+			logger.info("No execute permission for store root directory. Permission to edit store denied.");
+			errorHandler.handlePermissionDenied(PermissionError.EXECUTE, rootDir, userId);
+		}
+		
+		// TODO - the following to function calls *should* be an atomic operation (currently not.)
+		
+		// make sure there doesn't exist already a store with the same name (excluding store we're editing in case we're 
+		// simply changing the case (upper/lower) of the store)
+		Store existingStore = getStoreByName(storeName, userId);
+		if(existingStore != null && !storeId.equals(existingStore.getId())){
+			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
+		}		
+		
+		// update store name & description
+		this.fileSystemRepository.updateStore(storeToEdit, storeName, storeDesc);
+		
+		// update root directory
+		updateDirectory(rootDirId, rootDirName, rootDirDesc, readGroup1, writeGroup1, executeGroup1, userId);
+		
+		
+		// TODO - rename task managers
+	
+	}
 	
 	/**
 	 * Rebuilds the lucene search index by clearing all existing documents and re-adding all the ones from the store.
@@ -261,7 +504,7 @@ public class FileService {
 	public void rebuildStoreSearchIndex(Long storeId, String userId) throws ServiceException {
 		
 		final Store store = getStoreById(storeId, userId);
-		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
+		//final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		
     	Tree<PathResource> tree = secureTreeService.buildPathResourceTree(store.getRootDir().getNodeId(), userId);
     	
@@ -333,146 +576,49 @@ public class FileService {
 	}
 	
 	/**
-	 * Fetch the store object from the PathResource object. If the store object is null then
-	 * this method will attempt to fetch it from the database using the store id.
+	 * Create sample store for testing, with some sub-directories.
 	 * 
-	 * @param r
-	 * @param userId - is of user completing the action
-	 * @return
 	 * @throws ServiceException
 	 */
+	@SuppressWarnings("unused")
 	@MethodTimer
-	public Store getStore(PathResource r, String userId) throws ServiceException {
+	public Store createTestStore() throws ServiceException {
 		
-		if(r == null){
-			throw new ServiceException("Cannot get store from PathResource, the PathResource object is null");
-		}
-		Store s = r.getStore();
-		if(s != null){
-			return s;
-		}
-		if(r.getStoreId() == null){
-			throw new ServiceException("Cannot get store from PathResource, the PathResource storeId value is null");
-		}
-		return getStoreById(r.getStoreId(), userId);
+		String userId = appProps.getProperty("store.test.user.id");
+		String testStoreName = appProps.getProperty("store.test.name");
+		String testStoreDesc = appProps.getProperty("store.test.desc");
+		String testStorePath = PathResourceUtil.cleanFullPath(appProps.getProperty("store.test.path"));
+		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
+		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
+		String testStoreRootDirDesc = appProps.getProperty("store.test.root.dir.desc");
+		String readGroup = appProps.getProperty("store.test.root.dir.read");
+		String writeGroup = appProps.getProperty("store.test.root.dir.write");
+		String executeGroup = appProps.getProperty("store.test.root.dir.execute");
 		
-	}
-	
-	/**
-	 * Fetch all stores
-	 * 
-	 * @param userId - id of user completing the action
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public List<Store> getStores(String userId) throws ServiceException {
-		
-		List<Store> stores = null;
+		Long maxBytes = 0L;
 		try {
-			stores = fileSystemRepository.getStores();
-		} catch (Exception e) {
-			throw new ServiceException("Failed to fetch all stores, " + e.getMessage(), e);
+			maxBytes = Long.valueOf(testStoreMaxFileSizeBytes);
+		} catch (NumberFormatException e) {
+			throw new ServiceException("Error parsing store.test.max.file.size.bytes to long. " + e.getMessage(), e);
 		}
 		
-		// validate read, write, and execute bits
-		if(!StringUtil.isNullEmpty(userId)) {
-			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
-			DirectoryResource rootDir = null;
-			for(Store nextStore : stores) {
-				rootDir = nextStore.getRootDir();
-				this.setAccessBits(userGroupCodes, rootDir);
-			}
-		}
+		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), 
+				testStoreRootDirName, testStoreRootDirDesc, maxBytes, 
+				readGroup, writeGroup, executeGroup, AccessRule.DENY);
 		
-		return stores;
+		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc", userId);
+		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc", userId);
+			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc", userId);
+			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc", userId);
+				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc", userId);
+				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc", userId);
+					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc", userId);
+					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc", userId);
+						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc", userId);		
+		
+		return store;
+	
 	}	
-	
-	/**
-	 * fetch a store by id
-	 * 
-	 * @param storeId
-	 * @param userId - is of user completing the action
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store getStoreById(Long storeId, String userId) throws ServiceException {
-		
-		Store store = null;
-		try {
-			store = fileSystemRepository.getStoreById(storeId);
-		} catch (Exception e) {
-			throw new ServiceException("Failed to get store for store id => " + storeId, e);
-		}
-		if(store == null) {
-			return null;
-		}		
-		
-		// validate read, write, and execute bits
-		if(!StringUtil.isNullEmpty(userId)) {
-			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
-			DirectoryResource rootDir = store.getRootDir();
-			this.setAccessBits(userGroupCodes, rootDir);
-		}
-		
-		return store;
-		
-	}
-	
-	/**
-	 * fetch a store by name
-	 * 
-	 * @param storeName
-	 * @param userId - is of user completing the action
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store getStoreByName(String storeName, String userId) throws ServiceException {
-		
-		String lowerStoreName = storeName.toLowerCase();
-		
-		Store store = null;
-		try {
-			store = fileSystemRepository.getStoreByName(lowerStoreName);
-		} catch (Exception e) {
-			throw new ServiceException("Failed to get store for store name => " + storeName, e);
-		}
-		if(store == null) {
-			return null;
-		}
-		
-		// validate read, write, and execute bits
-		if(!StringUtil.isNullEmpty(userId)) {
-			Set<String> userGroupCodes = gatekeeperService.getUserGroupCodes(userId);
-			DirectoryResource rootDir = store.getRootDir();
-			this.setAccessBits(userGroupCodes, rootDir);
-		}		
-		
-		return store;
-		
-	}
-	
-	/**
-	 * Fetch first-level directory resource, by name (case insensitive), from the directory, provided one exists.
-	 * 
-	 * @param dirId
-	 * @param name
-	 * @param userId
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource getChildDirectoryResource(Long dirId, String name, String userId) throws ServiceException {
-		
-		PathResource resource = secureTreeService.getChildResource(dirId, name, ResourceType.DIRECTORY, userId);
-		if(resource != null) {
-			return (DirectoryResource)resource;
-		}
-		return null;
-		
-	}
 	
 	/**
 	 * Fetch first-level file meta resource, by name (case insensitive), from the directory, provided one exists.
@@ -499,87 +645,6 @@ public class FileService {
 			return (FileMetaResource)resource;
 		}
 		return null;
-		
-	}
-	
-	/**
-	 * Fetch a DirectoryResource by id
-	 * 
-	 * In order to properly evaluate the permissions we have to fetch the entire parent tree,
-	 * since resource inherit permissions from their parent (directory) resources.
-	 * 
-	 * @param nodeId
-	 * @param userId
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource getDirectory(Long nodeId, String userId) throws ServiceException {
-		
-		PathResource resource = secureTreeService.getPathResource(nodeId, userId);
-		
-		if(resource == null){
-			throw new ServiceException("Failed to get directory by id, no path resource for nodeId=" + nodeId + ". Returned object was null.");
-		}
-		if(resource.getResourceType() == ResourceType.DIRECTORY){
-			return (DirectoryResource)resource;
-		}else{
-			throw new ServiceException("Error fetching directory resource, nodeId => " + nodeId + " is not a directory resource.");
-		}		
-		
-	}
-	
-	/**
-	 * Fetch a DirectoryResource by store name and resource relative path.
-	 * 
-	 * In order to properly evaluate the permissions we have to fetch the entire parent tree,
-	 * since resource inherit permissions from their parent (directory) resources.
-	 * 
-	 * @param storeName
-	 * @param relativePath
-	 * @param userId
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource getDirectory(String storeName, String relativePath, String userId) throws ServiceException {
-		
-		PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
-		
-		if(resource == null){
-			throw new ServiceException("Failed to get directory by store name and resource relative path, "
-					+ "returned object was null. storeName=" + storeName + ", relativePath=" + relativePath);
-		}
-		if(resource.getResourceType() == ResourceType.DIRECTORY){
-			return (DirectoryResource)resource;
-		}else{
-			throw new ServiceException("Error fetching directory resource, storeName=" + storeName + 
-					", relativePath=" + relativePath + ", is not a directory resource.");
-		}		
-		
-	}
-	
-	/**
-	 * Fetch the parent directory of a resource
-	 * 
-	 * @param nodeId - id of resource. If this is an ID of a root directory of a store, then there is no parent. Null will be returned.
-	 * @param userId - id of user completing the action
-	 * @return The parent directory of the resource, or null if the resource has not parent (root directories have not parent.)
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public DirectoryResource getParentDirectory(Long nodeId, String userId) throws ServiceException {
-		
-		PathResource parent = secureTreeService.getParentPathResource(nodeId, userId);
-		
-		if(parent == null) {
-			return null;
-		}
-		if(parent.getResourceType() == ResourceType.DIRECTORY) {
-			return (DirectoryResource)parent;
-		}else {
-			throw new ServiceException("The parent resource for resource with id " + nodeId + " is not a directory resource, yet it should be.");
-		}
 		
 	}
 	
@@ -722,181 +787,6 @@ public class FileService {
 			
 		}
 		
-	}	
-	
-	/**
-	 * Set the access bits (read, write, execute) on the directory using the set of groups codes to determine access.
-	 * 
-	 * @param userGroupCodes
-	 * @param dir
-	 */
-	private void setAccessBits(Set<String> userGroupCodes, DirectoryResource dir) {
-		if(dir == null) {
-			return;
-		}
-		if(CollectionUtil.isEmpty(userGroupCodes)) {
-			dir.setCanRead(false);
-			dir.setCanWrite(false);
-			dir.setCanExecute(false);
-			return;
-		}
-		if(dir.getReadGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
-			dir.setCanRead(true);
-		}
-		if(dir.getWriteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
-			dir.setCanWrite(true);
-		}
-		if(dir.getExecuteGroups().stream().anyMatch(userGroupCodes::contains) /*|| store.getAccessRule() == AccessRule.ALLOW*/ ) {
-			dir.setCanExecute(true);
-		}		
-	}
-	
-	/**
-	 * Create a new store, and create it's queued task manager
-	 * 
-	 * @param storeName
-	 * @param storeDesc
-	 * @param storePath
-	 * @param rootDirName
-	 * @param rootDirDesc
-	 * @param maxFileSizeDb
-	 * @return
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public Store addStore(
-			String storeName, 
-			String storeDesc, 
-			Path storePath, 
-			String rootDirName, 
-			String rootDirDesc, 
-			Long maxFileSizeDb,
-			String readGroup,
-			String writeGroup,
-			String executeGroup,
-			AccessRule rule) throws ServiceException {
-		
-		if(StringUtil.isAnyNullEmpty(storeName, storeDesc, rootDirName, rootDirDesc, readGroup, writeGroup, executeGroup) || 
-				storePath == null || maxFileSizeDb == null){
-			
-			throw new ServiceException("Missing required parameter for creating a new store.");
-		}
-		
-		// make the last directory in the store path all lowercase, and remove any spaces
-		String storeDirName = storePath.getFileName().toString();
-		// remove all non alphanumeric characters except spaces, and convert to lowercase
-		String cleanStoreDirName = storeDirName.replaceAll("[^a-zA-Z0-9\\s]", "").toLowerCase();
-		Path storeParentPath = storePath.getParent();
-		Path cleanStorePath = Paths.get(storeParentPath.toString(), cleanStoreDirName);
-		
-		// make sure the store path does not already exist
-		if(Files.exists(cleanStorePath)) {
-			throw new ServiceException("Store path '" + cleanStorePath.toString() + "' already exists. Please provide a new directory that does not already exist.");
-		}
-		
-		// make sure there doesn't exist already a store with the same name (case insensitive)
-		// TOOO - pass in userId
-		Store store = getStoreByName(storeName, null);
-		if(store != null){
-			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
-		}
-		
-		// all files for the store are kept within a /files directory under the store directory
-		cleanStorePath = Paths.get(cleanStorePath.toString(), Store.STORE_FILES_DIRECTORY);
-		
-		try {
-			store = fileSystemRepository.addStore(
-					storeName, 
-					storeDesc, 
-					cleanStorePath,
-					rootDirName, 
-					rootDirDesc, 
-					maxFileSizeDb,
-					readGroup,
-					writeGroup,
-					executeGroup,
-					rule);
-		} catch (Exception e) {
-			throw new ServiceException("Error creating new store '" + storeName + "' at " + cleanStorePath.toString(), e);
-		}
-		
-		QueuedTaskManager generalManager = taskManagerProvider.createQueuedTaskManager();
-		QueuedTaskManager binaryManager = taskManagerProvider.createQueuedTaskManager();
-		QueuedTaskManager indexWriterManager = taskManagerProvider.createQueuedTaskManager();
-		
-		generalManager.setManagerName("General Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-		binaryManager.setManagerName("Binary Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-		indexWriterManager.setManagerName("Lucene Index Writer Task Manager [storeId=" + store.getId() + ", storeName=" + store.getName() + "]");
-		
-		ExecutorService generalExecutor = Executors.newSingleThreadExecutor();
-		ExecutorService binaryExecutor = Executors.newSingleThreadExecutor();
-		ExecutorService indexWriterExecutor = Executors.newSingleThreadExecutor();
-		
-		generalManager.startTaskManager(generalExecutor);
-		binaryManager.startTaskManager(binaryExecutor);
-		indexWriterManager.startTaskManager(indexWriterExecutor);
-		
-		StoreTaskManagerMap mapEntry = new StoreTaskManagerMap(store, generalManager, binaryManager, indexWriterManager);
-		storeTaskManagerMap.put(store, mapEntry);		
-		
-		return store;
-		
-	}
-	
-	/**
-	 * Update a store (add ability to change store path at a later date.)
-	 * 
-	 * @param storeId - if of store to update
-	 * @param storeName - new name for store
-	 * @param storeDesc - new description for store
-	 * @param rootDirName - new name for root directory
-	 * @param rootDirDesc - new description for root directory
-	 * @param readGroup1 - new read group for root directory
-	 * @param writeGroup1 - new write group for root directory
-	 * @param executeGroup1 - new execute group for root directory
-	 * @param userId - id of user completing the action
-	 * @throws ServiceException
-	 */
-	public void updateStore(
-			Long storeId,
-			String storeName,
-			String storeDesc,
-			String rootDirName, 
-			String rootDirDesc, 
-			String readGroup1, 
-			String writeGroup1, 
-			String executeGroup1, 
-			String userId) throws ServiceException {
-		
-		// fetch store
-		Store storeToEdit = this.getStoreById(storeId, userId);
-		Long rootDirId = storeToEdit.getRootDir().getNodeId();
-		DirectoryResource rootDir = this.getDirectory(rootDirId, userId);
-		
-		// need execute permission on root directory of store in order to edit store
-		if(!rootDir.getCanExecute()) {
-			logger.info("No execute permission for store root directory. Permission to edit store denied.");
-			this.handlePermissionDenied(PermissionError.EXECUTE, rootDir, userId);
-		}
-		
-		// TODO - the following to function calls *should* be an atomic operation (currently not.)
-		
-		// make sure there doesn't exist already a store with the same name (excluding store we're editing in case we're 
-		// simply changing the case (upper/lower) of the store)
-		Store existingStore = getStoreByName(storeName, userId);
-		if(existingStore != null && !storeId.equals(existingStore.getId())){
-			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
-		}		
-		
-		// update store name & description
-		this.fileSystemRepository.updateStore(storeToEdit, storeName, storeDesc);
-		
-		// update root directory
-		this.updateDirectory(rootDirId, rootDirName, rootDirDesc, readGroup1, writeGroup1, executeGroup1, userId);
-		
-		
-		// TODO - rename task managers
-	
 	}
 	
 	/**
@@ -914,7 +804,7 @@ public class FileService {
 	@MethodTimer
 	public FileMetaResource addFileBlock(Long dirNodeId, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		final DirectoryResource dirRes = this.getDirectory(dirNodeId, userId);
+		final DirectoryResource dirRes = getDirectory(dirNodeId, userId);
 		
 		return addFileBlock(dirRes, filePath, replaceExisting, userId);
 		
@@ -936,7 +826,7 @@ public class FileService {
 	@MethodTimer
 	public FileMetaResource addFileBlock(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		final DirectoryResource dirRes = this.getDirectory(storeName, dirRelPath, userId);
+		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
 		
 		return addFileBlock(dirRes, filePath, replaceExisting, userId);		
 		
@@ -959,7 +849,7 @@ public class FileService {
 		
 		// user must have write permission on destination directory
 		if(!toDir.getCanWrite()){
-			this.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 		}		
 		
 		final Store store = getStore(toDir, userId);
@@ -1101,7 +991,7 @@ public class FileService {
 	@MethodTimer
 	public void addFile(Long dirNodeId, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		final DirectoryResource dirRes = this.getDirectory(dirNodeId, userId);
+		final DirectoryResource dirRes = getDirectory(dirNodeId, userId);
 		
 		this.addFile(dirRes, filePath, replaceExisting, userId);
 		
@@ -1124,7 +1014,7 @@ public class FileService {
 	@MethodTimer
 	public void addFile(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
 		
-		final DirectoryResource dirRes = this.getDirectory(storeName, dirRelPath, userId);
+		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
 		
 		this.addFile(dirRes, filePath, replaceExisting, userId);		
 		
@@ -1148,7 +1038,7 @@ public class FileService {
 		
 		// user must have write permission on destination directory
 		if(!toDir.getCanWrite()){
-			this.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 		}		
 		
 		final Store store = getStore(toDir, userId);
@@ -1308,23 +1198,23 @@ public class FileService {
 		FileMetaResource file = this.getFileMetaResource(fileNodeId, userId, false);
 		if(!file.getCanExecute()) {
 			logger.info("No execute permission");
-			this.handlePermissionDenied(PermissionError.EXECUTE, file, userId);
+			errorHandler.handlePermissionDenied(PermissionError.EXECUTE, file, userId);
 		}
 		if(!file.getCanWrite()) {
 			logger.info("No write permission");
-			this.handlePermissionDenied(PermissionError.WRITE, file, userId);
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, file, userId);
 		}		
 		
 		// also need read & write permission on parent directory, if one exists
-		DirectoryResource parentDir = this.getParentDirectory(fileNodeId, userId);
+		DirectoryResource parentDir = getParentDirectory(fileNodeId, userId);
 		if(parentDir != null) {
 			if(!parentDir.getCanRead()) {
 				logger.info("No read permission on parent");
-				this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
 			}
 			if(!parentDir.getCanWrite()) {
 				logger.info("No write permission on parent");
-				this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 			}
 		}else {
 			throw new ServiceException("Error fetching parent directory file file resource with node id = " + fileNodeId);		
@@ -1391,6 +1281,316 @@ public class FileService {
 		taskManager.addTask(task);
 		
 		task.waitComplete(); // block until complete		
+		
+	}
+	
+	/**
+	 * Remove the file, from database and disk. No undo.
+	 * 
+	 * @param fileNodeId - id of file resource to be removed
+	 * @param userId - id of user performing the action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void removeFile(Long fileNodeId, String userId) throws ServiceException {
+		
+		final FileMetaResource fileMetaResource = this.getFileMetaResource(fileNodeId, userId, false);
+		
+		this.removeFile(fileMetaResource, userId);
+		
+	}	
+	
+	/**
+	 * Remove the file, from database and disk. No undo.
+	 * 
+	 * @param fileMetaResource - the file resource to remove
+	 * @param userId - id of user performing the action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void removeFile(FileMetaResource fileMetaResource, String userId) throws ServiceException {
+		
+		DirectoryResource parentDir = getParentDirectory(fileMetaResource.getNodeId(), userId);
+		
+		// user must have read & write access on parent directory
+		// file resource inherits permission from parent directory, so this works.
+		//if(!fileMetaResource.getCanRead()) {
+		//	this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
+		//}		
+		//if(!fileMetaResource.getCanWrite()) {
+		//	this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
+		//}
+		
+		if(!parentDir.getCanRead()) {
+			errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
+		}		
+		if(!parentDir.getCanWrite()) {
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+		}		
+		
+		final Store store = getStore(fileMetaResource, userId);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
+		
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+	
+				try {
+					fileSystemRepository.removeFile(store, fileMetaResource);
+				} catch (Exception e) {
+					throw new ServiceException("Error removing file with node id => " + fileMetaResource.getNodeId() + ". " + e.getMessage(), e);
+				}
+				
+				resChangeService.directoryContentsChanged(parentDir.getNodeId());
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+			
+		}
+		
+		Task task = new Task();
+		task.setName("Remove file [fileNodeId=" + fileMetaResource.getNodeId() + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until finished		
+		
+	}	
+
+	/**
+	 * Copy file to another directory (could be in another store)
+	 * 
+	 * @param fileNodeId - the file to copy
+	 * @param dirNodeId - the destination directory
+	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
+	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
+	 * @param userId - Id of user performing the action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
+		
+		FileMetaResource sourceFile = getFileMetaResource(fileNodeId, userId, false);
+		DirectoryResource destitationDir = getDirectory(dirNodeId, userId);
+		
+		copyFile(sourceFile, destitationDir, replaceExisting, userId);
+		
+	}
+	
+	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId) throws ServiceException {
+		
+		// user must have read on parent directory
+		// file resource inherits permission from parent directory, so this works.
+		if(!fileToCopy.getCanRead()) {
+			errorHandler.handlePermissionDenied(PermissionError.READ, fileToCopy, userId);
+		}
+		
+		Store soureStore = getStore(fileToCopy, userId);
+		Path sourceFilePath = PathResourceUtil.buildPath(soureStore, fileToCopy);
+		
+		// can't copy a file to the directory it's already in
+		if(fileToCopy.getParentNodeId().equals(toDir.getNodeId())){
+			throw new ServiceException("You cannot copy a file to the directory that it's already in. "
+					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
+		}
+		
+		this.addFile(toDir, sourceFilePath, replaceExisting, userId);
+		
+		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
+		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.
+		// we can lock a file meta resource right when we add it, then unlock it after we refresh the binary data.
+		
+		// TODO - do we want to block for updating binary data in the database?  Uhg!
+		// If we don't block then it's possible for one of those update tasks to fail (someone else might
+		// delete a file before the update process runs.)  We should make those tasks fail gracefully
+		
+	}
+		
+	/**
+	 * Move a file, preserving same node id.
+	 * 
+	 * @param fileNodeId - id of the file to move
+	 * @param dirNodeId - id of the directory where the file will be moved to
+	 * @param replaceExisting
+	 * @param userId - id of user performing action
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
+		
+		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId, userId, false);
+		final DirectoryResource destDir = getDirectory(dirNodeId, userId);
+				
+		moveFile(fileToMove, destDir, replaceExisting, userId);
+		
+	}
+	
+	/**
+	 * Move a file, preserving same node id.
+	 * 
+	 * @param fileNodeId - the file to move
+	 * @param dirNodeId - the directory where the file will be moved to
+	 * @param replaceExisting
+	 * @param userId - id of user performing action
+	 * @throws ServiceException
+	 */
+	public void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting, String userId) throws ServiceException {
+		
+		// user must have write access on destination directory
+		if(!destDir.getCanWrite()){
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, destDir, userId);
+		}
+		
+		// user must have read and write on parent directory of file being moved
+		DirectoryResource sourceDir = getParentDirectory(fileToMove.getChildNodeId(), userId);	
+		if(!sourceDir.getCanRead()) {
+			errorHandler.handlePermissionDenied(PermissionError.READ, sourceDir, userId);
+		}
+		if(!sourceDir.getCanWrite()) {
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, sourceDir, userId);
+		}
+		
+		final Store store = getStore(destDir, userId);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		
+		class Task extends AbstractQueuedTask<Void> {
+
+			@Override
+			public Void doWork() throws ServiceException {
+
+				try {
+					fileSystemRepository.moveFile(fileToMove, destDir, replaceExisting);
+				} catch (Exception e) {
+					throw new ServiceException("Error moving file " + fileToMove.getNodeId() + " to directory " + 
+							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
+				}
+				
+				resChangeService.directoryContentsChanged(sourceDir.getNodeId());
+				resChangeService.directoryContentsChanged(destDir.getNodeId());
+				
+				return null;
+				
+			}
+
+			@Override
+			public Logger getLogger() {
+				return logger;
+			}
+				
+		}		
+		
+		Task task = new Task();
+		task.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
+		taskManager.addTask(task);
+		
+		task.waitComplete(); // block until finished	
+		
+	}
+	
+	/**
+	 * Fetch first-level directory resource, by name (case insensitive), from the directory, provided one exists.
+	 * 
+	 * @param dirId
+	 * @param name
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getChildDirectoryResource(Long dirId, String name, String userId) throws ServiceException {
+		
+		PathResource resource = secureTreeService.getChildResource(dirId, name, ResourceType.DIRECTORY, userId);
+		if(resource != null) {
+			return (DirectoryResource)resource;
+		}
+		return null;
+		
+	}
+	
+	/**
+	 * Fetch a DirectoryResource by id
+	 * 
+	 * In order to properly evaluate the permissions we have to fetch the entire parent tree,
+	 * since resource inherit permissions from their parent (directory) resources.
+	 * 
+	 * @param nodeId
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getDirectory(Long nodeId, String userId) throws ServiceException {
+		
+		PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		
+		if(resource == null){
+			throw new ServiceException("Failed to get directory by id, no path resource for nodeId=" + nodeId + ". Returned object was null.");
+		}
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new ServiceException("Error fetching directory resource, nodeId => " + nodeId + " is not a directory resource.");
+		}		
+		
+	}
+	
+	/**
+	 * Fetch a DirectoryResource by store name and resource relative path.
+	 * 
+	 * In order to properly evaluate the permissions we have to fetch the entire parent tree,
+	 * since resource inherit permissions from their parent (directory) resources.
+	 * 
+	 * @param storeName
+	 * @param relativePath
+	 * @param userId
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getDirectory(String storeName, String relativePath, String userId) throws ServiceException {
+		
+		PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		
+		if(resource == null){
+			throw new ServiceException("Failed to get directory by store name and resource relative path, "
+					+ "returned object was null. storeName=" + storeName + ", relativePath=" + relativePath);
+		}
+		if(resource.getResourceType() == ResourceType.DIRECTORY){
+			return (DirectoryResource)resource;
+		}else{
+			throw new ServiceException("Error fetching directory resource, storeName=" + storeName + 
+					", relativePath=" + relativePath + ", is not a directory resource.");
+		}		
+		
+	}
+	
+	/**
+	 * Fetch the parent directory of a resource
+	 * 
+	 * @param nodeId - id of resource. If this is an ID of a root directory of a store, then there is no parent. Null will be returned.
+	 * @param userId - id of user completing the action
+	 * @return The parent directory of the resource, or null if the resource has not parent (root directories have not parent.)
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public DirectoryResource getParentDirectory(Long nodeId, String userId) throws ServiceException {
+		
+		PathResource parent = secureTreeService.getParentPathResource(nodeId, userId);
+		
+		if(parent == null) {
+			return null;
+		}
+		if(parent.getResourceType() == ResourceType.DIRECTORY) {
+			return (DirectoryResource)parent;
+		}else {
+			throw new ServiceException("The parent resource for resource with id " + nodeId + " is not a directory resource, yet it should be.");
+		}
 		
 	}
 	
@@ -1473,7 +1673,7 @@ public class FileService {
 		
 		// user must have write permission on parent directory
 		if(!parentDir.getCanWrite()) {
-			this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 		}		
 		
 		final Store store = getStore(parentDir, userId);
@@ -1539,11 +1739,11 @@ public class FileService {
 		DirectoryResource dir = this.getDirectory(dirNodeId, userId);
 		if(!dir.getCanExecute()) {
 			logger.info("No execute permission on directory");
-			this.handlePermissionDenied(PermissionError.EXECUTE, dir, userId);
+			errorHandler.handlePermissionDenied(PermissionError.EXECUTE, dir, userId);
 		}
 		if(!dir.getCanWrite()) {
 			logger.info("No write permission on directory");
-			this.handlePermissionDenied(PermissionError.WRITE, dir, userId);
+			errorHandler.handlePermissionDenied(PermissionError.WRITE, dir, userId);
 		}		
 		
 		// also need read & write permission on parent directory, if one exists
@@ -1551,11 +1751,11 @@ public class FileService {
 		if(parentDir != null) {
 			if(!parentDir.getCanRead()) {
 				logger.info("No read permission on parent");
-				this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
 			}
 			if(!parentDir.getCanWrite()) {
 				logger.info("No write permission on parent");
-				this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 			}
 		}else {
 			// no parent directory, so this must be a root directory for a store.
@@ -1603,85 +1803,6 @@ public class FileService {
 		taskManager.addTask(task);
 		
 		task.waitComplete(); // block until complete	
-		
-	}
-	
-	/**
-	 * Remove the file, from database and disk. No undo.
-	 * 
-	 * @param fileNodeId - id of file resource to be removed
-	 * @param userId - id of user performing the action
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public void removeFile(Long fileNodeId, String userId) throws ServiceException {
-		
-		final FileMetaResource fileMetaResource = this.getFileMetaResource(fileNodeId, userId, false);
-		
-		this.removeFile(fileMetaResource, userId);
-		
-	}	
-	
-	/**
-	 * Remove the file, from database and disk. No undo.
-	 * 
-	 * @param fileMetaResource - the file resource to remove
-	 * @param userId - id of user performing the action
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public void removeFile(FileMetaResource fileMetaResource, String userId) throws ServiceException {
-		
-		DirectoryResource parentDir = this.getParentDirectory(fileMetaResource.getNodeId(), userId);
-		
-		// user must have read & write access on parent directory
-		// file resource inherits permission from parent directory, so this works.
-		//if(!fileMetaResource.getCanRead()) {
-		//	this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
-		//}		
-		//if(!fileMetaResource.getCanWrite()) {
-		//	this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
-		//}
-		
-		if(!parentDir.getCanRead()) {
-			this.handlePermissionDenied(PermissionError.READ, parentDir, userId);
-		}		
-		if(!parentDir.getCanWrite()) {
-			this.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
-		}		
-		
-		final Store store = getStore(fileMetaResource, userId);
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
-		
-		class Task extends AbstractQueuedTask<Void> {
-
-			@Override
-			public Void doWork() throws ServiceException {
-	
-				try {
-					fileSystemRepository.removeFile(store, fileMetaResource);
-				} catch (Exception e) {
-					throw new ServiceException("Error removing file with node id => " + fileMetaResource.getNodeId() + ". " + e.getMessage(), e);
-				}
-				
-				resChangeService.directoryContentsChanged(parentDir.getNodeId());
-				
-				return null;
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-			
-		}
-		
-		Task task = new Task();
-		task.setName("Remove file [fileNodeId=" + fileMetaResource.getNodeId() + "]");
-		taskManager.addTask(task);
-		
-		task.waitComplete(); // block until finished		
 		
 	}
 	
@@ -1744,7 +1865,7 @@ public class FileService {
 									FileMetaResource fileToDelete = (FileMetaResource)treeNode.getData();
 									// this works because files inherit permissions from their directory
 									if(!fileToDelete.getCanWrite()) {
-										handlePermissionDenied(PermissionError.WRITE, fileToDelete, userId);
+										errorHandler.handlePermissionDenied(PermissionError.WRITE, fileToDelete, userId);
 									}
 									fileSystemRepository.removeFile(store, fileToDelete);
 									
@@ -1753,7 +1874,7 @@ public class FileService {
 									// we walk the tree bottom up, so by the time we remove a directory it will be empty
 									DirectoryResource nextDirToDelete = (DirectoryResource)treeNode.getData();
 									if(!nextDirToDelete.getCanWrite()) {
-										handlePermissionDenied(PermissionError.WRITE, nextDirToDelete, userId);
+										errorHandler.handlePermissionDenied(PermissionError.WRITE, nextDirToDelete, userId);
 									}									
 									fileSystemRepository.removeDirectory(store, nextDirToDelete);
 									
@@ -1795,55 +1916,6 @@ public class FileService {
 	}
 	
 	/**
-	 * Copy file to another directory (could be in another store)
-	 * 
-	 * @param fileNodeId - the file to copy
-	 * @param dirNodeId - the destination directory
-	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
-	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
-	 * @param userId - Id of user performing the action
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
-		
-		FileMetaResource sourceFile = this.getFileMetaResource(fileNodeId, userId, false);
-		DirectoryResource destitationDir = this.getDirectory(dirNodeId, userId);
-		
-		copyFile(sourceFile, destitationDir, replaceExisting, userId);
-		
-	}
-	
-	private void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId) throws ServiceException {
-		
-		// user must have read on parent directory
-		// file resource inherits permission from parent directory, so this works.
-		if(!fileToCopy.getCanRead()) {
-			handlePermissionDenied(PermissionError.READ, fileToCopy, userId);
-		}
-		
-		Store soureStore = getStore(fileToCopy, userId);
-		Path sourceFilePath = PathResourceUtil.buildPath(soureStore, fileToCopy);
-		
-		// can't copy a file to the directory it's already in
-		if(fileToCopy.getParentNodeId().equals(toDir.getNodeId())){
-			throw new ServiceException("You cannot copy a file to the directory that it's already in. "
-					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
-		}
-		
-		this.addFile(toDir, sourceFilePath, replaceExisting, userId);
-		
-		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
-		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.
-		// we can lock a file meta resource right when we add it, then unlock it after we refresh the binary data.
-		
-		// TODO - do we want to block for updating binary data in the database?  Uhg!
-		// If we don't block then it's possible for one of those update tasks to fail (someone else might
-		// delete a file before the update process runs.)  We should make those tasks fail gracefully
-		
-	}
-	
-	/**
 	 * Copies directory 'copyDirNodeId' to destination directory 'destDirNodeId'. The destination directory
 	 * may already contain files and sub-directories with the same name. Directories will be merged. Files
 	 * will be overwritten if 'replaceExisting' is set to true. If 'replaceExisting' is set to false and there
@@ -1874,13 +1946,13 @@ public class FileService {
 			// if the directory being copied has a parent directory, then the user must have read access
 			// on that directory in order to perform copy.
 			if(!fromDirParent.getCanRead()) {
-				handlePermissionDenied(PermissionError.READ, fromDirParent, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, fromDirParent, userId);
 			}
 			
 		}
 		
-		final DirectoryResource fromDir = this.getDirectory(copyDirNodeId, userId);
-		final DirectoryResource toDir = this.getDirectory(destDirNodeId, userId);
+		final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
+		final DirectoryResource toDir = getDirectory(destDirNodeId, userId);
 		final Store fromStore = getStore(fromDir, userId);
 		final Store toStore = getStore(fromDir, userId);
 
@@ -1917,11 +1989,11 @@ public class FileService {
 			
 			// user needs read permission on directory to copy
 			if(!dirToCopy.getCanRead()) {
-				handlePermissionDenied(PermissionError.READ, dirToCopy, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, dirToCopy, userId);
 			}
 			// user need write permission on destination directory
 			if(!toDir.getCanWrite()) {
-				handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 			}			
 			
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
@@ -1938,7 +2010,7 @@ public class FileService {
 			
 		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
 			
-			this.copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId);
+			copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId);
 			
 		}
 		
@@ -1993,87 +2065,6 @@ public class FileService {
 	}
 	
 	/**
-	 * Move a file, preserving same node id.
-	 * 
-	 * @param fileNodeId - id of the file to move
-	 * @param dirNodeId - id of the directory where the file will be moved to
-	 * @param replaceExisting
-	 * @param userId - id of user performing action
-	 * @throws ServiceException
-	 */
-	@MethodTimer
-	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
-		
-		final FileMetaResource fileToMove = this.getFileMetaResource(fileNodeId, userId, false);
-		final DirectoryResource destDir = this.getDirectory(dirNodeId, userId);
-				
-		moveFile(fileToMove, destDir, replaceExisting, userId);
-		
-	}
-	
-	/**
-	 * Move a file, preserving same node id.
-	 * 
-	 * @param fileNodeId - the file to move
-	 * @param dirNodeId - the directory where the file will be moved to
-	 * @param replaceExisting
-	 * @param userId - id of user performing action
-	 * @throws ServiceException
-	 */
-	private void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting, String userId) throws ServiceException {
-		
-		// user must have write access on destination directory
-		if(!destDir.getCanWrite()){
-			handlePermissionDenied(PermissionError.WRITE, destDir, userId);
-		}
-		
-		// user must have read and write on parent directory of file being moved
-		DirectoryResource sourceDir = this.getParentDirectory(fileToMove.getChildNodeId(), userId);	
-		if(!sourceDir.getCanRead()) {
-			handlePermissionDenied(PermissionError.READ, sourceDir, userId);
-		}
-		if(!sourceDir.getCanWrite()) {
-			handlePermissionDenied(PermissionError.WRITE, sourceDir, userId);
-		}
-		
-		final Store store = getStore(destDir, userId);
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
-		
-		class Task extends AbstractQueuedTask<Void> {
-
-			@Override
-			public Void doWork() throws ServiceException {
-
-				try {
-					fileSystemRepository.moveFile(fileToMove, destDir, replaceExisting);
-				} catch (Exception e) {
-					throw new ServiceException("Error moving file " + fileToMove.getNodeId() + " to directory " + 
-							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
-				}
-				
-				resChangeService.directoryContentsChanged(sourceDir.getNodeId());
-				resChangeService.directoryContentsChanged(destDir.getNodeId());
-				
-				return null;
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-				
-		}		
-		
-		Task task = new Task();
-		task.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
-		taskManager.addTask(task);
-		
-		task.waitComplete(); // block until finished	
-		
-	}
-	
-	/**
 	 * Move a directory (does not preserve node IDs for directories, but does for files.)
 	 * 
 	 * @param moveDirId - the directory to move
@@ -2103,10 +2094,10 @@ public class FileService {
 		DirectoryResource parentDir = this.getParentDirectory(moveDirId, userId);
 		if(parentDir != null) {
 			if(!parentDir.getCanRead()) {
-				handlePermissionDenied(PermissionError.READ, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
 			}
 			if(!parentDir.getCanWrite()) {
-				handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 			}			
 		}
 		
@@ -2138,6 +2129,18 @@ public class FileService {
 		
 	}
 	
+	/**
+	 * Helper method for moving a directory. This method is called recursively to move all child
+	 * directories in the directory tree.
+	 * 
+	 * @param fromStore
+	 * @param toStore
+	 * @param pathResourceNode
+	 * @param toDir
+	 * @param replaceExisting
+	 * @param userId
+	 * @throws ServiceException
+	 */
 	private void moveDirectoryTraversal(
 			Store fromStore,
 			Store toStore, 
@@ -2154,15 +2157,15 @@ public class FileService {
 			
 			// user must have read & write access on directory to move
 			if(!dirToMove.getCanRead()) {
-				handlePermissionDenied(PermissionError.READ, dirToMove, userId);
+				errorHandler.handlePermissionDenied(PermissionError.READ, dirToMove, userId);
 			}
 			if(!dirToMove.getCanWrite()) {
-				handlePermissionDenied(PermissionError.WRITE, dirToMove, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, dirToMove, userId);
 			}
 			
 			// user must have write access on destination directory
 			if(!toDir.getCanWrite()) {
-				handlePermissionDenied(PermissionError.WRITE, toDir, userId);
+				errorHandler.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
 			}
 			
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
@@ -2173,9 +2176,7 @@ public class FileService {
 			// move children of the directory (files and sub-directories)
 			if(pathResourceNode.hasChildren()){
 				for(TreeNode<PathResource> child : pathResourceNode.getChildren()){
-					
 					moveDirectoryTraversal(fromStore, toStore, child, newToDir, replaceExisting, userId);
-					
 				}
 			}
 			
@@ -2213,7 +2214,7 @@ public class FileService {
 		filePaths.stream().forEach(
 			(pathToFile) ->{
 				try {
-					this.addFile(dirNodeId, userId, pathToFile, replaceExisting);
+					addFile(dirNodeId, userId, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
 				}
@@ -2250,122 +2251,13 @@ public class FileService {
 		filePaths.stream().forEach(
 			(pathToFile) ->{
 				try {
-					this.addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting);
+					addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting);
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 
 							dirRelPath + "', under store name '" + storeName + "'.", e);
 				}
 			});		
 		
-	}
-	
-	/**
-	 * Create sample store for testing, with some sub-directories.
-	 * 
-	 * @throws ServiceException
-	 */
-	@SuppressWarnings("unused")
-	@MethodTimer
-	public Store createTestStore() throws ServiceException {
-		
-		String userId = appProps.getProperty("store.test.user.id");
-		String testStoreName = appProps.getProperty("store.test.name");
-		String testStoreDesc = appProps.getProperty("store.test.desc");
-		String testStorePath = PathResourceUtil.cleanFullPath(appProps.getProperty("store.test.path"));
-		String testStoreMaxFileSizeBytes = appProps.getProperty("store.test.max.file.size.bytes");
-		String testStoreRootDirName = appProps.getProperty("store.test.root.dir.name");
-		String testStoreRootDirDesc = appProps.getProperty("store.test.root.dir.desc");
-		String readGroup = appProps.getProperty("store.test.root.dir.read");
-		String writeGroup = appProps.getProperty("store.test.root.dir.write");
-		String executeGroup = appProps.getProperty("store.test.root.dir.execute");
-		
-		Long maxBytes = 0L;
-		try {
-			maxBytes = Long.valueOf(testStoreMaxFileSizeBytes);
-		} catch (NumberFormatException e) {
-			throw new ServiceException("Error parsing store.test.max.file.size.bytes to long. " + e.getMessage(), e);
-		}
-		
-		Store store = addStore(testStoreName, testStoreDesc, Paths.get(testStorePath), 
-				testStoreRootDirName, testStoreRootDirDesc, maxBytes, 
-				readGroup, writeGroup, executeGroup, AccessRule.DENY);
-		
-		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc", userId);
-		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc", userId);
-			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc", userId);
-			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc", userId);
-				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc", userId);
-				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc", userId);
-					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc", userId);
-					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc", userId);
-						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc", userId);		
-		
-		return store;
-	
-	}	
-	
-	/**
-	 * Helper method for processing permission related errors
-	 * 
-	 * @param error
-	 * @param fileResource
-	 * @param userId
-	 * @throws ServiceException
-	 */
-	private void handlePermissionDenied(PermissionError error, PathResource resource, String userId) throws ServiceException {
-		// TODO create a new exception type for permission not allowed
-		throw new ServiceException(error.toString() + ". User " + userId + " does not have permission to perform action on " + 
-				" path resource [id=" + resource.getNodeId() + ", type=" + resource.getResourceType().getTypeString() + 
-				", relPath=" + resource.getRelativePath() + ", store=" + resource.getStore().getName() + "]");
-	}	
-	
-	/**
-	 * Helper method for processing permission related errors
-	 * 
-	 * @param error
-	 * @param fileResource
-	 * @param userId
-	 * @throws ServiceException
-	 */
-	private void handlePermissionDenied(PermissionError error, FileMetaResource fileResource, String userId) throws ServiceException {
-		// TODO create a new exception type for permission not allowed
-		throw new ServiceException(error.toString() + ". User " + userId + " does not have permission to perform action on " + 
-				" file resource [id=" + fileResource.getNodeId() + ", type=" + fileResource.getResourceType().getTypeString() + 
-				", relPath=" + fileResource.getRelativePath() + ", store=" + fileResource.getStore().getName() + "]");
-	}
-	
-	/**
-	 * Helper method for processing permission related errors
-	 * 
-	 * @param error
-	 * @param fileResource
-	 * @param userId
-	 * @throws ServiceException
-	 */
-	private void handlePermissionDenied(PermissionError error, DirectoryResource directoryResource, String userId) throws ServiceException {
-		// TODO create a new exception type for permission not allowed
-		throw new ServiceException(error.toString() + ". User " + userId + " does not have permission to perform action on " + 
-				" directory resource [id=" + directoryResource.getNodeId() + ", type=" + directoryResource.getResourceType().getTypeString() + 
-				", relPath=" + directoryResource.getRelativePath() + ", store=" + directoryResource.getStore().getName() + "]");
-	}	
-	
-	/**
-	 * Helper method for processing permission related errors
-	 * 
-	 * @param error
-	 * @param fileResource
-	 * @param directoryResource
-	 * @param userId
-	 * @throws ServiceException
-	 */
-	private void handlePermissionDenied(PermissionError error, FileMetaResource fileResource, DirectoryResource directoryResource, String userId) throws ServiceException {
-		// TODO create a new exception type for permission not allowed
-		throw new ServiceException(error.toString() + ". User " + userId + " does not have permission to perform action on " + 
-				" file resource [id=" + fileResource.getNodeId() + ", type=" + fileResource.getResourceType().getTypeString() + 
-				", relPath=" + fileResource.getRelativePath() + ", store=" + fileResource.getStore().getName() + "] " +
-				" under directory resource [id=" + directoryResource.getNodeId() + ", type=" + directoryResource.getResourceType().getTypeString() + 
-				", relPath=" + directoryResource.getRelativePath() + ", store=" + directoryResource.getStore().getName() + "] "				
-				);
 	}	
 
 }
