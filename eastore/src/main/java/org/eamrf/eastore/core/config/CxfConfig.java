@@ -15,6 +15,7 @@ import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.web.jaxrs.core.rs.ClosureResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemActionResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemJsonResource;
+import org.eamrf.eastore.web.jaxrs.core.rs.FileSystemSearchResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.StoreApplication;
 import org.eamrf.eastore.web.jaxrs.core.rs.TestResource;
 import org.eamrf.eastore.web.jaxrs.core.rs.TreeResource;
@@ -87,7 +88,8 @@ public class CxfConfig {
 							getTreeResource(), 
 							getClosureResource(),
 							getFileSystemJsonResource(),
-							getFileSystemActionResource()
+							getFileSystemActionResource(),
+							getFileSystemSearchResource()
 							)
 					);
 			
@@ -134,6 +136,11 @@ public class CxfConfig {
 		@Bean
 		public FileSystemActionResource getFileSystemActionResource(){
 			return new FileSystemActionResource();
+		}
+		
+		@Bean
+		public FileSystemSearchResource getFileSystemSearchResource() {
+			return new FileSystemSearchResource();
 		}
 		
 		// marshalling json for our jax-rs services

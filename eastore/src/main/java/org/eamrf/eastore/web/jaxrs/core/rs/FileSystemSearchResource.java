@@ -25,8 +25,8 @@ import org.springframework.stereotype.Service;
  * @author slenzi
  */
 @Path("/fsys/search")
-@Service("fileSystemSearchService")
-public class FileSystemSearchService extends BaseResourceHandler {
+@Service("fileSystemSearchResource")
+public class FileSystemSearchResource extends BaseResourceHandler {
 
     @InjectLogger
     private Logger logger;
@@ -37,7 +37,7 @@ public class FileSystemSearchService extends BaseResourceHandler {
     @Autowired
     private StoreSearchService searchService;
 	
-	public FileSystemSearchService() {
+	public FileSystemSearchResource() {
 		
 	}
 	
