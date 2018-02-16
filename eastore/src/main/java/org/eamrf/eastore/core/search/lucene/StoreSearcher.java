@@ -62,11 +62,13 @@ public class StoreSearcher {
 	 * @throws IOException
 	 */
     public void init() throws IOException {
-        searcherManager = new SearcherManager(indexWriter, true, false, null);
+        //searcherManager = new SearcherManager(indexWriter, true, false, null);
+    	searcherManager = new SearcherManager(indexWriter, null);
         scheduledExecutor = Executors.newScheduledThreadPool(1);
         maybeRefreshFuture = scheduledExecutor.scheduleWithFixedDelay(() -> {
             try {
-                searcherManager.maybeRefresh();
+                boolean refreshStatus = searcherManager.maybeRefresh();
+                logger.info("Executed 'maybe refresh' on search manager for store [id=" + store.getId() + ", name=" + store.getName() + "], refresh status = " + refreshStatus);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -79,25 +81,6 @@ public class StoreSearcher {
 	public Store getStore() {
 		return store;
 	}
-
-	/*
-    public TopDocs searchByContent(String value, int topResults) throws IOException, ParseException {
-    	
-    	IndexSearcher searcher = null;
-        try {
-            searcher = searcherManager.acquire();
-            QueryParser qp = new QueryParser(SearchConstants.RESOURCE_CONTENT, new StandardAnalyzer());
-            Query query = qp.parse(value); 
-            TopDocs hits = searcher.search(query, topResults);
-            return hits;
-        } finally {
-            if (searcher != null) {
-                searcherManager.release(searcher);
-            }
-        }   	
-    	
-    }
-    */
     
 	/**
      * Search by document content/body.

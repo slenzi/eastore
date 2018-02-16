@@ -86,7 +86,8 @@ public class StoreIndexer {
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
         commitFuture = scheduledExecutor.scheduleWithFixedDelay(() -> {
             try {
-                indexWriter.commit();
+                long commitReturn = indexWriter.commit();
+                logger.info("Executed commit on index writer for store [id=" + store.getId() + ", name=" + store.getName() + "], commit return = " + commitReturn);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -179,7 +180,10 @@ public class StoreIndexer {
 		
 		if(!isInitialized()) {
 			return;
-		}		
+		}
+		
+		logger.info("Adding file " + fileResource.getRelativePath() + " to store index [id=" + getStore().getId() + 
+				", name=" + getStore().getName() + "]");		
 		
 		Document doc = new Document();
 		
@@ -235,10 +239,6 @@ public class StoreIndexer {
 						errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
 								". Resource belongs to different store with id " + resource.getStore().getId() + ".\n");						
 					}else {
-						
-						logger.info("Adding file " + resource.getRelativePath() + " to store index [id=" + getStore().getId() + 
-								", name=" + getStore().getName() + "]");						
-						
 						add(resource);
 					}
 				} catch (IOException e) {
@@ -306,8 +306,11 @@ public class StoreIndexer {
 		logger.info("Deleting all documents in search index for store [id=" + getStore().getId() + 
 						", name=" + getStore().getName() + "]");
 		
-		indexWriter.deleteAll();
-		indexWriter.commit();
+		long deleteReturn = indexWriter.deleteAll();
+		long commitReturn = indexWriter.commit();
+		
+		logger.info("deleteAll() return = " + deleteReturn);
+		logger.info("commit() return = " + commitReturn);
 		
 	}
 	

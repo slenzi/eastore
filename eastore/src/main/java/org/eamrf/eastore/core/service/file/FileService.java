@@ -864,7 +864,7 @@ public class FileService {
 		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
 			public FileMetaResource doWork() throws ServiceException {
 				
-				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
+				//logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
 				
 				String fileName = filePath.getFileName().toString();
 				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
@@ -925,7 +925,7 @@ public class FileService {
 				indexTask.setName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]");
 				indexWriterManager.addTask(indexTask);
 				
-				logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
+				//logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
 				
 				//
 				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
@@ -936,14 +936,14 @@ public class FileService {
 				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
 					public Void doWork() throws ServiceException {
 
-						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(START)");
+						//logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(START)");
 						try {
 							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
 						} catch (Exception e) {
 							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 									+ "for file resource node => " + fileNodeId, e);
 						}
-						logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(END)");
+						//logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(END)");
 						return null;				
 						
 					}
@@ -1055,7 +1055,7 @@ public class FileService {
 				
 				CodeTimer timer = new CodeTimer();
 				timer.start();
-				logger.info("---- (START) ---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
+				//logger.info("---- (START) ---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
 				
 				String fileName = filePath.getFileName().toString();
 				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
@@ -1086,7 +1086,7 @@ public class FileService {
 				resChangeService.directoryContentsChanged(toDir.getNodeId());				
 				
 				timer.stop();
-				logger.info("----- (END " + timer.getElapsedTime() + ") ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
+				//logger.info("----- (END " + timer.getElapsedTime() + ") ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
 				
 				timer.reset();
 				
@@ -1122,7 +1122,7 @@ public class FileService {
 				indexWriterManager.addTask(indexTask);
 				
 				timer.start();
-				logger.info("---- (START) ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
+				//logger.info("---- (START) ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
 				
 				//
 				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
@@ -1135,7 +1135,7 @@ public class FileService {
 
 						CodeTimer timer = new CodeTimer();
 						timer.start();
-						logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath);
+						//logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath);
 						
 						try {
 							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
@@ -1144,8 +1144,8 @@ public class FileService {
 									+ "for file resource node => " + fileNodeId, e);
 						}
 						timer.stop();
-						logger.info("----- (END " + timer.getElapsedTime() + ") ----- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + 
-								fileRelPath);
+						//logger.info("----- (END " + timer.getElapsedTime() + ") ----- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + 
+						//		fileRelPath);
 						return null;				
 						
 					}
@@ -1160,7 +1160,7 @@ public class FileService {
 				binaryTaskManager.addTask(refreshTask);
 				
 				timer.stop();
-				logger.info("---- (END " + timer.getElapsedTime() + ") ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
+				//logger.info("---- (END " + timer.getElapsedTime() + ") ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
 				
 				return newOrUpdatedFileResource;				
 			}
