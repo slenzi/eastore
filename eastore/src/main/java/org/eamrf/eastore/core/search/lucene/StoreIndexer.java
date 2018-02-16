@@ -86,7 +86,9 @@ public class StoreIndexer {
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
         commitFuture = scheduledExecutor.scheduleWithFixedDelay(() -> {
             try {
+            	indexWriter.flush();
                 long commitReturn = indexWriter.commit();
+                indexWriter.maybeMerge();
                 logger.info("Executed commit on index writer for store [id=" + store.getId() + ", name=" + store.getName() + "], commit return = " + commitReturn);
             } catch (IOException e) {
                 e.printStackTrace();
