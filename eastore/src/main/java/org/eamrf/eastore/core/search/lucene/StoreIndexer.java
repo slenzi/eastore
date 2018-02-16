@@ -192,6 +192,9 @@ public class StoreIndexer {
 		Store fileStore = fileResource.getStore();
 		if(fileStore != null) {
 			
+			doc.add(new StringField(SearchConstants.STORE_ID, fileStore.getId().toString() , Field.Store.YES));
+			doc.add(new StringField(SearchConstants.STORE_NAME, fileStore.getName() , Field.Store.YES));
+			
 			Path filePath = PathResourceUtil.buildPath(fileStore, fileResource.getRelativePath());
 			doc.add(new StringField(SearchConstants.RESOURCE_PATH, filePath.toString() , Field.Store.YES));
 			

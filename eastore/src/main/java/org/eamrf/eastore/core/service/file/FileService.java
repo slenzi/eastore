@@ -188,7 +188,7 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	public QueuedTaskManager getGeneralTaskManagerForStore(Store store){
+	private QueuedTaskManager getGeneralTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getGeneralTaskManager();
 	}
@@ -200,7 +200,7 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	public QueuedTaskManager getBinaryTaskManagerForStore(Store store){
+	private QueuedTaskManager getBinaryTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getBinaryTaskManager();
 	}
@@ -211,7 +211,7 @@ public class FileService {
 	 * @param store
 	 * @return
 	 */
-	public QueuedTaskManager getIndexWriterTaskManagerForStore(Store store){
+	private QueuedTaskManager getIndexWriterTaskManagerForStore(Store store){
 		StoreTaskManagerMap map = storeTaskManagerMap.get(store);
 		return map.getSearchIndexWriterTaskManager();
 	}	
@@ -2258,6 +2258,45 @@ public class FileService {
 				}
 			});		
 		
-	}	
+	}
+	
+	/**
+	 * Get a map that specifies read access to all files in a store for a specific user.
+	 * 
+	 * @param store - the store
+	 * @param userId - the ID of the user
+	 * @return A map where keys are fileIds. Every file in the store will have its keys returned in the map. The values
+	 * in the maps are booleans and specify whether or not the user has access to said file.  If map.get(fileId) == true then
+	 * the user has read access to the file. If map.get(fileId) == false then the user does not have read access to the file.
+	 * @throws ServiceException
+	 */
+	public Map<Long,Boolean> getFileReadAccessMap(final Store store, final String userId) throws ServiceException {
+		
+		//final Store store = getStoreById(storeId, userId);
+		final Long rootNodeId = store.getRootDir().getNodeId();
+		final Tree<PathResource> tree = secureTreeService.buildPathResourceTree(rootNodeId, userId);
+		
+		Map<Long,Boolean> accessMap = new HashMap<Long,Boolean>();
+		
+		try {
+			// walk tree, top-down
+			Trees.walkTree(tree,
+				(treeNode) -> {
+					if(treeNode.getData().getResourceType() == ResourceType.FILE){
+						FileMetaResource file = (FileMetaResource)treeNode.getData();
+						if(file.getCanRead()) {
+							accessMap.put(file.getNodeId(), true);
+						}
+					}
+				},
+				WalkOption.PRE_ORDER_TRAVERSAL);
+		}catch(TreeNodeVisitException e){
+			throw new ServiceException("Encountered error when walking tree to build read access map. "
+					+ "Tree root node Id => " + rootNodeId + ". " + e.getMessage(), e);
+		}		
+		
+		return accessMap;
+		
+	}
 
 }
