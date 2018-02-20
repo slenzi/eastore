@@ -1050,6 +1050,7 @@ public class FileSystemRepository {
 		newFileResource.setRelativePath(fileRelPathString);
 		newFileResource.setDesc(null); // TODO - change method to pass in optional description?
 		newFileResource.setStoreId(store.getId());
+		newFileResource.setStore(store);
 		((FileMetaResource)newFileResource).setFileSize(fileSizeBytes);
 		((FileMetaResource)newFileResource).setMimeType(fileMimeType);
 		((FileMetaResource)newFileResource).setIsBinaryInDatabase(isBinaryInDb);
@@ -1123,6 +1124,8 @@ public class FileSystemRepository {
 		currFileRes.setDateUpdated(DateUtil.getCurrentTime());
 		currFileRes.setPathName(newFileName);
 		currFileRes.setRelativePath(newRelFilePath);
+		//currFileRes.setStoreId(store.getId());
+		//currFileRes.setStore(store);
 			
 		// update eas_file_meta_resource
 		jdbcTemplate.update(

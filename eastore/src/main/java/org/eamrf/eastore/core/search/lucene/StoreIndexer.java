@@ -178,7 +178,7 @@ public class StoreIndexer {
 	 * @param fileResource
 	 * @throws IOException
 	 */
-	public void add(FileMetaResource fileResource) throws IOException {
+	private void addResource(FileMetaResource fileResource) throws IOException {
 		
 		if(!isInitialized()) {
 			return;
@@ -215,18 +215,21 @@ public class StoreIndexer {
 		
 		indexWriter.addDocument(doc);
 		
+		//indexWriter.forceMerge(1, false); // hacky
+		//indexWriter.commit();
+		
 	}
 	
 	/**
 	 * Create a task that adds all files to the lucene index. The task is submitted to an executor for execution.
 	 * 
-	 * @param fileResources
+	 * @param resources - The collection of file resource to add to the lucene index
 	 * @return A future for the task.
 	 * @throws IOException
 	 */
-	public Future<Boolean> addAll(final Collection<FileMetaResource> fileResources) {
+	public Future<Boolean> addAll(final Collection<FileMetaResource> resources) {
 		
-		if(CollectionUtil.isEmpty(fileResources)) {
+		if(CollectionUtil.isEmpty(resources)) {
 			return null;
 		}
 		
@@ -234,23 +237,23 @@ public class StoreIndexer {
 		StringBuffer errors = new StringBuffer();
 		
 		Callable<Boolean> callableTask = () -> {
-			for(FileMetaResource resource : fileResources) {
+			for(FileMetaResource res : resources) {
 				try {
-					if(!resource.getStore().getId().equals(getStore().getId())) {
+					if(!res.getStore().getId().equals(getStore().getId())) {
 						wasError.set(true);
-						errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
-								". Resource belongs to different store with id " + resource.getStore().getId() + ".\n");						
+						errors.append("Failed to add file " + res.getRelativePath() + " to index for store " + getStore().getId() + 
+								". Resource belongs to different store with id " + res.getStore().getId() + ".\n");						
 					}else {
-						add(resource);
+						addResource(res);
 					}
 				} catch (IOException e) {
 					wasError.set(true);
-					errors.append("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
+					errors.append("Failed to add file " + res.getRelativePath() + " to index for store " + getStore().getId() + 
 							", " + e.getMessage() + ".\n");
 				}
 			}
 			if(wasError.get()) {
-				logger.error("Error adding all " + fileResources.size() + " resources to lucene index for store [id=" + getStore().getId() + 
+				logger.error("Error adding all " + resources.size() + " resources to lucene index for store [id=" + getStore().getId() + 
 						", name=" + getStore().getName() + "]\n");
 				logger.error(errors.toString());
 				return false;
@@ -266,19 +269,49 @@ public class StoreIndexer {
 	}
 	
 	/**
+	 * Create a task that adds the file to the lucene index. The task is submitted to an executor for execution.
+	 * 
+	 * @param resource
+	 * @return A future for the task.
+	 */
+	public Future<Boolean> add(final FileMetaResource resource) {
+		
+		if(resource == null) {
+			return null;
+		}
+		
+		Callable<Boolean> callableTask = () -> {
+			if(!resource.getStore().getId().equals(getStore().getId())) {
+				logger.error("Failed to add file " + resource.getRelativePath() + " to index for store " + getStore().getId() + 
+								". Resource belongs to different store with id " + resource.getStore().getId() + ".\n");
+				return false;
+			}else {
+				addResource(resource);
+				return true;
+			}
+		};		
+		
+		Future<Boolean> future = executorService.submit(callableTask);
+		
+		return future;		
+		
+	}
+	
+	/**
 	 * Update a document in the index
 	 * 
 	 * @param fileResource
 	 * @throws IOException
 	 */
-	public void update(FileMetaResource fileResource) throws IOException {
+	public Future<Boolean> update(FileMetaResource fileResource) throws IOException {
 		
 		if(!isInitialized()) {
-			return;
+			return null;
 		}
 		
 		delete(fileResource);
-		add(fileResource);
+		
+		return add(fileResource);
 		
 	}
 	
