@@ -88,8 +88,8 @@ public class StoreIndexer {
             try {
             	indexWriter.flush();
                 long commitReturn = indexWriter.commit();
-                indexWriter.maybeMerge();
-                logger.info("Executed commit on index writer for store [id=" + store.getId() + ", name=" + store.getName() + "], commit return = " + commitReturn);
+                indexWriter.maybeMerge(); // TODO - needed?
+                //logger.info("Executed commit on index writer for store [id=" + store.getId() + ", name=" + store.getName() + "], commit return = " + commitReturn);
             } catch (IOException e) {
                 e.printStackTrace();
             }

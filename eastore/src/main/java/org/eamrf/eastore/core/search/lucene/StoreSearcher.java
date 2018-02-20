@@ -68,7 +68,7 @@ public class StoreSearcher {
         maybeRefreshFuture = scheduledExecutor.scheduleWithFixedDelay(() -> {
             try {
                 boolean refreshStatus = searcherManager.maybeRefresh();
-                logger.info("Executed 'maybe refresh' on search manager for store [id=" + store.getId() + ", name=" + store.getName() + "], refresh status = " + refreshStatus);
+                //logger.info("Executed 'maybe refresh' on search manager for store [id=" + store.getId() + ", name=" + store.getName() + "], refresh status = " + refreshStatus);
             } catch (IOException e) {
                 e.printStackTrace();
             }
