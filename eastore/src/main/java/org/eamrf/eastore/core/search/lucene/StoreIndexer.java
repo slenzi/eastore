@@ -34,6 +34,7 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.search.extract.FileTextExtractor;
 import org.eamrf.eastore.core.search.service.SearchConstants;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.slf4j.Logger;
@@ -175,7 +176,7 @@ public class StoreIndexer {
 	/**
 	 * Add a document to the index
 	 * 
-	 * @param fileResource
+	 * @param fileResource - the file to add to the index.
 	 * @throws IOException
 	 */
 	private void addResource(FileMetaResource fileResource) throws IOException {
@@ -189,12 +190,20 @@ public class StoreIndexer {
 		
 		Document doc = new Document();
 		
+		// store basic file attributes
 		doc.add(new StringField(SearchConstants.RESOURCE_ID, fileResource.getNodeId().toString(), Field.Store.YES));
 		doc.add(new StringField(SearchConstants.RESOURCE_NAME, fileResource.getPathName(), Field.Store.YES));
 		doc.add(new StringField(SearchConstants.RESOURCE_DESC, StringUtil.changeNull(fileResource.getDesc()), Field.Store.YES));
+		doc.add(new StringField(SearchConstants.RESOURCE_RELATIVE_PATH, fileResource.getRelativePath(), Field.Store.YES));
 		
-		doc.add(new TextField(SearchConstants.RESOURCE_RELATIVE_PATH, fileResource.getRelativePath(), Field.Store.YES));
+		// store the directory ID and name
+		DirectoryResource directory = fileResource.getDirectory();
+		if(directory != null) {
+			doc.add(new StringField(SearchConstants.DIRECTORY_ID, directory.getNodeId().toString() , Field.Store.YES));
+			doc.add(new StringField(SearchConstants.DIRECTORY_NAME, directory.getPathName() , Field.Store.YES));			
+		}
 		
+		// store the store ID and name, plus the full path to the file, and the parsed file contents
 		Store fileStore = fileResource.getStore();
 		if(fileStore != null) {
 			

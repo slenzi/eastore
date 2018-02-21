@@ -9,14 +9,22 @@ public class FileMetaResource extends PathResource {
 
 	private static final long serialVersionUID = 5490626976580639467L;
 	
+	// file size in bytes
 	private Long fileSize = 0L;
+	
+	// file mime type
 	private String mimeType = null;
+	
+	// will be true if the binary data for the file is in the database (blob), false otherwise
 	private Boolean isBinaryInDatabase = false;
+	
+	// the binary data for the file
 	private BinaryResource binaryResource = null;
 	
-	public FileMetaResource() {
-		
-	}
+	// optional reference to the directory that the file is in
+	private DirectoryResource directory = null;
+	
+	public FileMetaResource() { }
 
 	public Long getFileSize() {
 		return fileSize;
@@ -48,6 +56,20 @@ public class FileMetaResource extends PathResource {
 
 	public void setBinaryResource(BinaryResource binaryResource) {
 		this.binaryResource = binaryResource;
+	}
+	
+	/**
+	 * @return the directory that the file is in
+	 */
+	public DirectoryResource getDirectory() {
+		return directory;
+	}
+
+	/**
+	 * @param directory - the directory that the file is in
+	 */
+	public void setDirectory(DirectoryResource directory) {
+		this.directory = directory;
 	}
 
 	@Override

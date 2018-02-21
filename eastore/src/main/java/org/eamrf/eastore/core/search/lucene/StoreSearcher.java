@@ -127,6 +127,7 @@ public class StoreSearcher {
             Document doc = null;
             
             String resourceId = null, resourceContent = null, resourceName = null;
+            String directoryId = null, directoryName = null;
             String resourceDescription = null, resourceRelativePath = null;
             String resourcePath = null, storeId = null, storeName = null;
             
@@ -135,33 +136,54 @@ public class StoreSearcher {
             
             for (int i = 0; i < hits.scoreDocs.length; i++) {
             	
+            	StoreSearchHit hit = new StoreSearchHit();
+            	
             	docId = hits.scoreDocs[i].doc;
             	doc = searcher.doc(docId);
             	
+            	hit.setLuceneDocId(docId);
+            	
             	resourceId = doc.get(SearchConstants.RESOURCE_ID);
+            	if(!StringUtil.isNullEmpty(resourceId)) {
+            		hit.setResourceId(Long.valueOf(resourceId));
+            	}
+            	
             	resourceName = doc.get(SearchConstants.RESOURCE_NAME);
+            	hit.setResourceName(resourceName);
+            	
             	resourceDescription = doc.get(SearchConstants.RESOURCE_DESC);
+            	hit.setResourceDesc(resourceDescription);
+            	
             	resourceRelativePath = doc.get(SearchConstants.RESOURCE_RELATIVE_PATH);
+            	hit.setResourceRelativePath(resourceRelativePath); 
+            	
             	resourcePath = doc.get(SearchConstants.RESOURCE_PATH);
-            	resourceContent = doc.get(SearchConstants.RESOURCE_CONTENT);
+            	if(!StringUtil.isNullEmpty(resourcePath)) {
+            		hit.setResourcePath(Paths.get(resourcePath));
+            	}
+            	
+            	directoryId = doc.get(SearchConstants.DIRECTORY_ID);
+            	if(!StringUtil.isNullEmpty(directoryId)) {
+            		hit.setDirectoryId(Long.valueOf(directoryId));
+            	}
+            	
+            	directoryName = doc.get(SearchConstants.DIRECTORY_NAME);
+            	hit.setDirectoryName(directoryName);
             	
             	storeId = doc.get(SearchConstants.STORE_ID);
+            	if(!StringUtil.isNullEmpty(storeId)) {
+            		hit.setStoreId(Long.valueOf(storeId));
+            	}
+            	
             	storeName = doc.get(SearchConstants.STORE_NAME);
-            	
-            	tokeStream = analyzer.tokenStream(SearchConstants.RESOURCE_CONTENT, new StringReader(resourceContent));
-            	
-            	fragments = highlighter.getBestFragments(tokeStream, resourceContent, maxNumFragments);
-            	
-            	StoreSearchHit hit = new StoreSearchHit();
-            	hit.setFragments(fragments);
-            	hit.setLuceneDocId(docId);
-            	hit.setResourceDesc(resourceDescription);
-            	hit.setResourceId(Long.valueOf(resourceId));
-            	hit.setResourceName(resourceName);
-            	hit.setResourcePath(Paths.get(resourcePath));
-            	hit.setResourceRelativePath(resourceRelativePath);
-            	hit.setStoreId(Long.valueOf(storeId));
             	hit.setStoreName(storeName);
+            	
+            	resourceContent = doc.get(SearchConstants.RESOURCE_CONTENT);
+            	if(!StringUtil.isNullEmpty(resourceContent)) {
+                	tokeStream = analyzer.tokenStream(SearchConstants.RESOURCE_CONTENT, new StringReader(resourceContent));
+                	fragments = highlighter.getBestFragments(tokeStream, resourceContent, maxNumFragments);
+                	hit.setFragments(fragments);
+            	}
             	
             	searchResult.addHit(hit);
             	

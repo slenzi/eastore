@@ -20,6 +20,10 @@ public class StoreSearchHit {
 	private String resourceDesc = null;
 	private Path resourcePath = null;
 	private String resourceRelativePath = null;
+	
+	private Long directoryId = 0L;
+	private String directoryName = null;
+	
 	private Long storeId = 0L;
 	private String storeName = null;
 	
@@ -123,6 +127,34 @@ public class StoreSearchHit {
 	 */
 	public void setResourceRelativePath(String resourceRelativePath) {
 		this.resourceRelativePath = resourceRelativePath;
+	}
+
+	/**
+	 * @return the directoryId
+	 */
+	public Long getDirectoryId() {
+		return directoryId;
+	}
+
+	/**
+	 * @param directoryId the directoryId to set
+	 */
+	public void setDirectoryId(Long directoryId) {
+		this.directoryId = directoryId;
+	}
+
+	/**
+	 * @return the directoryName
+	 */
+	public String getDirectoryName() {
+		return directoryName;
+	}
+
+	/**
+	 * @param directoryName the directoryName to set
+	 */
+	public void setDirectoryName(String directoryName) {
+		this.directoryName = directoryName;
 	}
 
 	/**

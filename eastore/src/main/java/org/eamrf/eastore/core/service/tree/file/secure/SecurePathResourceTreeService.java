@@ -95,9 +95,10 @@ public class SecurePathResourceTreeService {
 	@MethodTimer
 	public Tree<PathResource> buildPathResourceTree(Long nodeId, String userId, int depth) throws ServiceException {
 		
-		//DirectoryResource dirResource = this.getDirectory(dirNodeId, userId);
+		// get the directory node
 		PathResource resource = getPathResource(nodeId, userId);
 		
+		// get the children up to the specified depth
 		return this.buildPathResourceTree(resource, userId, depth);	// TODO - was Integer.MAX_VALUE. A bug I think.
 		
 	}	
@@ -359,6 +360,7 @@ public class SecurePathResourceTreeService {
 		// by fetching the entire parent tree and evaluating all parent permissions.
 		Tree<PathResource> tree = this.buildPathResourceTree(dirId, userId, 1);
 		
+		// collect the first-level children in a list
 		if(tree.getRootNode().hasChildren()){
 			return tree.getRootNode().getChildren()
 				.stream()
@@ -373,9 +375,9 @@ public class SecurePathResourceTreeService {
 	/**
 	 * Fetch first-level resource, by name (case insensitive), from the directory, provided one exists.
 	 * 
-	 * @param dirId
-	 * @param dirName
-	 * @param userId
+	 * @param dirId - id of the directory
+	 * @param name - name of the file to fetch
+	 * @param userId - ID of user completing the action
 	 * @return
 	 * @throws ServiceException
 	 */
@@ -385,6 +387,7 @@ public class SecurePathResourceTreeService {
 		if(childResources == null || childResources.size() == 0) {
 			return null;
 		}
+		// find the child resource with the specified name
 		for(PathResource pr : childResources){
 			if(pr.getParentNodeId().equals(dirId)
 					&& pr.getResourceType() == type

@@ -903,6 +903,10 @@ public class FileService {
 					@Override
 					public Void doWork() throws ServiceException {
 						try {
+							
+							// set the directory so we can store that information in the lucene index
+							documentToIndex.setDirectory(toDir);							
+							
 							if(haveExisting) {
 								indexerService.getIndexerForStore(store).update(documentToIndex);
 							}else {
@@ -1099,6 +1103,10 @@ public class FileService {
 					@Override
 					public Void doWork() throws ServiceException {
 						try {
+							
+							// set the directory so we can store that information in the lucene index
+							documentToIndex.setDirectory(toDir);
+							
 							if(haveExisting) {
 								indexerService.getIndexerForStore(store).update(documentToIndex);
 							}else {
