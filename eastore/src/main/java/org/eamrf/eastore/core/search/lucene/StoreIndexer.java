@@ -200,7 +200,8 @@ public class StoreIndexer {
 		DirectoryResource directory = fileResource.getDirectory();
 		if(directory != null) {
 			doc.add(new StringField(SearchConstants.DIRECTORY_ID, directory.getNodeId().toString() , Field.Store.YES));
-			doc.add(new StringField(SearchConstants.DIRECTORY_NAME, directory.getPathName() , Field.Store.YES));			
+			doc.add(new StringField(SearchConstants.DIRECTORY_NAME, directory.getPathName() , Field.Store.YES));
+			doc.add(new StringField(SearchConstants.DIRECTORY_RELATIVE_PATH, directory.getRelativePath() , Field.Store.YES));
 		}
 		
 		// store the store ID and name, plus the full path to the file, and the parsed file contents

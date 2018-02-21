@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -496,6 +497,45 @@ public class FileService {
 	}
 	
 	/**
+	 * Walk the tree and add any found FileMetaResource to the collection. Also, for every FileMetaResource
+	 * set the directory that the file is in FileMetaResource.setDirectory
+	 * 
+	 * @param node - The node to start walking at
+	 * @param files - The collection in which we collect all files
+	 */
+	private void collectFilesAndSetDirectory(TreeNode<PathResource> node, Collection<FileMetaResource> files) {
+		
+		collectFilesAndSetDirectory(node, null, files);
+		
+	}
+	
+	/**
+	 * Walk the tree and add any found FileMetaResource to the collection. Also, for every FileMetaResource
+	 * set the directory that the file is in FileMetaResource.setDirectory
+	 * 
+	 * @param node - The node to start walking at
+	 * @param parent - The parent of 'node'
+	 * @param files - The collection in which we collect all files
+	 */
+	private void collectFilesAndSetDirectory(TreeNode<PathResource> node, TreeNode<PathResource> parent, Collection<FileMetaResource> files) {
+		
+		PathResource resource = node.getData();
+		if(resource.getResourceType() == ResourceType.DIRECTORY) {
+			List<TreeNode<PathResource>> children = node.getChildren();
+			if(!CollectionUtil.isEmpty(children)) {
+				for(TreeNode<PathResource> child : children) {
+					collectFilesAndSetDirectory(child, node, files);
+				}
+			}
+		}else if(resource.getResourceType() == ResourceType.FILE) {
+			FileMetaResource f = (FileMetaResource)resource;
+			f.setDirectory( (DirectoryResource)parent.getData()  );
+			files.add(f);
+		}
+		
+	}
+	
+	/**
 	 * Rebuilds the lucene search index by clearing all existing documents and re-adding all the ones from the store.
 	 * 
 	 * @param storeId
@@ -504,24 +544,31 @@ public class FileService {
 	public void rebuildStoreSearchIndex(Long storeId, String userId) throws ServiceException {
 		
 		final Store store = getStoreById(storeId, userId);
-		//final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
 		
     	Tree<PathResource> tree = secureTreeService.buildPathResourceTree(store.getRootDir().getNodeId(), userId);
     	
-    	List<FileMetaResource> filePaths = new ArrayList<FileMetaResource>();
+    	List<FileMetaResource> files = new ArrayList<FileMetaResource>();
+    	
+    	// this method will set the directory for each file resource. This allows us to store directory
+    	// related meta-data for the file in the lucene index
+    	collectFilesAndSetDirectory(tree.getRootNode(), files);
+    	
+    	/*
+    	List<FileMetaResource> files = new ArrayList<FileMetaResource>();
     	try {
 			Trees.walkTree(tree, (treeNode) -> {
 				PathResource resource = treeNode.getData();
 				if(resource.getResourceType() == ResourceType.FILE){
-					filePaths.add((FileMetaResource)resource);
+					files.add((FileMetaResource)resource);
 				}
 			}, WalkOption.PRE_ORDER_TRAVERSAL);
 		} catch (TreeNodeVisitException e) {
 			throw new ServiceException("Error walking file tree to get list of all files, " + e.getMessage());
 		}
+		*/
     	
     	logger.info("Store [id='" + store.getId() + "', name='" + store.getName() + "'] has " + 
-    			filePaths.size() + " files to be added to lucene search index.");
+    			files.size() + " files to be added to lucene search index.");
     	
     	StoreIndexer indexer = null;
     	try {
@@ -538,7 +585,7 @@ public class FileService {
 					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
 		}
     	
-    	Future<Boolean> future = indexer.addAll(filePaths);
+    	Future<Boolean> future = indexer.addAll(files);
     	
     	/*
     	Boolean ok;

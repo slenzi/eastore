@@ -59,12 +59,12 @@ public class MsWordExtractor implements FileTextExtractor {
 		String text = null;
 		try(BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(filePath))){
 			if (FileMagic.valueOf(bis) == FileMagic.OLE2) {
-				System.out.println("MS Document type: OLE2");
+				//System.out.println("MS Document type: OLE2");
 				WordExtractor ex = new WordExtractor(bis);
 				text = ex.getText();
 				ex.close();
 			} else if(FileMagic.valueOf(bis) == FileMagic.OOXML) {
-				System.out.println("MS Document type: OOXML");
+				//System.out.println("MS Document type: OOXML");
 				XWPFDocument doc = new XWPFDocument(bis);
 				XWPFWordExtractor extractor = new XWPFWordExtractor(doc);
 				text = extractor.getText();

@@ -127,7 +127,7 @@ public class StoreSearcher {
             Document doc = null;
             
             String resourceId = null, resourceContent = null, resourceName = null;
-            String directoryId = null, directoryName = null;
+            String directoryId = null, directoryName = null, directoryRelativePath = null;
             String resourceDescription = null, resourceRelativePath = null;
             String resourcePath = null, storeId = null, storeName = null;
             
@@ -169,6 +169,9 @@ public class StoreSearcher {
             	
             	directoryName = doc.get(SearchConstants.DIRECTORY_NAME);
             	hit.setDirectoryName(directoryName);
+            	
+            	directoryRelativePath = doc.get(SearchConstants.DIRECTORY_RELATIVE_PATH);
+            	hit.setDirectoryRelativePath(directoryRelativePath);
             	
             	storeId = doc.get(SearchConstants.STORE_ID);
             	if(!StringUtil.isNullEmpty(storeId)) {

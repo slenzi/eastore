@@ -23,6 +23,7 @@ public class StoreSearchHit {
 	
 	private Long directoryId = 0L;
 	private String directoryName = null;
+	private String directoryRelativePath = null;
 	
 	private Long storeId = 0L;
 	private String storeName = null;
@@ -155,6 +156,20 @@ public class StoreSearchHit {
 	 */
 	public void setDirectoryName(String directoryName) {
 		this.directoryName = directoryName;
+	}
+
+	/**
+	 * @return the directoryRelativePath
+	 */
+	public String getDirectoryRelativePath() {
+		return directoryRelativePath;
+	}
+
+	/**
+	 * @param directoryRelativePath the directoryRelativePath to set
+	 */
+	public void setDirectoryRelativePath(String directoryRelativePath) {
+		this.directoryRelativePath = directoryRelativePath;
 	}
 
 	/**

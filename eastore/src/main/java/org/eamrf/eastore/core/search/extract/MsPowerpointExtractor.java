@@ -67,12 +67,12 @@ public class MsPowerpointExtractor implements FileTextExtractor {
 		String text = null;
 		try(BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(filePath))){
 			if (FileMagic.valueOf(bis) == FileMagic.OLE2) {
-				System.out.println("MS Powerpoint type: OLE2");
+				//System.out.println("MS Powerpoint type: OLE2");
 				PowerPointExtractor ex = new PowerPointExtractor(bis);
 				text = ex.getText();
 				ex.close();
 			} else if(FileMagic.valueOf(bis) == FileMagic.OOXML) {
-				System.out.println("MS Powerpoint type: OOXML");
+				//System.out.println("MS Powerpoint type: OOXML");
 				XMLSlideShow show = new XMLSlideShow(bis);
 				XSLFPowerPointExtractor extractor = new XSLFPowerPointExtractor(show);
 				text = extractor.getText();

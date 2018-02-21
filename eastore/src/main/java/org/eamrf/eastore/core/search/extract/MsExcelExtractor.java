@@ -65,13 +65,13 @@ public class MsExcelExtractor implements FileTextExtractor {
 		String text = null;
 		try(BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(filePath))){
 			if (FileMagic.valueOf(bis) == FileMagic.OLE2) {
-				System.out.println("MS Excel type: OLE2");
+				//System.out.println("MS Excel type: OLE2");
 				HSSFWorkbook book = new HSSFWorkbook(bis);
 				ExcelExtractor ex = new ExcelExtractor(book);
 				text = ex.getText();
 				ex.close();
 			} else if(FileMagic.valueOf(bis) == FileMagic.OOXML) {
-				System.out.println("MS Excel type: OOXML");
+				//System.out.println("MS Excel type: OOXML");
 				XSSFWorkbook book = new XSSFWorkbook(bis);
 				XSSFExcelExtractor extractor = new XSSFExcelExtractor(book);
 				text = extractor.getText();
