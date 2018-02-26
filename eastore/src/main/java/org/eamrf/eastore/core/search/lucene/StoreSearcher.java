@@ -43,6 +43,8 @@ public class StoreSearcher {
     private Store store = null;
     
     private ScheduledExecutorService scheduledExecutor = null;
+    
+    //private final 
    
 	
     /**
@@ -88,11 +90,12 @@ public class StoreSearcher {
      * @param value - search value
      * @param topResults - number of top hit results to return
      * @param maxNumFragments - max number of fragments to return for each hit.
+     * @oaram fragmentSize - length of search fragment
      * @return
      * @throws IOException 
      * @throws ParseException 
      */
-    public StoreSearchResult searchByContent(String value, int topResults, int maxNumFragments) throws IOException, ServiceException {
+    public StoreSearchResult searchByContent(String value, int topResults, int maxNumFragments, int fragmentSize) throws IOException, ServiceException {
     	
     	if(StringUtil.isNullEmpty(value)) {
     		return null;

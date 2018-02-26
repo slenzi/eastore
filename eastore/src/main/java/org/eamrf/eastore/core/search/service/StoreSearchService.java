@@ -36,8 +36,9 @@ public class StoreSearchService {
     // maps all stores to their lucene searcher
     private Map<Store,StoreSearcher> storeSearcherMap = new HashMap<Store,StoreSearcher>();
     
-    final int MAX_NUM_SEARCH_RESULTS = 50;
-    final int MAX_NUM_SEARCH_FRAGMENTS = 5;
+    private final int MAX_NUM_SEARCH_RESULTS 	= 50;
+    private final int MAX_NUM_SEARCH_FRAGMENTS	= 3;
+    private final int MAX_FRAGMENT_LENGTH		= 300;
 	
 	public StoreSearchService() {
 		
@@ -84,7 +85,7 @@ public class StoreSearchService {
 		
 		StoreSearchResult result = null;
 		try {
-			result = searcher.searchByContent(value, MAX_NUM_SEARCH_RESULTS, MAX_NUM_SEARCH_FRAGMENTS);
+			result = searcher.searchByContent(value, MAX_NUM_SEARCH_RESULTS, MAX_NUM_SEARCH_FRAGMENTS, MAX_FRAGMENT_LENGTH);
 		} catch (IOException e) {
 			throw new ServiceException("IOException thrown when searching store [id=" + store.getId() + ", name=" + store.getName() + "] for term '" + value + "'", e);
 		}
