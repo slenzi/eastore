@@ -116,7 +116,8 @@ public class StoreSearcher {
             Query query = qp.parse(value); 
             
 			QueryScorer scorer = new QueryScorer(query);
-			Formatter formatter = new SimpleHTMLFormatter();
+			// search results are highlighted with a yellow background and bold text
+			Formatter formatter = new SimpleHTMLFormatter("<span class=\"luceneBasicHighlight\">", "</span>");
 			Highlighter highlighter = new Highlighter(formatter, scorer);
 			Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 100);
 			highlighter.setTextFragmenter(fragmenter);            
