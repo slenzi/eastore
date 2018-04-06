@@ -39,6 +39,10 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
+import org.eamrf.eastore.web.dto.map.DirectoryResourceMapper;
+import org.eamrf.eastore.web.dto.map.StoreMapper;
+import org.eamrf.eastore.web.dto.model.DirectoryResourceDto;
+import org.eamrf.eastore.web.dto.model.StoreDto;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
@@ -368,7 +372,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @GET
     @Path("/addDirectory")
     @Produces(MediaType.APPLICATION_JSON)
-    public DirectoryResource addDirectory(
+    public DirectoryResourceDto addDirectory(
     		@QueryParam("dirNodeId") Long dirNodeId,
     		@QueryParam("name") String name,
     		@QueryParam("desc") String desc,
@@ -390,8 +394,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	//return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build(); 
-    	return dirResource;
+    	DirectoryResourceMapper mapper = new DirectoryResourceMapper();
+    	
+    	//return Response.ok(buildJsonOK(), MediaType.APPLICATION_JSON).build();
+    	return mapper.map(dirResource);
     	
     }
     
@@ -459,7 +465,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @POST
     @Path("/addStore")
     @Produces(MediaType.APPLICATION_JSON)
-    public Store addStore(
+    public StoreDto addStore(
     		@QueryParam("storeName") String storeName,
     		@QueryParam("storeDesc") String storeDesc,
     		@QueryParam("storePath") String storePath,
@@ -500,7 +506,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return store;
+    	StoreMapper mapper = new StoreMapper();
+    	
+    	return mapper.map(store);
     	
     }
     
@@ -791,7 +799,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
     @GET
     @Path("/createTestStore")
     @Produces(MediaType.APPLICATION_JSON)    
-    public Store createTestStore() throws WebServiceException {
+    public StoreDto createTestStore() throws WebServiceException {
     	
     	Store testStore = null;
     	try {
@@ -800,7 +808,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
 			handleError("Error creating test store, " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return testStore;
+    	StoreMapper mapper = new StoreMapper();
+    	
+    	return mapper.map(testStore);
     	
     }
     

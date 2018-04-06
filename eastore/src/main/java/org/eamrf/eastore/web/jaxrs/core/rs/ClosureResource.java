@@ -17,6 +17,8 @@ import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.tree.ClosureService;
+import org.eamrf.eastore.web.dto.map.NodeMapper;
+import org.eamrf.eastore.web.dto.model.NodeDto;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Node;
 import org.eamrf.web.rs.exception.WebServiceException;
@@ -38,6 +40,8 @@ public class ClosureResource extends BaseResourceHandler {
     @Autowired
     private ClosureService closureService;
     
+    private NodeMapper nodeMapper = new NodeMapper();
+    
 	public ClosureResource() {
 
 	}
@@ -52,7 +56,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/child/{nodeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Node> getChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<NodeDto> getChildMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -65,7 +69,7 @@ public class ClosureResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return mappings;
+    	return nodeMapper.map(mappings);
     	
     }
     
@@ -80,7 +84,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/child/{nodeId}/depth/{depth}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Node> getChildMappings(
+    public List<NodeDto> getChildMappings(
     		@PathParam("nodeId") Long nodeId, @PathParam("depth") int depth) throws WebServiceException {
     	
     	if(nodeId == null){
@@ -97,7 +101,7 @@ public class ClosureResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return mappings;
+    	return nodeMapper.map(mappings);
     	
     }
     
@@ -111,7 +115,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/parent/{nodeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Node> getParentMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
+    public List<NodeDto> getParentMappings(@PathParam("nodeId") Long nodeId) throws WebServiceException {
     	
     	if(nodeId == null){
     		handleError("Missing nodeId param.", WebExceptionType.CODE_IO_ERROR);
@@ -124,7 +128,7 @@ public class ClosureResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return mappings;
+    	return nodeMapper.map(mappings);
     	
     }
     
@@ -139,7 +143,7 @@ public class ClosureResource extends BaseResourceHandler {
     @GET
     @Path("/mappings/parent/{nodeId}/levels/{levels}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Node> getParentMappings(
+    public List<NodeDto> getParentMappings(
     		@PathParam("nodeId") Long nodeId, @PathParam("levels") int levels) throws WebServiceException {
     	
     	if(nodeId == null){
@@ -156,7 +160,7 @@ public class ClosureResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return mappings;
+    	return nodeMapper.map(mappings);
     	
     }    
     
@@ -172,7 +176,7 @@ public class ClosureResource extends BaseResourceHandler {
     @POST
     @Path("/add/{parentNodeId}/name/{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Node addNode(
+    public NodeDto addNode(
     		@PathParam("parentNodeId") Long parentNodeId,
     		@PathParam("name") String name,
     		@PathParam("type") String type) throws WebServiceException {
@@ -188,7 +192,7 @@ public class ClosureResource extends BaseResourceHandler {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
     	
-    	return newNode;
+    	return nodeMapper.map(newNode);
     	
     }
     
