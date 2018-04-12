@@ -100,6 +100,13 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 			handleError("Error mapping path resource entity list to list of data transfer objects, " + e.getMessage(),
 					WebExceptionType.CODE_IO_ERROR);
 		}
+		
+		// when data is returned from our web service we want to make sure and empty
+		// JSON array is returned when we return 0 path resources. 
+		if(dtoList == null) {
+			dtoList = new ArrayList<PathResourceDto>();
+		}
+		
 		return dtoList;
 
 	}	
@@ -365,6 +372,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 					WebExceptionType.CODE_IO_ERROR, e);
 		}
 
+		// return empty list if no children
 		return mapToDto(children);
 
 	}
@@ -426,6 +434,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 					+ storeName + ", rePath=" + relPath + ", " + e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
 
+		// return empty list if no children
 		return mapToDto(children);
 
 	}
@@ -468,6 +477,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		buildCrumbs(tree.getRootNode(), crumbs);
 
+		// return empty list if no children
 		return mapToDto(crumbs);
 
 	}
@@ -536,6 +546,7 @@ public class FileSystemJsonResource extends BaseResourceHandler {
 
 		buildCrumbs(tree.getRootNode(), crumbs);
 
+		// return empty list if no children
 		return mapToDto(crumbs);
 
 	}
