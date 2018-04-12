@@ -6,7 +6,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.eamrf</groupId>
 	<artifactId>eastore-rs-service</artifactId>
-	<version>0.0.2</version>
+	<version>1.0.0</version>
 	<packaging>jar</packaging>
 	<name>EA Store</name>
 	<description>ECOG-ACRIN Hierarchical File Store</description>
