@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.eamrf.eastore.core.messaging.model;
+package org.eamrf.eastore.core.socket.messaging.model;
 
 import java.io.Serializable;
 
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * A sample message class use in conjunction with org.eamrf.eastore.core.messaging.TestMessageService
  * to test the initial setup of web socket support.
  * 
- * @see org.eamrf.eastore.core.messaging.TestMessageService
+ * @see org.eamrf.eastore.core.socket.messaging.TestMessageService
  * 
  * @author slenzi
  */

@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.messaging;
+package org.eamrf.eastore.core.socket.messaging;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -10,7 +10,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
-import org.eamrf.eastore.core.messaging.model.ReplyMessage;
+import org.eamrf.eastore.core.socket.messaging.model.ReplyMessage;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -19,8 +19,7 @@ import org.springframework.stereotype.Service;
 /**
  * Sample messaging service which writes a test message every 10 seconds to /topic/test
  * 
- * Currently enabled!
- * Currently disabled (uncomment @PostConstruct and @PreDestroy to re-enable))
+ * Currently enabled. (comment out @PostConstruct and @PreDestroy to disable))
  * 
  * @author sal
  */

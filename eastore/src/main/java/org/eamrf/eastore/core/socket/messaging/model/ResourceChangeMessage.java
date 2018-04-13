@@ -1,4 +1,4 @@
-package org.eamrf.eastore.core.messaging.model;
+package org.eamrf.eastore.core.socket.messaging.model;
 
 import java.io.Serializable;
 import java.time.LocalDate;
