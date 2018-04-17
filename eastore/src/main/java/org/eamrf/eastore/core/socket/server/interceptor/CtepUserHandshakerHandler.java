@@ -6,8 +6,12 @@ package org.eamrf.eastore.core.socket.server.interceptor;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 
+import org.eamrf.core.util.CollectionUtil;
+import org.eamrf.core.util.StringUtil;
+import org.eamrf.eastore.core.socket.messaging.StompPrincipal;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
@@ -45,21 +49,29 @@ public class CtepUserHandshakerHandler extends DefaultHandshakeHandler {
 		logger.info("determineUser called");
 		
 		Principal principal = request.getPrincipal();
-		String principalName = principal.getName();
-		logger.info("Principal Name = " + principalName);
+		if(principal != null) {
+			String principalName = StringUtil.changeNull(principal.getName());
+			logger.info("Principal Name = " + principalName);
+		}
 		
 		logRequestHeaders(request);
 		
-		return super.determineUser(request, wsHandler, attributes);
+        // Generate principal with UUID as name
+        return new StompPrincipal(UUID.randomUUID().toString());	
+		
+		//return super.determineUser(request, wsHandler, attributes);
+        		
 	}
 	
 	private void logRequestHeaders(ServerHttpRequest request) {
 		
 		HttpHeaders headers = request.getHeaders();
 		Set<String> headerNames = headers.keySet();
-		logger.info("Http Headers:");
-		for(String headerName : headerNames) {
-			logger.info(headerName + " = " + headers.get(headerName));
+		if(!CollectionUtil.isEmpty(headerNames)) {
+			logger.info("Http Headers:");
+			for(String headerName : headerNames) {
+				logger.info(headerName + " = " + headers.get(headerName));
+			}			
 		}		
 		
 	}

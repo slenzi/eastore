@@ -9,14 +9,14 @@ import java.security.Principal;
  * @author slenzi
  *
  */
-public class StompUser implements Principal {
+public class StompPrincipal implements Principal {
 
 	private final String name;
 	
 	/**
 	 * 
 	 */
-	public StompUser(String name) {
+	public StompPrincipal(String name) {
 		this.name = name;
 	}
 
