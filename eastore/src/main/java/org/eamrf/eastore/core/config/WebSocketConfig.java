@@ -6,6 +6,7 @@ package org.eamrf.eastore.core.config;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.properties.ManagedProperties;
+import org.eamrf.eastore.core.socket.server.interceptor.CtepUserHandshakerHandler;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -58,7 +59,10 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		logger.info(WebSocketConfig.class.getSimpleName() + ".registerStompEndpoints(...) called");
 		
 		TomcatRequestUpgradeStrategy tomcatStrategy = new TomcatRequestUpgradeStrategy();
-		DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler(tomcatStrategy);		
+		
+		//DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler(tomcatStrategy);		
+		CtepUserHandshakerHandler handshakeHandler = new CtepUserHandshakerHandler(tomcatStrategy);
+		
 		
 		// URL will be, http://localhost:45001/eastore/stomp-service/info
 		// (replace 45001 with whatever 'server.port' value you specified in the build properties file)

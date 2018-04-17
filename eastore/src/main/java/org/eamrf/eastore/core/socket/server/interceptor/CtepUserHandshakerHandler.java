@@ -5,8 +5,10 @@ package org.eamrf.eastore.core.socket.server.interceptor;
 
 import java.security.Principal;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.RequestUpgradeStrategy;
@@ -42,7 +44,24 @@ public class CtepUserHandshakerHandler extends DefaultHandshakeHandler {
 		
 		logger.info("determineUser called");
 		
+		Principal principal = request.getPrincipal();
+		String principalName = principal.getName();
+		logger.info("Principal Name = " + principalName);
+		
+		logRequestHeaders(request);
+		
 		return super.determineUser(request, wsHandler, attributes);
+	}
+	
+	private void logRequestHeaders(ServerHttpRequest request) {
+		
+		HttpHeaders headers = request.getHeaders();
+		Set<String> headerNames = headers.keySet();
+		logger.info("Http Headers:");
+		for(String headerName : headerNames) {
+			logger.info(headerName + " = " + headers.get(headerName));
+		}		
+		
 	}
 	
 
