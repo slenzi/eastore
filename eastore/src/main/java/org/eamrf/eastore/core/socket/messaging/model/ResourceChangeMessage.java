@@ -64,5 +64,13 @@ public class ResourceChangeMessage implements Serializable {
 		this.time = time;
 	}
 
-
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "ResourceChangeMessage [code=" + code + ", message=" + message + ", nodeId=" + nodeId + ", date=" + date
+				+ ", time=" + time + "]";
+	}
+	
 }
