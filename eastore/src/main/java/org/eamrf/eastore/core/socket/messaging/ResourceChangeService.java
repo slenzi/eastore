@@ -21,8 +21,13 @@ import org.eamrf.eastore.core.socket.messaging.model.EventCode;
 import org.eamrf.eastore.core.socket.messaging.model.ResourceChangeMessage;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * Message service for notifying clients that resources have changed on the server.
@@ -82,6 +87,7 @@ public class ResourceChangeService {
 			
 			// broadcast the actual message to the clients
 			logger.info("Broadcasting directory change event for nodeId = " + nodeId);
+			
 			template.convertAndSend(messageDestination, mesg);
 			
 			return null;
@@ -138,6 +144,11 @@ public class ResourceChangeService {
 		
 		taskManager.startTaskManager(executorService);
 		
+		// custom converter which supports java8 LocalDate and LocalTime formats
+		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+		converter.setObjectMapper(objectMapper());
+		template.setMessageConverter(converter);
+		
 	}
 	
 	@PreDestroy
@@ -146,6 +157,18 @@ public class ResourceChangeService {
 		taskManager.stopTaskManager();
 		
 	}
+	
+	private ObjectMapper objectMapper() {
+
+		ObjectMapper objectMapper = new ObjectMapper()
+				.registerModule(new Jdk8Module())
+				.registerModule(new JavaTimeModule());
+		
+		//objectMapper.findAndRegisterModules();
+
+		return objectMapper;
+
+	}	
 	
 	/**
 	 * Broadcasts a message that the contents of the directory changed.

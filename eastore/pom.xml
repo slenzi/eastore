@@ -268,6 +268,19 @@
 		    <version>${version.jackson.json.provider}</version>
 		</dependency>
 		
+		<!-- serializing new java8 data types -->
+		<!-- https://github.com/FasterXML/jackson-modules-java8 -->
+		<dependency>
+		    <groupId>com.fasterxml.jackson.datatype</groupId>
+		    <artifactId>jackson-datatype-jdk8</artifactId>
+		    <version>${version.jackson.json.provider}</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.fasterxml.jackson.datatype</groupId>
+		    <artifactId>jackson-datatype-jsr310</artifactId>
+		    <version>${version.jackson.json.provider}</version>
+		</dependency>		
+		
 		<!-- database connection pooling library -->
 		<!-- https://mvnrepository.com/artifact/com.zaxxer/HikariCP -->
 		<dependency>
