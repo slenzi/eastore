@@ -11,13 +11,13 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.SockJsServiceRegistration;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.StompWebSocketEndpointRegistration;
 import org.springframework.web.socket.server.standard.TomcatRequestUpgradeStrategy;
-import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 /**
  * Configure websocket support
@@ -43,7 +43,14 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		
 		logger.info(WebSocketConfig.class.getSimpleName() + ".configureMessageBroker(...) called");
 		
-		registry.enableSimpleBroker("/topic");
+        ThreadPoolTaskScheduler threadPool = new ThreadPoolTaskScheduler();
+        threadPool.setPoolSize(1);
+        threadPool.setThreadNamePrefix("wss-heartbeat-thread-");
+        threadPool.initialize();		
+		
+		registry.enableSimpleBroker("/topic")
+			.setTaskScheduler(threadPool); // for scheduling heartbeats
+		
 		registry.setApplicationDestinationPrefixes("/app");
 		
 		logger.info("Message broker registery = " + registry.toString());		
@@ -59,7 +66,7 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		logger.info(WebSocketConfig.class.getSimpleName() + ".registerStompEndpoints(...) called");
 		
 		TomcatRequestUpgradeStrategy tomcatStrategy = new TomcatRequestUpgradeStrategy();
-		
+
 		//DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler(tomcatStrategy);		
 		CtepUserHandshakerHandler handshakeHandler = new CtepUserHandshakerHandler(tomcatStrategy);
 		
@@ -67,6 +74,22 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 		// URL will be, http://localhost:45001/eastore/stomp-service/info
 		// (replace 45001 with whatever 'server.port' value you specified in the build properties file)
 		StompWebSocketEndpointRegistration endpoint = registry.addEndpoint("/stomp-service");
+		
+		endpoint
+			.setAllowedOrigins(getAllowedOrigins())
+			.setHandshakeHandler(handshakeHandler);
+		
+		SockJsServiceRegistration sockReg = endpoint.withSockJS();
+		
+		//This option can be used to disable automatic addition of CORS headers for SockJS requests.
+		sockReg.setSupressCors(true);
+		
+		// optionally specify the SockJS client library to fall back on (give URL to script)
+		//.setClientLibraryUrl(sockjsClientUrl);
+		
+	}
+	
+	private String[] getAllowedOrigins() {
 		
 		String originsString = StringUtil.changeNull(appProps.getProperty("cors.allowed.origins")).trim();
 		String[] allowedOrigins = new String[0];
@@ -77,18 +100,7 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 				logger.info("Allowed CORS origin = " + allowedOrigins[i]);
 			}
 		}
-		
-		endpoint
-			.setAllowedOrigins(allowedOrigins)
-			.setHandshakeHandler(handshakeHandler);
-		
-		SockJsServiceRegistration sockReg = endpoint.withSockJS();
-		
-		//This option can be used to disable automatic addition of CORS headers for SockJS requests.
-		sockReg.setSupressCors(true);
-		
-		// optionally specify the SockJS client library to fall back on (give URL to script)
-		//.setClientLibraryUrl(sockjsClientUrl);
+		return allowedOrigins;
 		
 	}
 
