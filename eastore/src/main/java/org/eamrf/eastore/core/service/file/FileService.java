@@ -1133,7 +1133,7 @@ public class FileService {
 					}					
 				}
 				
-				// broadcast directory contents changed event
+				// broadcast resource change message
 				resChangeService.directoryContentsChanged(toDir.getNodeId());				
 				
 				timer.stop();
@@ -1526,6 +1526,7 @@ public class FileService {
 							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 				}
 				
+				// broadcast resource change message
 				resChangeService.directoryContentsChanged(sourceDir.getNodeId());
 				resChangeService.directoryContentsChanged(destDir.getNodeId());
 				
@@ -1749,6 +1750,7 @@ public class FileService {
 				// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
 				DirectoryResource evaluatedDir = getDirectory(dirResource.getNodeId(), userId);
 				
+				// broadcast resource change message
 				resChangeService.directoryContentsChanged(parentDir.getNodeId());
 				
 				return evaluatedDir;				
@@ -1924,6 +1926,12 @@ public class FileService {
 									}
 									fileSystemRepository.removeFile(store, fileToDelete);
 									
+									// broadcast resource chance message
+									DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
+									if(parentDir != null) {
+										resChangeService.directoryContentsChanged(parentDir.getNodeId());
+									}
+									
 								}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
 									
 									// we walk the tree bottom up, so by the time we remove a directory it will be empty
@@ -1932,6 +1940,12 @@ public class FileService {
 										errorHandler.handlePermissionDenied(PermissionError.WRITE, nextDirToDelete, userId);
 									}									
 									fileSystemRepository.removeDirectory(store, nextDirToDelete);
+									
+									// broadcast resource chance message
+									DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
+									if(parentDir != null) {
+										resChangeService.directoryContentsChanged(parentDir.getNodeId());
+									}									
 									
 								}
 							}catch(Exception e){
