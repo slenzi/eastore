@@ -338,6 +338,7 @@ public class SecurePathResourceTreeBuilder {
 		Long childNodeId = treeNode.getData().getChildNodeId();
 		for( PathResource res : CollectionUtil.emptyIfNull( map.get(childNodeId) ) ){
 			
+			// add the children to the node, and set the parent for each child
 			childTreeNode = new TreeNode<PathResource>();
 			childTreeNode.setData(res);
 			childTreeNode.setParent(treeNode);

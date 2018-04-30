@@ -1926,10 +1926,12 @@ public class FileService {
 									}
 									fileSystemRepository.removeFile(store, fileToDelete);
 									
-									// broadcast resource chance message
-									DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
-									if(parentDir != null) {
-										resChangeService.directoryContentsChanged(parentDir.getNodeId());
+									// broadcast resource change message
+									if(treeNode.hasParent()) {
+										DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
+										if(parentDir != null) {
+											resChangeService.directoryContentsChanged(parentDir.getNodeId());
+										}
 									}
 									
 								}else if(treeNode.getData().getResourceType() == ResourceType.DIRECTORY){
@@ -1941,10 +1943,12 @@ public class FileService {
 									}									
 									fileSystemRepository.removeDirectory(store, nextDirToDelete);
 									
-									// broadcast resource chance message
-									DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
-									if(parentDir != null) {
-										resChangeService.directoryContentsChanged(parentDir.getNodeId());
+									// broadcast resource change message
+									if(treeNode.hasParent()) {
+										DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
+										if(parentDir != null) {
+											resChangeService.directoryContentsChanged(parentDir.getNodeId());
+										}
 									}									
 									
 								}
