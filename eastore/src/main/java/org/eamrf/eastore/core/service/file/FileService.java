@@ -1893,6 +1893,10 @@ public class FileService {
 		
 		Long dirNodeId = dirToDelete.getNodeId();
 		
+		// TODO - check permissions to make sure user has permission to delete. Need to check permissions on each child directory...
+		
+		DirectoryResource parentDir = getParentDirectory(dirNodeId, userId);
+		
 		class Task extends AbstractQueuedTask<Void> {
 
 			@Override
@@ -1928,9 +1932,9 @@ public class FileService {
 									
 									// broadcast resource change message
 									if(treeNode.hasParent()) {
-										DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
-										if(parentDir != null) {
-											resChangeService.directoryContentsChanged(parentDir.getNodeId());
+										DirectoryResource pdir = (DirectoryResource)treeNode.getParent().getData();
+										if(pdir != null) {
+											resChangeService.directoryContentsChanged(pdir.getNodeId());
 										}
 									}
 									
@@ -1945,9 +1949,9 @@ public class FileService {
 									
 									// broadcast resource change message
 									if(treeNode.hasParent()) {
-										DirectoryResource parentDir = (DirectoryResource)treeNode.getParent().getData();
-										if(parentDir != null) {
-											resChangeService.directoryContentsChanged(parentDir.getNodeId());
+										DirectoryResource pdir = (DirectoryResource)treeNode.getParent().getData();
+										if(pdir != null) {
+											resChangeService.directoryContentsChanged(pdir.getNodeId());
 										}
 									}									
 									
@@ -1964,6 +1968,8 @@ public class FileService {
 							
 						},
 						WalkOption.POST_ORDER_TRAVERSAL);
+					
+					resChangeService.directoryContentsChanged(parentDir.getNodeId());
 				
 				}catch(TreeNodeVisitException e){
 					throw new ServiceException("Encountered error when deleting directory with node id => " + 
