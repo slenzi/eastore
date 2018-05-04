@@ -27,10 +27,13 @@ import org.eamrf.core.util.FileUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.concurrent.StoreTaskManagerMap;
+import org.eamrf.eastore.core.exception.BuildException;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.search.lucene.StoreIndexer;
 import org.eamrf.eastore.core.search.service.StoreIndexerService;
+import org.eamrf.eastore.core.service.file.task.AddFileToSearchIndexTask;
+import org.eamrf.eastore.core.service.file.task.RefreshFileBinaryTask;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
@@ -476,7 +479,7 @@ public class FileService {
 			errorHandler.handlePermissionDenied(PermissionError.EXECUTE, rootDir, userId);
 		}
 		
-		// TODO - the following to function calls *should* be an atomic operation (currently not.)
+		// TODO - the following two function calls *should* be an atomic operation (currently not.)
 		
 		// make sure there doesn't exist already a store with the same name (excluding store we're editing in case we're 
 		// simply changing the case (upper/lower) of the store)
@@ -679,12 +682,12 @@ public class FileService {
 	@MethodTimer
 	public FileMetaResource getChildFileMetaResource(Long dirId, String name, String userId) throws ServiceException {
 		
-		CodeTimer timer = new CodeTimer();
-		timer.start();
+		//CodeTimer timer = new CodeTimer();
+		//timer.start();
 		
 		PathResource resource = secureTreeService.getChildResource(dirId, name, ResourceType.FILE, userId);
 		
-		timer.stop();
+		//timer.stop();
 		
 		//logger.info("getChildFileMetaResource completed in " + timer.getElapsedTime());
 		
@@ -908,16 +911,16 @@ public class FileService {
 		// Parent task adds file meta data to database, spawns child task for refreshing binary data
 		// in the database, then returns quickly. We must wait (block) for this parent task to complete.
 		//
-		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
+		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {		
+			
+			@Override
 			public FileMetaResource doWork() throws ServiceException {
-				
-				//logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (START)");
 				
 				String fileName = filePath.getFileName().toString();
 				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
 				final boolean haveExisting = existingResource != null ? true : false;
-				
 				FileMetaResource newOrUpdatedFileResource = null;
+				
 				if(haveExisting && !replaceExisting) {
 					throw new ServiceException(" Directory [id=" + toDir.getNodeId() + ", relPath=" + toDir.getRelativePath() + "] "
 							+ "already contains a file with the name '" + fileName + "', and 'replaceExisting' param is set to false.");					
@@ -938,81 +941,35 @@ public class FileService {
 					}					
 				}
 				
+				// set the directory so we can store that information in the lucene index
+				newOrUpdatedFileResource.setDirectory(toDir);
+				
 				// broadcast directory contents changed event
 				resChangeService.directoryContentsChanged(toDir.getNodeId());
-				
-				//
-				// Child task for adding document to search index
-				//
-				final FileMetaResource documentToIndex = newOrUpdatedFileResource;
-				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
 
-					@Override
-					public Void doWork() throws ServiceException {
-						try {
-							
-							// set the directory so we can store that information in the lucene index
-							documentToIndex.setDirectory(toDir);							
-							
-							if(haveExisting) {
-								indexerService.getIndexerForStore(store).update(documentToIndex);
-							}else {
-								indexerService.getIndexerForStore(store).add(documentToIndex);
-							}
-						} catch (IOException e) {
-							logger.error("Error adding/updating document in search index, " + e.getMessage());
-						}
-						return null;
-					}
-
-					@Override
-					public Logger getLogger() {
-						return logger;
-					}
-				}
-				
-				// add to index writer task manager
-				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
-				indexTask.setName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]");
+				// Child task for adding file to lucene index
+				AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
+						.withResource(newOrUpdatedFileResource)
+						.withIndexer(indexerService)
+						.withStore(store)
+						.withHaveExisting(haveExisting)
+						.withTaskName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]")
+						.build();
 				indexWriterManager.addTask(indexTask);
 				
-				//logger.info("---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString() + " (END)");
-				
-				//
-				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
-				//
-				//final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
-				final Long fileNodeId = newOrUpdatedFileResource.getNodeId();
-				final String fileRelPath = newOrUpdatedFileResource.getRelativePath();
-				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
-					public Void doWork() throws ServiceException {
-
-						//logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(START)");
-						try {
-							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
-						} catch (Exception e) {
-							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
-									+ "for file resource node => " + fileNodeId, e);
-						}
-						//logger.info("---- REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath + "(END)");
-						return null;				
-						
-					}
-					public Logger getLogger() {
-						return logger;
-					}
-				}
-				
-				// add to binary task manager (not general task manager)
-				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
+				// Child task refreshes the binary data in the database.
+				RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(newOrUpdatedFileResource.getNodeId(), fileSystemRepository);
 				refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
-				binaryTaskManager.addTask(refreshTask);				
+				binaryTaskManager.addTask(refreshTask);		
 				
 				return newOrUpdatedFileResource;				
 			}
+			
+			@Override
 			public Logger getLogger() {
 				return logger;
 			}
+			
 		};
 		
 		AddFileTask addTask = new AddFileTask();
@@ -2021,13 +1978,11 @@ public class FileService {
 		
 		final DirectoryResource fromDirParent = this.getParentDirectory(copyDirNodeId, userId);
 		if(fromDirParent != null) {
-			
 			// if the directory being copied has a parent directory, then the user must have read access
 			// on that directory in order to perform copy.
 			if(!fromDirParent.getCanRead()) {
 				errorHandler.handlePermissionDenied(PermissionError.READ, fromDirParent, userId);
 			}
-			
 		}
 		
 		final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
@@ -2037,6 +1992,15 @@ public class FileService {
 
 		final Tree<PathResource> fromTree = secureTreeService.buildPathResourceTree(fromDir, userId);
 		
+		Integer numResourcesToCopy = 0;
+		try {
+			numResourcesToCopy = Trees.nodeCount(fromTree);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
+		}
+		
+		
+		
 		copyDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting, userId);
 		
 	}
@@ -2044,11 +2008,11 @@ public class FileService {
 	/**
 	 * Recursively walk the tree to copy all child path resources
 	 * 
-	 * @param fromStore
-	 * @param toStore
-	 * @param pathResourceNode
-	 * @param toDir
-	 * @param replaceExisting
+	 * @param fromStore - store under which the source directory resides
+	 * @param toStore - store under which the destination directory resides
+	 * @param pathResourceNode - root node for the source tree being copied
+	 * @param toDir - the destination directory
+	 * @param replaceExisting - 
 	 * @param userId
 	 * @throws ServiceException
 	 */

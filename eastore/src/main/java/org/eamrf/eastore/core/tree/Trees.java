@@ -3,6 +3,12 @@ package org.eamrf.eastore.core.tree;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.eamrf.eastore.core.tree.Trees.WalkOption;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.PathResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.ResourceType;
 
 /**
  * Contains a bunch of static methods for working on Trees.
@@ -263,5 +269,32 @@ public final class Trees {
 		}
 		
 	}
+	
+	/**
+	 * Counts the number of nodes in the tree.
+	 * 
+	 * @param tree - the tree
+	 * @return
+	 * @throws TreeNodeVisitException 
+	 */
+	public static <N> Integer nodeCount(Tree<N> tree) throws TreeNodeVisitException {
+		return Trees.nodeCount(tree.getRootNode());
+	}
+	
+	/**
+	 * Counts the number of nodes in the tree.
+	 * 
+	 * @param node - the root node of the tree.
+	 * @return
+	 * @throws TreeNodeVisitException
+	 */
+	public static <N> Integer nodeCount(TreeNode<N> node) throws TreeNodeVisitException {
+		AtomicInteger nodeCount = new AtomicInteger();
+		Trees.walkTree(node, (treeNode) -> {
+			//N n = treeNode.getData();
+			nodeCount.addAndGet(1);
+		}, WalkOption.PRE_ORDER_TRAVERSAL);
+		return nodeCount.get();
+	}	
 
 }

@@ -1,6 +1,7 @@
 package org.eamrf.concurrent.task;
 
 import java.util.Date;
+import java.util.Observable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -17,7 +18,7 @@ import org.slf4j.Logger;
  *
  * @param <T>
  */
-public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable<QueuedTask<T>> {
+public abstract class AbstractQueuedTask<T> extends Observable implements QueuedTask<T>, Comparable<QueuedTask<T>> {
 
 	private long taskId = 0L;
 	
@@ -240,6 +241,8 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 	}
 
 	public abstract T doWork() throws ServiceException;
+	
+	//public abstract Double getProgress();
 	
 	public abstract Logger getLogger();
 
