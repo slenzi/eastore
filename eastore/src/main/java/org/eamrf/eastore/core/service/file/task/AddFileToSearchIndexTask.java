@@ -24,14 +24,12 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 	
 	private FileMetaResource documentToIndex = null;
 	private StoreIndexerService indexerService = null;
-	private Store store = null;
 	private boolean haveExisting = false;
 	
 	public static class Builder {
 	
 		private FileMetaResource documentToIndex = null;
 		private StoreIndexerService indexerService = null;
-		private Store store = null;
 		private boolean haveExisting = false;
 		private String taskName = null;
 		
@@ -46,11 +44,6 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 		
 		public Builder withIndexer(StoreIndexerService indexerService) {
 			this.indexerService = indexerService;
-			return this;
-		}
-		
-		public Builder withStore(Store store) {
-			this.store = store;
 			return this;
 		}
 		
@@ -74,7 +67,6 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 		
 		this.documentToIndex = builder.documentToIndex;
 		this.indexerService = builder.indexerService;
-		this.store = builder.store;
 		this.haveExisting = builder.haveExisting;
 		
 		super.setName(builder.taskName);
@@ -87,9 +79,9 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 	public Void doWork() throws ServiceException {
 		try {
 			if(haveExisting) {
-				indexerService.getIndexerForStore(store).update(documentToIndex);
+				indexerService.getIndexerForStore(documentToIndex.getStore()).update(documentToIndex);
 			}else {
-				indexerService.getIndexerForStore(store).add(documentToIndex);
+				indexerService.getIndexerForStore(documentToIndex.getStore()).add(documentToIndex);
 			}
 			setChanged();
 			notifyObservers();

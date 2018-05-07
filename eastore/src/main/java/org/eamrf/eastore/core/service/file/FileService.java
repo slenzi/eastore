@@ -34,6 +34,8 @@ import org.eamrf.eastore.core.search.lucene.StoreIndexer;
 import org.eamrf.eastore.core.search.service.StoreIndexerService;
 import org.eamrf.eastore.core.service.file.task.AddFileToSearchIndexTask;
 import org.eamrf.eastore.core.service.file.task.RefreshFileBinaryTask;
+import org.eamrf.eastore.core.service.file.task.RemoveFileTask;
+import org.eamrf.eastore.core.service.file.task.UpdateFileMetaTask;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
@@ -556,20 +558,6 @@ public class FileService {
     	// related meta-data for the file in the lucene index
     	collectFilesAndSetDirectory(tree.getRootNode(), files);
     	
-    	/*
-    	List<FileMetaResource> files = new ArrayList<FileMetaResource>();
-    	try {
-			Trees.walkTree(tree, (treeNode) -> {
-				PathResource resource = treeNode.getData();
-				if(resource.getResourceType() == ResourceType.FILE){
-					files.add((FileMetaResource)resource);
-				}
-			}, WalkOption.PRE_ORDER_TRAVERSAL);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Error walking file tree to get list of all files, " + e.getMessage());
-		}
-		*/
-    	
     	logger.info("Store [id='" + store.getId() + "', name='" + store.getName() + "'] has " + 
     			files.size() + " files to be added to lucene search index.");
     	
@@ -589,39 +577,6 @@ public class FileService {
 		}
     	
     	Future<Boolean> future = indexer.addAll(files);
-    	
-    	/*
-    	Boolean ok;
-		try {
-			ok = future.get();
-		} catch (InterruptedException e) {
-			throw new ServiceException("InterruptedException thrown when reindexing index for store [id='" + 
-					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
-		} catch (ExecutionException e) {
-			throw new ServiceException("ExecutionException thrown when reindexing index for store [id='" + 
-					store.getId() + "', name='" + store.getName() + "'], " + e.getMessage());
-		}
-  		*/
-		
-		/*
-		class RebuildIndexTask extends AbstractQueuedTask<Boolean> {
-			
-			public Boolean doWork() throws ServiceException {
-				
-
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-		}
-		
-		RebuildIndexTask indexTask = new RebuildIndexTask();
-		indexTask.setName("Rebuild search index for store [storeId=" + storeId + ", name=" + store.getName() + "]");
-		generalTaskManager.addTask(indexTask);
-		*/
 		
 	}
 	
@@ -801,7 +756,7 @@ public class FileService {
 		// else get data from local file system
 		}else{
 		
-			Store store = resource.getStore();
+			Store store = getStore(resource, userId);
 			if(store == null){
 				Long storeId = resource.getStoreId();
 				if(storeId == null){
@@ -943,6 +898,7 @@ public class FileService {
 				
 				// set the directory so we can store that information in the lucene index
 				newOrUpdatedFileResource.setDirectory(toDir);
+				newOrUpdatedFileResource.setStore(store);
 				
 				// broadcast directory contents changed event
 				resChangeService.directoryContentsChanged(toDir.getNodeId());
@@ -951,14 +907,14 @@ public class FileService {
 				AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
 						.withResource(newOrUpdatedFileResource)
 						.withIndexer(indexerService)
-						.withStore(store)
 						.withHaveExisting(haveExisting)
 						.withTaskName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]")
 						.build();
 				indexWriterManager.addTask(indexTask);
 				
 				// Child task refreshes the binary data in the database.
-				RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(newOrUpdatedFileResource.getNodeId(), fileSystemRepository);
+				RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(
+						newOrUpdatedFileResource.getNodeId(), fileSystemRepository);
 				refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
 				binaryTaskManager.addTask(refreshTask);		
 				
@@ -1061,10 +1017,6 @@ public class FileService {
 		class AddFileTask extends AbstractQueuedTask<FileMetaResource> {
 			public FileMetaResource doWork() throws ServiceException {
 				
-				CodeTimer timer = new CodeTimer();
-				timer.start();
-				//logger.info("---- (START) ---- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
-				
 				String fileName = filePath.getFileName().toString();
 				FileMetaResource existingResource = getChildFileMetaResource(toDir.getNodeId(), fileName, userId);
 				boolean haveExisting = existingResource != null ? true : false;
@@ -1090,105 +1042,42 @@ public class FileService {
 					}					
 				}
 				
+				// set the directory so we can store that information in the lucene index
+				newOrUpdatedFileResource.setDirectory(toDir);
+				newOrUpdatedFileResource.setStore(store);
+				
 				// broadcast resource change message
-				resChangeService.directoryContentsChanged(toDir.getNodeId());				
+				resChangeService.directoryContentsChanged(toDir.getNodeId());
 				
-				timer.stop();
-				//logger.info("----- (END " + timer.getElapsedTime() + ") ----- ADDING FILE WITHOUT BINARY DATA FOR FILE " + filePath.toString());
-				
-				timer.reset();
-				
-				//
-				// Child task for adding document to search index
-				//
-				final FileMetaResource documentToIndex = newOrUpdatedFileResource;
-				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
-
-					@Override
-					public Void doWork() throws ServiceException {
-						try {
-							
-							// set the directory so we can store that information in the lucene index
-							documentToIndex.setDirectory(toDir);
-							
-							if(haveExisting) {
-								indexerService.getIndexerForStore(store).update(documentToIndex);
-							}else {
-								indexerService.getIndexerForStore(store).add(documentToIndex);
-							}
-						} catch (IOException e) {
-							logger.error("Error adding/updating document in search index, " + e.getMessage());
-						}
-						return null;
-					}
-
-					@Override
-					public Logger getLogger() {
-						return logger;
-					}
-				}
-				
-				// add to index writer task manager
-				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
-				indexTask.setName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]");
+				// Child task for adding file to lucene index
+				AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
+						.withResource(newOrUpdatedFileResource)
+						.withIndexer(indexerService)
+						.withHaveExisting(haveExisting)
+						.withTaskName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]")
+						.build();
 				indexWriterManager.addTask(indexTask);
 				
-				timer.start();
-				//logger.info("---- (START) ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
-				
-				//
-				// Child task refreshes the binary data in the database. We do not need to wait (block) for this to finish
-				//
-				//final FileMetaResource finalFileMetaResource = newOrUpdatedFileResource;
-				final Long fileNodeId = newOrUpdatedFileResource.getNodeId();
-				final String fileRelPath = newOrUpdatedFileResource.getRelativePath();
-				class RefreshBinaryTask extends AbstractQueuedTask<Void> {
-					public Void doWork() throws ServiceException {
-
-						CodeTimer timer = new CodeTimer();
-						timer.start();
-						//logger.info("---- (START) ---- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + fileRelPath);
-						
-						try {
-							fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
-						} catch (Exception e) {
-							throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
-									+ "for file resource node => " + fileNodeId, e);
-						}
-						timer.stop();
-						//logger.info("----- (END " + timer.getElapsedTime() + ") ----- PERFORMING REFRESH BINARY DATA IN DB FOR FILE " + 
-						//		fileRelPath);
-						return null;				
-						
-					}
-					public Logger getLogger() {
-						return logger;
-					}
-				}
-				
-				// add to binary task manager (not general task manager)
-				RefreshBinaryTask refreshTask = new RefreshBinaryTask();
-				refreshTask.setName("Refresh file binary [" + newOrUpdatedFileResource.toString() + "]");
-				binaryTaskManager.addTask(refreshTask);
-				
-				timer.stop();
-				//logger.info("---- (END " + timer.getElapsedTime() + ") ---- ADDING BINARY REFRESH TASK FOR FILE " + filePath.toString());				
+				// Child task refreshes the binary data in the database.
+				RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(
+						newOrUpdatedFileResource.getNodeId(), fileSystemRepository);
+				refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
+				binaryTaskManager.addTask(refreshTask);				
 				
 				return newOrUpdatedFileResource;				
 			}
+			
+			@Override
 			public Logger getLogger() {
 				return logger;
 			}
+			
 		};
 		
 		AddFileTask addTask = new AddFileTask();
 		addTask.setName("Add File [dirNodeId=" + toDir.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
 		generalTaskManager.addTask(addTask);
-		
-		//FileMetaResource fileMetaResource = addTask.get(); // block until finished
-		
-		//return fileMetaResource;
 		
 	}
 	
@@ -1232,67 +1121,22 @@ public class FileService {
 			throw new ServiceException("Error fetching parent directory file file resource with node id = " + fileNodeId);		
 		}
 		
-		final Store store = getStore(file, userId);
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
-		final QueuedTaskManager indexWriterManager = getIndexWriterTaskManagerForStore(store);
+		file.setDirectory(parentDir);
+
+		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(getStore(file, userId));
+		final QueuedTaskManager indexWriterTaskManager = getIndexWriterTaskManagerForStore(getStore(file, userId));
 		
-		class UpdateFileTask extends AbstractQueuedTask<Void> {
-
-			@Override
-			public Void doWork() throws ServiceException {
-				
-				// update file
-				try {
-					fileSystemRepository.updateFile(file, newName, newDesc);
-				} catch (Exception e) {
-					throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
-				}
-				
-				resChangeService.directoryContentsChanged(parentDir.getNodeId());
-				
-				//
-				// Child task for adding document to search index
-				//
-				class AddFileSearchIndexTask extends AbstractQueuedTask<Void> {
-
-					@Override
-					public Void doWork() throws ServiceException {
-						try {
-							indexerService.getIndexerForStore(store).update(file);
-						} catch (IOException e) {
-							logger.error("Error updating document in search index, " + e.getMessage());
-						}
-						return null;
-					}
-
-					@Override
-					public Logger getLogger() {
-						return logger;
-					}
-				}
-				
-				// add to index writer task manager
-				AddFileSearchIndexTask indexTask = new AddFileSearchIndexTask();
-				indexTask.setName("Index Writer Task [" + file.toString() + "]");
-				indexWriterManager.addTask(indexTask);				
-				
-				return null;
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-			
-			
-		}
+		UpdateFileMetaTask updateTask = new UpdateFileMetaTask.Builder(file)
+				.withNewName(newName)
+				.withNewDesc(newDesc)
+				.withFileRepository(fileSystemRepository)
+				.withIndexer(indexerService)
+				.withIndexWriterTaskManager(indexWriterTaskManager)
+				.build();
 		
-		UpdateFileTask task = new UpdateFileTask();
-		task.setName("Update file [fileNodeId=" + file.getNodeId() + ", name=" + file.getNodeName() + "]");
-		taskManager.addTask(task);
+		generalTaskManager.addTask(updateTask);
 		
-		task.waitComplete(); // block until complete		
+		updateTask.waitComplete(); // block until complete		
 		
 	}
 	
@@ -1323,55 +1167,22 @@ public class FileService {
 	public void removeFile(FileMetaResource fileMetaResource, String userId) throws ServiceException {
 		
 		DirectoryResource parentDir = getParentDirectory(fileMetaResource.getNodeId(), userId);
-		
-		// user must have read & write access on parent directory
-		// file resource inherits permission from parent directory, so this works.
-		//if(!fileMetaResource.getCanRead()) {
-		//	this.handlePermissionDenied(PermissionError.READ, fileMetaResource, userId);
-		//}		
-		//if(!fileMetaResource.getCanWrite()) {
-		//	this.handlePermissionDenied(PermissionError.WRITE, fileMetaResource, userId);
-		//}
+		fileMetaResource.setDirectory(parentDir);
 		
 		if(!parentDir.getCanRead()) {
 			errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
 		}		
 		if(!parentDir.getCanWrite()) {
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
-		}		
-		
-		final Store store = getStore(fileMetaResource, userId);
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);		
-		
-		class Task extends AbstractQueuedTask<Void> {
-
-			@Override
-			public Void doWork() throws ServiceException {
-	
-				try {
-					fileSystemRepository.removeFile(store, fileMetaResource);
-				} catch (Exception e) {
-					throw new ServiceException("Error removing file with node id => " + fileMetaResource.getNodeId() + ". " + e.getMessage(), e);
-				}
-				
-				resChangeService.directoryContentsChanged(parentDir.getNodeId());
-				
-				return null;
-				
-			}
-
-			@Override
-			public Logger getLogger() {
-				return logger;
-			}
-			
 		}
 		
-		Task task = new Task();
-		task.setName("Remove file [fileNodeId=" + fileMetaResource.getNodeId() + "]");
-		taskManager.addTask(task);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(fileMetaResource, userId));
 		
-		task.waitComplete(); // block until finished		
+		RemoveFileTask removeFileTask = new RemoveFileTask(fileMetaResource, fileSystemRepository, resChangeService);
+		
+		taskManager.addTask(removeFileTask);
+		
+		removeFileTask.waitComplete(); // block until finished		
 		
 	}	
 
@@ -1412,7 +1223,7 @@ public class FileService {
 					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
 		}
 		
-		this.addFile(toDir, sourceFilePath, replaceExisting, userId);
+		addFile(toDir, sourceFilePath, replaceExisting, userId);
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
 		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.
@@ -1482,6 +1293,8 @@ public class FileService {
 					throw new ServiceException("Error moving file " + fileToMove.getNodeId() + " to directory " + 
 							destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 				}
+				
+				// TODO - do we need to update the lucene search index?
 				
 				// broadcast resource change message
 				resChangeService.directoryContentsChanged(sourceDir.getNodeId());
@@ -1844,9 +1657,9 @@ public class FileService {
 	@MethodTimer
 	public void removeDirectory(DirectoryResource dirToDelete, String userId) throws ServiceException {
 		
-		final Store store = getStore(dirToDelete, userId);
+		//final Store store = getStore(dirToDelete, userId);
 		
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(store);
+		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(dirToDelete, userId));
 		
 		Long dirNodeId = dirToDelete.getNodeId();
 		
@@ -1885,7 +1698,7 @@ public class FileService {
 									if(!fileToDelete.getCanWrite()) {
 										errorHandler.handlePermissionDenied(PermissionError.WRITE, fileToDelete, userId);
 									}
-									fileSystemRepository.removeFile(store, fileToDelete);
+									fileSystemRepository.removeFile(fileToDelete);
 									
 									// broadcast resource change message
 									if(treeNode.hasParent()) {
@@ -1902,7 +1715,7 @@ public class FileService {
 									if(!nextDirToDelete.getCanWrite()) {
 										errorHandler.handlePermissionDenied(PermissionError.WRITE, nextDirToDelete, userId);
 									}									
-									fileSystemRepository.removeDirectory(store, nextDirToDelete);
+									fileSystemRepository.removeDirectory(nextDirToDelete);
 									
 									// broadcast resource change message
 									if(treeNode.hasParent()) {

@@ -824,7 +824,7 @@ public class FileSystemRepository {
 				newName, DateUtil.getCurrentTime(), resource.getNodeId());
 		
 		// rename file on local file system
-		Store store = resource.getStore();
+		Store store = this.getStoreForResource(resource);
 		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
 		Path newPath = Paths.get(store.getPath() + newRelPath);			
 		fileService.moveFile(oldPath, newPath);		
@@ -910,7 +910,8 @@ public class FileSystemRepository {
 		//pathResTreeUtil.logPreOrderTraversal(tree);		
 		
 		// rename directory on local file system
-		Store store = resource.getStore();
+		//Store store = resource.getStore();
+		Store store = this.getStoreForResource(resource);
 		Path oldPath = Paths.get(store.getPath() + resource.getRelativePath());
 		Path newPath = Paths.get(store.getPath() + tree.getRootNode().getData().getRelativePath());		
 		fileService.moveFile(oldPath, newPath);
@@ -1434,7 +1435,7 @@ public class FileSystemRepository {
 		// else get data from local file system
 		}else{
 		
-			Store store = this.getStoreForResource(resource);
+			Store store = getStoreForResource(resource);
 			if(store == null) {
 				throw new Exception("Cannot populate file meta resource with binary data from database because the store could not be fetched.");
 			}
@@ -1459,14 +1460,13 @@ public class FileSystemRepository {
 	/**
 	 * Remove a file
 	 * 
-	 * @param store
 	 * @param resource
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public void removeFile(Store store, FileMetaResource resource) throws Exception {
+	public void removeFile(FileMetaResource resource) throws Exception {
 		
-		Path filePath = PathResourceUtil.buildPath(store, resource);
+		Path filePath = PathResourceUtil.buildPath(getStoreForResource(resource), resource);
 		
 		// delete from eas_binary_resource
 		if(resource.getIsBinaryInDatabase()){
@@ -1494,14 +1494,13 @@ public class FileSystemRepository {
 	/**
 	 * Removing a directory. THE DIRECTORY MUST BE EMPTY!
 	 * 
-	 * @param store
 	 * @param resource
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public void removeDirectory(Store store, DirectoryResource resource) throws Exception {
+	public void removeDirectory(DirectoryResource resource) throws Exception {
 		
-		Path dirPath = PathResourceUtil.buildPath(store, resource);
+		Path dirPath = PathResourceUtil.buildPath(getStoreForResource(resource), resource);
 		
 		// delete from eas_directory_resource
 		jdbcTemplate.update("delete from eas_directory_resource where node_id = ?", resource.getNodeId());
@@ -1574,7 +1573,7 @@ public class FileSystemRepository {
 			String newRelativePath = PathResourceUtil.buildRelativePath(destDir, fileName);
 			
 			// delete existing file in destination directory
-			removeFile(destinationStore, (FileMetaResource)existingFile);
+			removeFile((FileMetaResource)existingFile);
 			
 			// remove existing closure data for 'fileToMove'
 			// TODO - will this work if we have foreign key constraints? 
