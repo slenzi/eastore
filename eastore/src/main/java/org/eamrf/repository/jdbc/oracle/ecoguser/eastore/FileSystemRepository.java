@@ -1019,10 +1019,7 @@ public class FileSystemRepository {
 	 * @throws Exception
 	 */
 	@MethodTimer
-	public FileMetaResource _addNewFileWithoutBinary(Store store, DirectoryResource directory, Path filePath) throws Exception {
-		
-		CodeTimer timer = new CodeTimer();
-		timer.start();		
+	public FileMetaResource _addNewFileWithoutBinary(Store store, DirectoryResource directory, Path filePath) throws Exception {	
 		
 		String fileName = filePath.getFileName().toString();
 		Long fileSizeBytes = fileService.getSize(filePath);
@@ -1074,10 +1071,7 @@ public class FileSystemRepository {
 		} catch (Exception e) {
 			throw new Exception("Failed to copy file from => " + filePath.toString() + 
 					" to " + newFilePath.toString() + ". " + e.getMessage(), e);
-		}
-		
-		timer.stop();
-		logger.info("_addNewFileWithoutBinary completed in " + timer.getElapsedTime() + " for file " + filePath.toString());		
+		}	
 		
 		return (FileMetaResource)newFileResource;
 		
@@ -1094,9 +1088,6 @@ public class FileSystemRepository {
 	 */
 	@MethodTimer
 	public FileMetaResource _updateFileDiscardOldBinary(DirectoryResource dirResource, Path srcFilePath, FileMetaResource currFileRes) throws Exception {
-		
-		CodeTimer timer = new CodeTimer();
-		timer.start();
 		
 		final String newFileName = srcFilePath.getFileName().toString();
 		final Store store = this.getStoreForResource(dirResource);
@@ -1159,9 +1150,6 @@ public class FileSystemRepository {
 		
 		// NOTE - do not delete file at srcFilePath
 		
-		timer.stop();
-		logger.info("_updateFileDiscardOldBinary completed in " + timer.getElapsedTime() + " for file " + srcFilePath.toString());
-		
 		return currFileRes;
 		
 	}
@@ -1187,21 +1175,12 @@ public class FileSystemRepository {
 			String writeGroup1, 
 			String executeGroup1) throws Exception {
 		
-		logger.info("Adding directory");
-		
-		CodeTimer timer = new CodeTimer();
-		
-		timer.start();
 		// make sure directory doesn't already contain a sub-directory with the same name	
 		if(hasChildPathResource(parentDir.getNodeId(), name, ResourceType.DIRECTORY, null)){
 			throw new Exception("Directory with dirNodeId " + parentDir.getNodeId() + 
 					" already contains a sub-directory with the name '" + name + "'");			
 		}
-		timer.stop();
-		logger.info("called hasChildPathResource in " + timer.getElapsedTime());
-		timer.reset();
 		
-		timer.start();
 		// add entry to eas_node and eas_closure
 		Node newNode = null;
 		try {
@@ -1209,17 +1188,8 @@ public class FileSystemRepository {
 		} catch (Exception e) {
 			throw new Exception("Error adding directory node", e);
 		}
-		timer.stop();
-		logger.info("Added node via closure repository in " + timer.getElapsedTime());
-		timer.reset();
 		
-		timer.start();
-		Store store = this.getStoreForResource(parentDir);
-		timer.stop();
-		logger.info("Fetched store in " + timer.getElapsedTime());
-		timer.reset();
-		
-		timer.start();
+		Store store = getStoreForResource(parentDir);
 		
 		String dirRelPathString = PathResourceUtil.buildRelativePath(parentDir, name);
 		
@@ -1233,6 +1203,7 @@ public class FileSystemRepository {
 		resource.setRelativePath(dirRelPathString);
 		resource.setDesc(desc);
 		resource.setStoreId(store.getId());
+		resource.setStore(store);
 		resource.setReadGroup1(readGroup1);
 		resource.setWriteGroup1(writeGroup1);
 		resource.setExecuteGroup1(executeGroup1);
@@ -1246,13 +1217,7 @@ public class FileSystemRepository {
 		// add entry to eas_directory_resource
 		jdbcTemplate.update(
 				"insert into eas_directory_resource (node_id) values (?)", resource.getNodeId());
-		
-		timer.stop();
-		logger.info("Added rows to eas_path_resource and eas_directory_resource in " + timer.getElapsedTime());
-		timer.reset();		
-		
-		
-		timer.start();
+
 		// create directory on local file system. If there is any error throw a RuntimeException,
 		// or update the @Transactional annotation to rollback for any exception type, i.e.,
 		// @Transactional(rollbackFor=Exception.class)
@@ -1261,11 +1226,7 @@ public class FileSystemRepository {
 			fileService.createDirectory(newDirectoryPath, true);
 		} catch (Exception e) {
 			throw new Exception("Failed to create directory => " + newDirectoryPath.toString().replace("\\", "/") + ". " + e.getMessage(), e);
-		}
-		
-		timer.stop();
-		logger.info("Created directory on local file system in " + timer.getElapsedTime());
-		timer.reset();		
+		}	
 		
 		return (DirectoryResource)resource;
 		
@@ -1320,6 +1281,9 @@ public class FileSystemRepository {
 		dirResource.setReadGroup1(readGroup);
 		dirResource.setWriteGroup1(writeGroup);
 		dirResource.setExecuteGroup1(executeGroup);
+		
+		Store store = getStoreForResource(dirResource);
+		dirResource.setStore(store);
 		
 		// add entry to eas_path_resource
 		jdbcTemplate.update(
@@ -1378,7 +1342,6 @@ public class FileSystemRepository {
 		}		
 		
 		return false;
-		
 	}
 	
 	/**

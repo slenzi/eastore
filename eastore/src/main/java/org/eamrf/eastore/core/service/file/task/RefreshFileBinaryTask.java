@@ -3,7 +3,6 @@
  */
 package org.eamrf.eastore.core.service.file.task;
 
-import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.FileSystemRepository;
 import org.slf4j.Logger;
@@ -14,12 +13,14 @@ import org.slf4j.LoggerFactory;
  * 
  * @author slenzi
  */
-public class RefreshFileBinaryTask extends AbstractQueuedTask<Void> {
+public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 
 	private Logger logger = LoggerFactory.getLogger(RefreshFileBinaryTask.class);
 	
 	private Long fileNodeId;
 	private FileSystemRepository fileSystemRepository;
+	
+	private int jobCount = 1;
 	
 	/**
 	 * 
@@ -40,6 +41,7 @@ public class RefreshFileBinaryTask extends AbstractQueuedTask<Void> {
 			throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 					+ "for file resource node => " + fileNodeId, e);
 		}
+		incrementJobsCompleted();
 		return null;
 	}
 
@@ -49,6 +51,11 @@ public class RefreshFileBinaryTask extends AbstractQueuedTask<Void> {
 	@Override
 	public Logger getLogger() {
 		return logger;
+	}
+
+	@Override
+	public int getJobCount() {
+		return jobCount;
 	}
 
 }

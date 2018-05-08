@@ -17,6 +17,7 @@ import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.file.task.FileServiceTask;
 import org.eamrf.eastore.core.socket.messaging.model.EventCode;
 import org.eamrf.eastore.core.socket.messaging.model.ResourceChangeMessage;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ public class ResourceChangeService {
      * @author slenzi
      *
      */
-	private class ResourceChangeTask extends AbstractQueuedTask<Void> {
+	private class ResourceChangeTask extends FileServiceTask<Void> {
 
 		private Long nodeId = null;
 		private EventCode event = null;
@@ -128,6 +129,11 @@ public class ResourceChangeService {
 				logger.info("Other object not a ResourceChangeTask");
 			}
 			return false;
+		}
+
+		@Override
+		public int getJobCount() {
+			return 1;
 		}
 		
 	};    

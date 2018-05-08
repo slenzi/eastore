@@ -81,12 +81,17 @@ public interface QueuedTask<T> extends Runnable, Comparable<QueuedTask<T>> {
 	 */
 	public T doWork() throws ServiceException;
 	
+	/**
+	 * Set percent complete
+	 * 
+	 * @param progress A value from 0 to 100
+	 */
+	public void setProgress(Double progress);
 	
 	/**
 	 * Return the percentage of the task that is complete
-	 * 
 	 * @return A value from 0 to 100
 	 */
-	//public Double getProgress();  
+	public Double getProgress();
 	
 }

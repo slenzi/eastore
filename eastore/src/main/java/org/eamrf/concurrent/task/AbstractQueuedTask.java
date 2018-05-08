@@ -18,7 +18,7 @@ import org.slf4j.Logger;
  *
  * @param <T>
  */
-public abstract class AbstractQueuedTask<T> extends Observable implements QueuedTask<T>, Comparable<QueuedTask<T>> {
+public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable<QueuedTask<T>> {
 
 	private long taskId = 0L;
 	
@@ -241,9 +241,8 @@ public abstract class AbstractQueuedTask<T> extends Observable implements Queued
 	}
 
 	public abstract T doWork() throws ServiceException;
-	
-	//public abstract Double getProgress();
-	
+
+
 	public abstract Logger getLogger();
 
 }

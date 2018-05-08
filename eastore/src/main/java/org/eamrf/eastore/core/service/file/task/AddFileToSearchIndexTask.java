@@ -5,11 +5,9 @@ package org.eamrf.eastore.core.service.file.task;
 
 import java.io.IOException;
 
-import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.search.service.StoreIndexerService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
-import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,13 +16,15 @@ import org.slf4j.LoggerFactory;
  * 
  * @author slenzi
  */
-public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
+public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 
 	private Logger logger = LoggerFactory.getLogger(AddFileToSearchIndexTask.class);
 	
 	private FileMetaResource documentToIndex = null;
 	private StoreIndexerService indexerService = null;
 	private boolean haveExisting = false;
+	
+	private int jobCount = 1;
 	
 	public static class Builder {
 	
@@ -83,8 +83,6 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 			}else {
 				indexerService.getIndexerForStore(documentToIndex.getStore()).add(documentToIndex);
 			}
-			setChanged();
-			notifyObservers();
 		} catch (IOException e) {
 			logger.error("Error adding/updating document in search index, " + e.getMessage());
 		}
@@ -97,6 +95,11 @@ public class AddFileToSearchIndexTask extends AbstractQueuedTask<Void> {
 	@Override
 	public Logger getLogger() {
 		return logger;
+	}
+
+	@Override
+	public int getJobCount() {
+		return jobCount;
 	}
 
 }

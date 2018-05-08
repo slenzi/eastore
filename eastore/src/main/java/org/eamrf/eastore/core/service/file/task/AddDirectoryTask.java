@@ -1,3 +1,6 @@
+/**
+ * 
+ */
 package org.eamrf.eastore.core.service.file.task;
 
 import org.eamrf.eastore.core.exception.ServiceException;
@@ -7,21 +10,24 @@ import org.eamrf.eastore.core.service.file.PermissionError;
 import org.eamrf.eastore.core.socket.messaging.ResourceChangeService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
-import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Task for removing a file
+ * Task for adding new directory
  * 
  * @author slenzi
- *
  */
-public class RemoveFileTask extends FileServiceTask<Void> {
+public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 
-	private Logger logger = LoggerFactory.getLogger(RemoveFileTask.class);
+	private Logger logger = LoggerFactory.getLogger(AddDirectoryTask.class);
 	
-	private FileMetaResource file;
+	private DirectoryResource parentDir;
+	private String name; 
+	private String desc;
+	private String readGroup1;
+	private String writeGroup1;
+	private String executeGroup1;
 	private String userId;
 	private FileSystemRepository fileSystemRepository;
 	private ResourceChangeService resChangeService;
@@ -30,15 +36,25 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 	
 	private int jobCount = 1;
 	
-	public RemoveFileTask(
-			FileMetaResource file,
+	public AddDirectoryTask(
+			DirectoryResource parentDir, 
+			String name, 
+			String desc, 
+			String readGroup1, 
+			String writeGroup1, 
+			String executeGroup1,
 			String userId,
 			FileSystemRepository fileSystemRepository,
 			ResourceChangeService resChangeService,
 			FileService fileService,
 			ErrorHandler errorHandler) {
-		
-		this.file = file;
+	
+		this.parentDir = parentDir;
+		this.name = name;
+		this.desc = desc;
+		this.readGroup1 = readGroup1;
+		this.writeGroup1 = writeGroup1;
+		this.executeGroup1 =executeGroup1;
 		this.userId = userId;
 		this.fileSystemRepository = fileSystemRepository;
 		this.resChangeService = resChangeService;
@@ -46,32 +62,33 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		this.errorHandler = errorHandler;
 		
 	}
-
+	
 	@Override
-	public Void doWork() throws ServiceException {
-		
-		DirectoryResource parentDir = fileService.getParentDirectory(file.getNodeId(), userId);
-		file.setDirectory(parentDir);
-		
-		if(!parentDir.getCanRead()) {
-			errorHandler.handlePermissionDenied(PermissionError.READ, parentDir, userId);
-		}		
+	public DirectoryResource doWork() throws ServiceException {
+
+		// user must have write permission on parent directory
 		if(!parentDir.getCanWrite()) {
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
 		}		
 		
+		DirectoryResource dirResource = null;
 		try {
-			fileSystemRepository.removeFile(file);
+			dirResource = fileSystemRepository.addDirectory(parentDir, name, desc, readGroup1, writeGroup1, executeGroup1);
 		} catch (Exception e) {
-			throw new ServiceException("Error removing file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
+			throw new ServiceException("Error adding new subdirectory to directory " + parentDir.getNodeId(), e);
 		}
 		
-		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());
+		// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
+		DirectoryResource evaluatedDir = fileService.getDirectory(dirResource.getNodeId(), userId);
 		
-		// TODO - remove from lucene index!
+		incrementJobsCompleted();
 		
-		return null;
-	}
+		// broadcast resource change message
+		resChangeService.directoryContentsChanged(parentDir.getNodeId());
+		
+		return evaluatedDir;		
+		
+	}	
 
 	@Override
 	public Logger getLogger() {
