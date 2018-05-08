@@ -845,9 +845,17 @@ public class FileService {
 		
 		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
 		
-		addFile(dirRes, filePath, replaceExisting, userId);		
+		addFile(dirRes, filePath, replaceExisting, userId, null);		
 		
 	}
+	
+	public void addFile(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting, FileServiceTaskListener listener) throws ServiceException {
+		
+		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
+		
+		addFile(dirRes, filePath, replaceExisting, userId, listener);		
+		
+	}	
 	
 	/**
 	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
@@ -863,7 +871,11 @@ public class FileService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId) throws ServiceException {		
+	public void addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId) throws ServiceException {
+		addFile(toDir, filePath, replaceExisting, userId, null);	
+	}
+	
+	public void addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {		
 		
 		final Store store = getStore(toDir, userId);
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(store);
@@ -876,9 +888,14 @@ public class FileService {
 		
 		addTask.setName("Add File [dirNodeId=" + toDir.getNodeId() + ", filePath=" + filePath + 
 				", replaceExisting=" + replaceExisting + "]");
+		
+		if(listener != null) {
+			addTask.registerProgressListener(listener);
+		}
+		
 		generalTaskManager.addTask(addTask);
 		
-	}
+	}	
 	
 	/**
 	 * Updates the file
@@ -1511,7 +1528,10 @@ public class FileService {
 		filePaths.stream().forEach(
 			(pathToFile) ->{
 				try {
-					addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting);
+					addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting, task -> {
+						Double progress = task.getProgress();
+						logger.info("Add file progress for file " + pathToFile.getFileName() + " from user " + userId + " is at " + progress);
+					});
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 
 							dirRelPath + "', under store name '" + storeName + "'.", e);

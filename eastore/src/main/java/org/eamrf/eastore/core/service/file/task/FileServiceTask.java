@@ -20,10 +20,18 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	
 	private List<FileServiceTaskListener> listeners = new ArrayList<FileServiceTaskListener>();
 	
+	/**
+	 * Register a listener for the task to monitor progess
+	 * 
+	 * @param listener
+	 */
 	public void registerProgressListener(FileServiceTaskListener listener) {
 		listeners.add(listener);
 	}
 	
+	/**
+	 * Notify all listeners that the progress of the task has changed.
+	 */
 	protected void notifyProgressListeners() {
 		listeners.forEach(listener -> listener.onProgressChange(this) );
 	}
@@ -45,6 +53,9 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		
 	}
 	
+	/**
+	 * Recalculate the progress based on the number of jobs completed
+	 */
 	protected void updateProgress() {
 		
 		if(getJobCount() > 0 && jobCompletedCount > 0) {
@@ -55,6 +66,11 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		
 	}
 	
+	/**
+	 * Get the job count for the task
+	 * 
+	 * @return
+	 */
 	public abstract int getJobCount();
 
 	/* (non-Javadoc)
