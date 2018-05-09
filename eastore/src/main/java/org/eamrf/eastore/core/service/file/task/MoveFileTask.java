@@ -89,6 +89,8 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		
 		// TODO - do we need to update the lucene search index?
 		
+		// TODO - if you add a child task for updating lucene, don't forget to increment the job count (and for other parent tasks like MoveDirectoryTask)
+		
 		// broadcast resource change message
 		resChangeService.directoryContentsChanged(sourceDir.getNodeId());
 		resChangeService.directoryContentsChanged(destDir.getNodeId());

@@ -37,6 +37,8 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
+	private Tree<PathResource> fromTree;
+	
 	private int jobCount = 0;
 	
 	/**
@@ -52,7 +54,8 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		this.userId = userId;
 		this.secureTreeService = secureTreeService;
 		this.fileService = fileService;
-		this.errorHandler = errorHandler;		
+		this.errorHandler = errorHandler;
+		
 	}
 
 	/* (non-Javadoc)
@@ -76,20 +79,12 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			}
 		}
 		
-		//final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
-		//final DirectoryResource toDir = getDirectory(destDirNodeId, userId);
 		final Store fromStore = fileService.getStore(fromDir, userId);
 		final Store toStore = fileService.getStore(fromDir, userId);
 
 		final Tree<PathResource> fromTree = secureTreeService.buildPathResourceTree(fromDir, userId);
 		
-		// calculate number of nodes to copy.
-		int numResourcesToCopy = 0;
-		try {
-			numResourcesToCopy = Trees.nodeCount(fromTree);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}
+		calculateJobCount(fromTree);
 		
 		copyDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), toDir, replaceExisting, userId);		
 		
@@ -114,14 +109,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			TreeNode<PathResource> pathResourceNode, 
 			DirectoryResource toDir, 
 			boolean replaceExisting,
-			String userId) throws ServiceException {
-		
-		// calculate number of nodes to copy.
-		try {
-			jobCount = Trees.nodeCount(pathResourceNode);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}			
+			String userId) throws ServiceException {		
 		
 		PathResource resourceToCopy = pathResourceNode.getData();
 		
@@ -161,6 +149,22 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		}
 		
 	}
+	
+	private void calculateJobCount(Tree<PathResource> fromTree) throws ServiceException {
+		
+		int numDirToCopy = 0;
+		int numFileToCopy = 0;
+		
+		try {
+			numDirToCopy = Trees.nodeCount(fromTree, DirectoryResource.class);
+			numFileToCopy = Trees.nodeCount(fromTree, FileMetaResource.class);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
+		}	
+	
+		jobCount = numDirToCopy + (numFileToCopy * 3); // 3 operations for every file
+		
+	}	
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.AbstractQueuedTask#getLogger()

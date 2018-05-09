@@ -3,7 +3,6 @@
  */
 package org.eamrf.eastore.core.service.file.task;
 
-import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.ErrorHandler;
 import org.eamrf.eastore.core.service.file.FileService;
@@ -183,25 +182,21 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 	
 	private void calculateJobCount(Tree<PathResource> fromTree) throws ServiceException {
 		
-		int numberItemsToCopy = 0;
-		int numberItemsToDelete = 0;
+		int numDirToCopy = 0;
+		int numFileToCopy = 0;
 		
 		try {
-			numberItemsToCopy = Trees.nodeCount(fromTree);
+			numDirToCopy = Trees.nodeCount(fromTree, DirectoryResource.class);
+			numFileToCopy = Trees.nodeCount(fromTree, FileMetaResource.class);
 		} catch (TreeNodeVisitException e) {
 			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}
+		}	
+	
+		jobCount = 
+				(numDirToCopy * 2) + // x2, once for copying them all and once for deleting the sources
+				numFileToCopy; // only 1 job per move file task
 		
-		try {
-			numberItemsToDelete = Trees.nodeCount(fromTree, DirectoryResource.class);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}		
-		
-		// first we copy all the directories and files to the new destination directory, then we delete the source directory
-		jobCount = numberItemsToCopy + numberItemsToDelete;
-		
-	}
+	}	
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.AbstractQueuedTask#getLogger()

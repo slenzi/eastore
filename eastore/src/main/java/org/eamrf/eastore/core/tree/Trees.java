@@ -290,7 +290,7 @@ public final class Trees {
 	 * @throws TreeNodeVisitException
 	 */
 	public static <N> Integer nodeCount(Tree<N> tree, Class<?> clazz) throws TreeNodeVisitException {
-		return Trees.nodeCount(tree.getRootNode());
+		return Trees.nodeCount(tree.getRootNode(), clazz);
 	}	
 	
 	/**

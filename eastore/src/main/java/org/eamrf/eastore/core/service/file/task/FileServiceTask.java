@@ -37,12 +37,24 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	}
 	
 	/**
-	 * Increment the counter that tracks the number of jobs completed, and notify all
+	 * Increment the jobs completed counter, by 1, and notify all
 	 * observers that the state of the task has changed. 
 	 */
 	protected void incrementJobsCompleted() {
 		
-		jobCompletedCount++;
+		incrementJobsCompleted(1);
+		
+	}
+	
+	/**
+	 * Increment the jobs completed counter, by the amount specified, and notify all
+	 * observers that the state of the task has changed. 
+	 * 
+	 * @param increment
+	 */
+	protected void incrementJobsCompleted(int increment) {
+		
+		jobCompletedCount += increment;
 		
 		updateProgress();
 		
@@ -51,7 +63,7 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		
 		notifyProgressListeners();
 		
-	}
+	}	
 	
 	/**
 	 * Recalculate the progress based on the number of jobs completed

@@ -487,14 +487,14 @@ public class FileService {
 			errorHandler.handlePermissionDenied(PermissionError.EXECUTE, rootDir, userId);
 		}
 		
-		// TODO - the following two function calls *should* be an atomic operation (currently not.)
-		
 		// make sure there doesn't exist already a store with the same name (excluding store we're editing in case we're 
 		// simply changing the case (upper/lower) of the store)
 		Store existingStore = getStoreByName(storeName, userId);
 		if(existingStore != null && !storeId.equals(existingStore.getId())){
 			throw new ServiceException("Store with name '" + storeName + "' already exists. Store names must be unique.");
 		}		
+		
+		// TODO - the following two function calls *should* be an atomic operation (currently not.)
 		
 		// update store name & description
 		fileSystemRepository.updateStore(storeToEdit, storeName, storeDesc);
@@ -1412,23 +1412,22 @@ public class FileService {
 			FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
-		final DirectoryResource toDir = getDirectory(destDirNodeId, userId);
+		final DirectoryResource toDir = getDirectory(destDirNodeId, userId);	
 		
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(fromDir, userId));		
-		
-		// TODO - This task contains child tasks which block. Since our task manager can only run one
-		// task at a time, this task must execute independently outside our task queue.
-		CopyDirectoryTask task = new CopyDirectoryTask(fromDir, toDir, replaceExisting, userId, secureTreeService,
-				this, errorHandler);
-		
+		CopyDirectoryTask task = new CopyDirectoryTask(fromDir, toDir, replaceExisting, userId, secureTreeService, this, errorHandler);
 		if(listener != null) {
 			task.registerProgressListener(listener);
-		}		
-		
+		}
 		task.setName("Copy directory [copyDirNodeId=" + copyDirNodeId + ", destDirNodeId=" + destDirNodeId + 
 				", replaceExisting=" + replaceExisting + "]");
 		
-		taskManager.addTask(task);		
+		// CopyDirectoryTask contains child tasks which block. Since our task manager is a queue and
+		// only runs one task a a time, the child tasks will never run because the parent task is waiting
+		// for the child tasks to finish. Solution is to execute the parent task immediately in
+		Executors.newSingleThreadExecutor().execute(task);
+		
+		//final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(fromDir, userId));	
+		//taskManager.addTask(task);		
 		
 	}
 	
@@ -1501,20 +1500,20 @@ public class FileService {
 		
 		DirectoryResource dirToMove = getDirectory(moveDirId, userId);
 		DirectoryResource destDir = getDirectory(destDirId, userId);
-		
-		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(dirToMove, userId));
-		
-		// TODO - This task contains child tasks which block. Since our task manager can only run one
-		// task at a time, this task must execute independently outside our task queue.		
-		MoveDirectoryTask task = new MoveDirectoryTask(dirToMove, destDir, replaceExisting, userId,
-				secureTreeService, fileSystemRepository, this, errorHandler);
-		
+			
+		MoveDirectoryTask task = new MoveDirectoryTask(dirToMove, destDir, replaceExisting, userId, secureTreeService, fileSystemRepository, this, errorHandler);
 		if(listener != null) {
 			task.registerProgressListener(listener);
-		}		
-		
+		}
 		task.setName("Movie directory [moveDirId=" + moveDirId + ", destDirId=" + destDirId + ", replaceExisting=" + replaceExisting + "]");
-		taskManager.addTask(task);		
+		
+		// MoveDirectoryTask contains child tasks which block. Since our task manager is a queue and
+		// only runs one task a a time, the child tasks will never run because the parent task is waiting
+		// for the child tasks to finish. Solution is to execute the parent task immediately in
+		Executors.newSingleThreadExecutor().execute(task);		
+		
+		//final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(dirToMove, userId));
+		//taskManager.addTask(task);		
 		
 	}
 	
