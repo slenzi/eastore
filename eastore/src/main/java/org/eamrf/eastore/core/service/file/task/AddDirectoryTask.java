@@ -100,4 +100,9 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		return jobCount;
 	}
 
+	@Override
+	public String getStatusMessage() {
+		return "Add directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}
+
 }

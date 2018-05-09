@@ -134,4 +134,9 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 		return jobCount;
 	}
 
+	@Override
+	public String getStatusMessage() {
+		return "Update directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}	
+	
 }

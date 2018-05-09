@@ -103,4 +103,9 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		return jobCount;
 	}
 
+	@Override
+	public String getStatusMessage() {
+		return "Add file to lucene index task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}
+
 }

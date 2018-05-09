@@ -39,6 +39,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
+import org.eamrf.eastore.core.socket.messaging.FileServiceTaskMessageService;
 import org.eamrf.eastore.web.dto.map.DirectoryResourceMapper;
 import org.eamrf.eastore.web.dto.map.StoreMapper;
 import org.eamrf.eastore.web.dto.model.DirectoryResourceDto;
@@ -71,6 +72,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     
     @Autowired
     private FileService fileService;  
+    
+    @Autowired
+    private FileServiceTaskMessageService fileServiceTaskMessageService;
     
     @Autowired
     private HttpSession session;
@@ -346,6 +350,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.updateFile(fileNodeId, name, desc, userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Update file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {fileNodeId : " + fileNodeId + ", user : " + userId + " }");
 			});
@@ -393,6 +400,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	DirectoryResource dirResource = null;
     	try {
     		dirResource = fileService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId, task -> {
+    			
+    			fileServiceTaskMessageService.broadcast(task);
+    			
 				logger.info("Add directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {dirNodeId (parent) : " + dirNodeId + ", name : " + name + ", user : " + userId + " }");
 			});
@@ -440,6 +450,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Update directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {dirNodeId : " + dirNodeId + ", new name : " + name + ", user : " + userId + " }");
 			});
@@ -560,6 +573,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		try {
 			fileService.updateStore(storeId, storeName, storeDesc, rootDirName, rootDirDesc, 
 					rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId, task -> {
+						
+						fileServiceTaskMessageService.broadcast(task);
+						
 						logger.info("Update store progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 								+ " {storeId : " + storeId + ", user : " + userId + " }");
 					});
@@ -594,6 +610,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
     		fileService.removeFile(fileNodeId, userId, task -> {
+    			
+    			fileServiceTaskMessageService.broadcast(task);
+    			
 				logger.info("Remove file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {fileNodeId : " + fileNodeId + ", user : " + userId + " }");
 			});
@@ -625,6 +644,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.removeDirectory(dirNodeId, userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Remove directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {dirNodeId : " + dirNodeId + ", user : " + userId + " }");
 			});
@@ -666,6 +688,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Copy file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {fileNodeId : " + fileNodeId + ", dirNodeId : " + dirNodeId + ", user : " + userId + " }");
 			});
@@ -704,6 +729,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Copy directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {copyDirNodeId : " + copyDirNodeId + ", destDirNodeId : " + destDirNodeId + ", user : " + userId + " }");
 			});
@@ -745,6 +773,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Move file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {fileNodeId : " + fileNodeId + ", dirNodeId : " + dirNodeId + ", user : " + userId + " }");
 			});
@@ -783,6 +814,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	try {
 			fileService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				
+				fileServiceTaskMessageService.broadcast(task);
+				
 				logger.info("Move directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 						+ " {moveDirNodeId : " + moveDirNodeId + ", destDirNodeId : " + destDirNodeId + ", user : " + userId + " }");
 			});

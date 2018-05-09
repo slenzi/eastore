@@ -85,6 +85,8 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 */
 	public abstract int getJobCount();
 	
+	public abstract String getStatusMessage();
+	
 	/**
 	 * Get the number of completed jobs for the task.
 	 * 

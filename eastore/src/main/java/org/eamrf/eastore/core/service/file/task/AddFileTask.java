@@ -152,4 +152,9 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		return jobCount;
 	}
 
+	@Override
+	public String getStatusMessage() {
+		return "Add file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}
+
 }

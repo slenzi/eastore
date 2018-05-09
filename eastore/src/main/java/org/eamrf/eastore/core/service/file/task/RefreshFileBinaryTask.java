@@ -57,5 +57,10 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	public int getJobCount() {
 		return jobCount;
 	}
+	
+	@Override
+	public String getStatusMessage() {
+		return "Refresh file binary task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}	
 
 }

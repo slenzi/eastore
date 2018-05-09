@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1544,8 +1545,17 @@ public class FileService {
 			(pathToFile) ->{
 				try {
 					addFile(dirNodeId, userId, pathToFile, replaceExisting, task -> {
+						
+						Long taskId = task.getTaskId();
+						int jobCount = task.getJobCount();
+						int jobCompletedCount = task.getCompletedJobCount();
+						Long percentComplete = Math.round(task.getProgress());
+						String taskName = task.getName();
+						Date queuedTime = task.getQueuedTime();
+						
 						logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
 								+ " {fileName : " + pathToFile.getFileName() + ", user : " + userId + " }");
+						
 					});
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
