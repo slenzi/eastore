@@ -67,17 +67,27 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	}
 	
 	/**
-	 * Get the job count for the task
+	 * Get the total job count for the task.
 	 * 
 	 * @return
 	 */
 	public abstract int getJobCount();
+	
+	/**
+	 * Get the number of completed jobs for the task.
+	 * 
+	 * @return
+	 */
+	public int getCompletedJobCount() {
+		return jobCompletedCount;
+	}
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.QueuedTask#setProgress(java.lang.Double)
 	 */
 	@Override
 	public void setProgress(Double progress) {
+		//getLogger().info("Set progress to " + progress);
 		this.progress = progress;
 	}
 

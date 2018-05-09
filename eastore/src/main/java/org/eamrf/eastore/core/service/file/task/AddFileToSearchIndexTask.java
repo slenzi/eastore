@@ -83,6 +83,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 			}else {
 				indexerService.getIndexerForStore(documentToIndex.getStore()).add(documentToIndex);
 			}
+			incrementJobsCompleted();
 		} catch (IOException e) {
 			logger.error("Error adding/updating document in search index, " + e.getMessage());
 		}

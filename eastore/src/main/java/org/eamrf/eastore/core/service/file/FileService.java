@@ -9,8 +9,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,8 +17,6 @@ import java.util.concurrent.Future;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
-import org.eamrf.concurrent.task.AbstractQueuedTask;
-import org.eamrf.concurrent.task.QueuedTask;
 import org.eamrf.concurrent.task.QueuedTaskManager;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
@@ -35,13 +31,11 @@ import org.eamrf.eastore.core.search.lucene.StoreIndexer;
 import org.eamrf.eastore.core.search.service.StoreIndexerService;
 import org.eamrf.eastore.core.service.file.task.AddDirectoryTask;
 import org.eamrf.eastore.core.service.file.task.AddFileTask;
-import org.eamrf.eastore.core.service.file.task.AddFileToSearchIndexTask;
 import org.eamrf.eastore.core.service.file.task.CopyDirectoryTask;
 import org.eamrf.eastore.core.service.file.task.CopyFileTask;
 import org.eamrf.eastore.core.service.file.task.FileServiceTaskListener;
 import org.eamrf.eastore.core.service.file.task.MoveDirectoryTask;
 import org.eamrf.eastore.core.service.file.task.MoveFileTask;
-import org.eamrf.eastore.core.service.file.task.RefreshFileBinaryTask;
 import org.eamrf.eastore.core.service.file.task.RemoveDirectoryTask;
 import org.eamrf.eastore.core.service.file.task.RemoveFileTask;
 import org.eamrf.eastore.core.service.file.task.UpdateDirectoryTask;
@@ -467,6 +461,7 @@ public class FileService {
 	 * @param writeGroup1 - new write group for root directory
 	 * @param executeGroup1 - new execute group for root directory
 	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	public void updateStore(
@@ -478,7 +473,8 @@ public class FileService {
 			String readGroup1, 
 			String writeGroup1, 
 			String executeGroup1, 
-			String userId) throws ServiceException {
+			String userId,
+			FileServiceTaskListener listener) throws ServiceException {
 		
 		// fetch store
 		Store storeToEdit = getStoreById(storeId, userId);
@@ -504,7 +500,7 @@ public class FileService {
 		fileSystemRepository.updateStore(storeToEdit, storeName, storeDesc);
 		
 		// update root directory
-		updateDirectory(rootDirId, rootDirName, rootDirDesc, readGroup1, writeGroup1, executeGroup1, userId);
+		updateDirectory(rootDirId, rootDirName, rootDirDesc, readGroup1, writeGroup1, executeGroup1, userId, listener);
 		
 		
 		// TODO - rename task managers
@@ -621,15 +617,19 @@ public class FileService {
 				testStoreRootDirName, testStoreRootDirDesc, maxBytes, 
 				readGroup, writeGroup, executeGroup, AccessRule.DENY);
 		
-		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc", userId);
-		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc", userId);
-			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc", userId);
-			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc", userId);
-				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc", userId);
-				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc", userId);
-					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc", userId);
-					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc", userId);
-						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc", userId);		
+		FileServiceTaskListener listener = task -> {
+			logger.info("Create directory for test store at " + Math.round(task.getProgress()) + "%");
+		};
+		
+		DirectoryResource dirMore  = addDirectory(store.getNodeId(), "more", "more desc", userId, listener);
+		DirectoryResource dirOther = addDirectory(store.getNodeId(), "other", "other desc", userId, listener);
+			DirectoryResource dirThings = addDirectory(dirOther, "things", "things desc", userId, listener);
+			DirectoryResource dirFoo = addDirectory(dirOther, "foo", "foo desc", userId, listener);
+				DirectoryResource dirCats = addDirectory(dirFoo, "cats", "cats desc", userId, listener);
+				DirectoryResource dirDogs = addDirectory(dirFoo, "dogs", "dogs desc", userId, listener);
+					DirectoryResource dirBig = addDirectory(dirDogs, "big", "big desc", userId, listener);
+					DirectoryResource dirSmall = addDirectory(dirDogs, "small", "small desc", userId, listener);
+						DirectoryResource dirPics = addDirectory(dirSmall, "pics", "pics desc", userId, listener);		
 		
 		return store;
 	
@@ -818,18 +818,17 @@ public class FileService {
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void addFile(Long dirNodeId, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
+	public void addFile(Long dirNodeId, String userId, Path filePath, boolean replaceExisting, FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectory(dirNodeId, userId);
 		
-		addFile(dirRes, filePath, replaceExisting, userId);
+		addFile(dirRes, filePath, replaceExisting, userId, listener);
 		
 	}
 	
 	/**
-	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
-	 * binary data in the database. This version does not wait for the file to be added to the database, instead
-	 * it queues the process and returns instantly.
+	 * Adds new file to the database, then spawns two non-blocking child tasks for adding/refreshing the
+	 * binary data in the database, and adding the file to the lucene search index.
 	 * 
 	 * @param storeName - name of the store
 	 * @param dirRelPath - relative path of directory resource within the store
@@ -837,44 +836,31 @@ public class FileService {
 	 * @param filePath - path to file on local file system
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
-	 * @return A new FileMetaResource object (without the binary data)
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void addFile(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting) throws ServiceException {
-		
-		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
-		
-		addFile(dirRes, filePath, replaceExisting, userId, null);		
-		
-	}
-	
 	public void addFile(String storeName, String dirRelPath, String userId, Path filePath, boolean replaceExisting, FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource dirRes = getDirectory(storeName, dirRelPath, userId);
 		
 		addFile(dirRes, filePath, replaceExisting, userId, listener);		
 		
-	}	
+	}
 	
 	/**
-	 * Adds new file to the database, then spawns a non-blocking child task for adding/refreshing the
-	 * binary data in the database. This version does not wait for the file to be added to the database, instead
-	 * it queues the process and returns instantly. 
+	 * Adds new file to the database, then spawns two non-blocking child tasks for adding/refreshing the
+	 * binary data in the database, and adding the file to the lucene search index.
 	 * 
 	 * @param toDir - directory where file will be added
 	 * @param filePath - path to file on local file system
 	 * @param replaceExisting - pass true to overwrite any file with the same name that's already in the directory tree. If you
 	 * pass false, and there exists a file with the same name (case insensitive) then an ServiceException will be thrown.
 	 * @param userId - Id of the user adding the file
-	 * @return A new FileMetaResource object (without the binary data)
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId) throws ServiceException {
-		addFile(toDir, filePath, replaceExisting, userId, null);	
-	}
-	
 	public void addFile(DirectoryResource toDir, Path filePath, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {		
 		
 		final Store store = getStore(toDir, userId);
@@ -904,10 +890,11 @@ public class FileService {
 	 * @param newName - new name
 	 * @param newDesc - new description
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void updateFile(Long fileNodeId, String newName, String newDesc, String userId) throws ServiceException {
+	public void updateFile(Long fileNodeId, String newName, String newDesc, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		logger.debug("Updating file [fileNodeId=" + fileNodeId + "]");
 				
@@ -924,6 +911,10 @@ public class FileService {
 				.withIndexWriterTaskManager(indexWriterTaskManager)
 				.build();
 		
+		if(listener != null) {
+			updateTask.registerProgressListener(listener);
+		}		
+		
 		updateTask.setName("Update File [fileId = " + file.getNodeId() + ", path = " + file.getRelativePath() + "]");
 		generalTaskManager.addTask(updateTask);
 		
@@ -936,14 +927,15 @@ public class FileService {
 	 * 
 	 * @param fileNodeId - id of file resource to be removed
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void removeFile(Long fileNodeId, String userId) throws ServiceException {
+	public void removeFile(Long fileNodeId, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final FileMetaResource fileMetaResource = getFileMetaResource(fileNodeId, userId, false);
 		
-		removeFile(fileMetaResource, userId);
+		removeFile(fileMetaResource, userId, listener);
 		
 	}	
 	
@@ -952,16 +944,22 @@ public class FileService {
 	 * 
 	 * @param file - the file resource to remove
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void removeFile(FileMetaResource file, String userId) throws ServiceException {
+	public void removeFile(FileMetaResource file, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(file, userId));
 		
 		RemoveFileTask removeFileTask = new RemoveFileTask(
 				file, userId, fileSystemRepository, resChangeService, this, errorHandler);
 		removeFileTask.setName("Remove File [fileId = " + file.getNodeId() + ", path = " + file.getRelativePath() + "]");
+		
+		if(listener != null) {
+			removeFileTask.registerProgressListener(listener);
+		}			
+		
 		taskManager.addTask(removeFileTask);
 		
 		removeFileTask.waitComplete(); // block until finished		
@@ -976,15 +974,16 @@ public class FileService {
 	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
 	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
 	 * @param userId - Id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
+	public void copyFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		FileMetaResource sourceFile = getFileMetaResource(fileNodeId, userId, false);
 		DirectoryResource destitationDir = getDirectory(dirNodeId, userId);
 		
-		copyFile(sourceFile, destitationDir, replaceExisting, userId);
+		copyFile(sourceFile, destitationDir, replaceExisting, userId, listener);
 		
 	}
 	
@@ -996,10 +995,11 @@ public class FileService {
 	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
 	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
 	 * @param userId - Id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId) throws ServiceException {
+	public void copyFile(FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(toDir, userId));
 		
@@ -1007,6 +1007,11 @@ public class FileService {
 		
 		task.setName("Copy File [fileId = " + fileToCopy.getNodeId() + 
 				", toDir = " + toDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
+		
+		if(listener != null) {
+			task.registerProgressListener(listener);
+		}			
+		
 		taskManager.addTask(task);		
 		
 	}
@@ -1019,15 +1024,16 @@ public class FileService {
 	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
 	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
 	 * @param userId - id of user performing action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId) throws ServiceException {
+	public void moveFile(Long fileNodeId, Long dirNodeId, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final FileMetaResource fileToMove = getFileMetaResource(fileNodeId, userId, false);
 		final DirectoryResource destDir = getDirectory(dirNodeId, userId);
 				
-		moveFile(fileToMove, destDir, replaceExisting, userId);
+		moveFile(fileToMove, destDir, replaceExisting, userId, listener);
 		
 	}
 	
@@ -1039,10 +1045,11 @@ public class FileService {
 	 * @param replaceExisting - pass true to replace any existing file in the destination directory with
 	 * same name. If you pass false, and a file already exists, then an exception will be thrown.
 	 * @param userId - id of user performing action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting, String userId) throws ServiceException {
+	public void moveFile(FileMetaResource fileToMove, DirectoryResource destDir, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {
 	
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(destDir, userId));
 		
@@ -1051,6 +1058,11 @@ public class FileService {
 				fileSystemRepository, resChangeService, errorHandler, this);
 		
 		moveTask.setName("Move file [fileNodeId=" + fileToMove.getNodeId() + ", dirNodeId=" + destDir.getNodeId() + ", replaceExisting=" + replaceExisting + "]");
+		
+		if(listener != null) {
+			moveTask.registerProgressListener(listener);
+		}		
+		
 		taskManager.addTask(moveTask);
 		
 		moveTask.waitComplete(); // MUST block until finished!	
@@ -1165,16 +1177,17 @@ public class FileService {
 	 * @param name - name of new directory
 	 * @param desc - description for new directory
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
 	public DirectoryResource addDirectory(
-			Long dirNodeId, String name, String desc, String userId) throws ServiceException {
+			Long dirNodeId, String name, String desc, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource resource = getDirectory(dirNodeId, userId);		
 		
-		return addDirectory(resource, name, desc, null, null, null, userId);
+		return addDirectory(resource, name, desc, null, null, null, userId, listener);
 		
 	}
 	
@@ -1188,17 +1201,18 @@ public class FileService {
 	 * @param writeGroup1 - optional write group
 	 * @param executeGroup1 - optional execute group
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
 	public DirectoryResource addDirectory(
 			Long dirNodeId, String name, String desc, String readGroup1, String writeGroup1, 
-			String executeGroup1, String userId) throws ServiceException {
+			String executeGroup1, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource resource = getDirectory(dirNodeId, userId);		
 		
-		return addDirectory(resource, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+		return addDirectory(resource, name, desc, readGroup1, writeGroup1, executeGroup1, userId, listener);
 		
 	}
 	
@@ -1209,13 +1223,14 @@ public class FileService {
 	 * @param name - name of new directory
 	 * @param desc - description for new directory
 	 * @param userId - id of user performing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @return
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc, String userId) throws ServiceException {
+	public DirectoryResource addDirectory(DirectoryResource parentDir, String name, String desc, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
-		return addDirectory(parentDir, name, desc, null, null, null, userId);
+		return addDirectory(parentDir, name, desc, null, null, null, userId, listener);
 		
 	}	
 	
@@ -1232,6 +1247,7 @@ public class FileService {
 	 * @return
 	 * @throws ServiceException
 	 */
+	/*
 	@MethodTimer
 	public DirectoryResource addDirectory(
 			DirectoryResource parentDir, String name, String desc, 
@@ -1240,6 +1256,7 @@ public class FileService {
 		return addDirectory(parentDir, name, desc, readGroup1, writeGroup1, executeGroup1, userId, null);
 		
 	}
+	*/
 	
 	/**
 	 * Add new directory, with an observer that monitors the process.
@@ -1251,6 +1268,7 @@ public class FileService {
 	 * @param writeGroup1
 	 * @param executeGroup1
 	 * @param userId
+	 * @param listener - a listener to track progress of the operation
 	 * @param taskObserver
 	 * @return
 	 * @throws ServiceException
@@ -1290,10 +1308,13 @@ public class FileService {
 	 * @param writeGroup1 - new write group
 	 * @param executeGroup1 - new execute group
 	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void updateDirectory(Long dirNodeId, String name, String desc, String readGroup1, String writeGroup1, String executeGroup1, String userId) throws ServiceException {
+	public void updateDirectory(
+			Long dirNodeId, String name, String desc, 
+			String readGroup1, String writeGroup1, String executeGroup1, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		logger.debug("Updating directory [dirNodeId=" + dirNodeId + "]");
 		
@@ -1306,6 +1327,11 @@ public class FileService {
 				fileSystemRepository, resChangeService, this, errorHandler);
 
 		task.setName("Update directory [dirNodeId=" + dir.getNodeId() + ", name=" + dir.getNodeName() + "]");
+		
+		if(listener != null) {
+			task.registerProgressListener(listener);
+		}		
+		
 		taskManager.addTask(task);
 		
 		task.waitComplete(); // block until complete	
@@ -1316,14 +1342,16 @@ public class FileService {
 	 * Remove a directory. Walks the tree in POST_ORDER_TRAVERSAL, from leafs to root node.
 	 * 
 	 * @param dirNodeId - id of directory to remove
+	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void removeDirectory(Long dirNodeId, String userId) throws ServiceException {
+	public void removeDirectory(Long dirNodeId, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource dirToDelete = getDirectory(dirNodeId, userId);
 		
-		removeDirectory(dirToDelete, userId);		
+		removeDirectory(dirToDelete, userId, listener);		
 		
 	}	
 	
@@ -1331,10 +1359,12 @@ public class FileService {
 	 * Remove a directory. Walks the tree in POST_ORDER_TRAVERSAL, from leafs to root node.
 	 * 
 	 * @param dirNodeId - id of directory to remove
+	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void removeDirectory(DirectoryResource dirToDelete, String userId) throws ServiceException {
+	public void removeDirectory(DirectoryResource dirToDelete, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		//final Store store = getStore(dirToDelete, userId);
 		
@@ -1349,6 +1379,11 @@ public class FileService {
 		RemoveDirectoryTask task = new RemoveDirectoryTask(
 				dirToDelete, parentDir, userId, secureTreeService, fileSystemRepository, resChangeService, errorHandler);
 		task.setName("Remove directory [dirNodeId=" + dirNodeId + "]");
+		
+		if(listener != null) {
+			task.registerProgressListener(listener);
+		}		
+		
 		taskManager.addTask(task);
 		
 		task.waitComplete(); // block until finished		
@@ -1364,7 +1399,8 @@ public class FileService {
 	 * @param copyDirNodeId
 	 * @param destDirNodeId
 	 * @param replaceExisting
-	 * @param userId
+	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
@@ -1372,18 +1408,26 @@ public class FileService {
 			Long copyDirNodeId, 
 			Long destDirNodeId, 
 			boolean replaceExisting, 
-			String userId) throws ServiceException {
+			String userId,
+			FileServiceTaskListener listener) throws ServiceException {
 		
 		final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
 		final DirectoryResource toDir = getDirectory(destDirNodeId, userId);
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(fromDir, userId));		
 		
+		// TODO - This task contains child tasks which block. Since our task manager can only run one
+		// task at a time, this task must execute independently outside our task queue.
 		CopyDirectoryTask task = new CopyDirectoryTask(fromDir, toDir, replaceExisting, userId, secureTreeService,
 				this, errorHandler);
 		
+		if(listener != null) {
+			task.registerProgressListener(listener);
+		}		
+		
 		task.setName("Copy directory [copyDirNodeId=" + copyDirNodeId + ", destDirNodeId=" + destDirNodeId + 
 				", replaceExisting=" + replaceExisting + "]");
+		
 		taskManager.addTask(task);		
 		
 	}
@@ -1394,14 +1438,16 @@ public class FileService {
 	 * 
 	 * @param dirToCopy
 	 * @param toDir
-	 * @param userId
+	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @return
 	 * @throws Exception
 	 */
 	public DirectoryResource createCopyOfDirectory(
 			DirectoryResource dirToCopy, 
 			DirectoryResource toDir, 
-			String userId) throws ServiceException {
+			String userId,
+			FileServiceTaskListener listener) throws ServiceException {
 		
 		// see if there already exists a child directory with the same name
 		DirectoryResource existingChildDir = null;
@@ -1423,7 +1469,7 @@ public class FileService {
 			
 			// create new directory
 			DirectoryResource newCopy = addDirectory(toDir, dirToCopy.getPathName(), dirToCopy.getDesc(), 
-					dirToCopy.getReadGroup1(), dirToCopy.getWriteGroup1(), dirToCopy.getExecuteGroup1(), userId);
+					dirToCopy.getReadGroup1(), dirToCopy.getWriteGroup1(), dirToCopy.getExecuteGroup1(), userId, listener);
 			
 			// read/write/execute bits should be the same
 			newCopy.setCanRead(dirToCopy.getCanRead());
@@ -1443,10 +1489,11 @@ public class FileService {
 	 * @param destDirId - the directory where 'moveDirId' will be moved to (under). 
 	 * @param replaceExisting
 	 * @param userId - id of user completing the action
+	 * @param listener - a listener to track progress of the operation
 	 * @throws ServiceException
 	 */
 	@MethodTimer
-	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting, String userId) throws ServiceException {
+	public void moveDirectory(Long moveDirId, Long destDirId, boolean replaceExisting, String userId, FileServiceTaskListener listener) throws ServiceException {
 		
 		// we can preserve file IDs but hard to preserve directory IDs...
 		// if you eventually manage to preserve directory IDs, then you might have to worry about
@@ -1457,8 +1504,14 @@ public class FileService {
 		
 		final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(dirToMove, userId));
 		
+		// TODO - This task contains child tasks which block. Since our task manager can only run one
+		// task at a time, this task must execute independently outside our task queue.		
 		MoveDirectoryTask task = new MoveDirectoryTask(dirToMove, destDir, replaceExisting, userId,
 				secureTreeService, fileSystemRepository, this, errorHandler);
+		
+		if(listener != null) {
+			task.registerProgressListener(listener);
+		}		
 		
 		task.setName("Movie directory [moveDirId=" + moveDirId + ", destDirId=" + destDirId + ", replaceExisting=" + replaceExisting + "]");
 		taskManager.addTask(task);		
@@ -1491,7 +1544,10 @@ public class FileService {
 		filePaths.stream().forEach(
 			(pathToFile) ->{
 				try {
-					addFile(dirNodeId, userId, pathToFile, replaceExisting);
+					addFile(dirNodeId, userId, pathToFile, replaceExisting, task -> {
+						logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+								+ " {fileName : " + pathToFile.getFileName() + ", user : " + userId + " }");
+					});
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory with id '" + dirNodeId + "'.", e);
 				}
@@ -1529,8 +1585,9 @@ public class FileService {
 			(pathToFile) ->{
 				try {
 					addFile(storeName, dirRelPath, userId, pathToFile, replaceExisting, task -> {
-						Double progress = task.getProgress();
-						logger.info("Add file progress for file " + pathToFile.getFileName() + " from user " + userId + " is at " + progress);
+						logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+								+ " {fileName : " + pathToFile.getFileName() + ", user : " + userId + " }");
+					
 					});
 				} catch (ServiceException e) {
 					throw new RuntimeException("Error adding file '" + pathToFile.toString() + "' to directory  with relPath'" + 

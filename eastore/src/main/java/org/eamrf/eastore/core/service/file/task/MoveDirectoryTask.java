@@ -99,6 +99,8 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 
 		final Tree<PathResource> fromTree = secureTreeService.buildPathResourceTree(dirToMove, userId);
 		
+		calculateJobCount(fromTree);		
+		
 		//DirectoryResource toDir = this.getDirectory(destDirId, userId);
 		final Store fromStore = fileService.getStore(dirToMove, userId);
 		final Store toStore = fileService.getStore(destDir, userId);
@@ -108,7 +110,9 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		moveDirectoryTraversal(fromStore, toStore, fromTree.getRootNode(), destDir, replaceExisting, userId);
 		
 		// remove from dir and all child directories
-		fileService.removeDirectory(dirToMove.getNodeId(), userId);
+		fileService.removeDirectory(dirToMove.getNodeId(), userId, task -> {
+			incrementJobsCompleted();
+		});
 		
 		return null;
 		
@@ -134,13 +138,6 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 			boolean replaceExisting,
 			String userId) throws ServiceException {
 		
-		// calculate number of nodes to move.
-		try {
-			jobCount = Trees.nodeCount(pathResourceNode);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}		
-		
 		PathResource resourceToMove = pathResourceNode.getData();
 		
 		if(resourceToMove.getResourceType() == ResourceType.DIRECTORY){
@@ -163,7 +160,9 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
-			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToMove, toDir, userId);
+			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToMove, toDir, userId, task -> {
+				incrementJobsCompleted();
+			});
 			
 			// move children of the directory (files and sub-directories)
 			if(pathResourceNode.hasChildren()){
@@ -174,11 +173,35 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 			
 		}else if(resourceToMove.getResourceType() == ResourceType.FILE){
 			
-			fileService.moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting, userId);
+			fileService.moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting, userId, task -> {
+				incrementJobsCompleted();
+			});
 			
 		}
 		
-	}	
+	}
+	
+	private void calculateJobCount(Tree<PathResource> fromTree) throws ServiceException {
+		
+		int numberItemsToCopy = 0;
+		int numberItemsToDelete = 0;
+		
+		try {
+			numberItemsToCopy = Trees.nodeCount(fromTree);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
+		}
+		
+		try {
+			numberItemsToDelete = Trees.nodeCount(fromTree, DirectoryResource.class);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
+		}		
+		
+		// first we copy all the directories and files to the new destination directory, then we delete the source directory
+		jobCount = numberItemsToCopy + numberItemsToDelete;
+		
+	}
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.AbstractQueuedTask#getLogger()

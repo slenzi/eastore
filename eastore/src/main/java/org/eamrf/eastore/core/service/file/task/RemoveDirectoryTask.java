@@ -96,6 +96,8 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							}
 							fileSystemRepository.removeFile(fileToDelete);
 							
+							incrementJobsCompleted();
+							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {
 								DirectoryResource pdir = (DirectoryResource)treeNode.getParent().getData();
@@ -112,6 +114,8 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 								errorHandler.handlePermissionDenied(PermissionError.WRITE, nextDirToDelete, userId);
 							}									
 							fileSystemRepository.removeDirectory(nextDirToDelete);
+							
+							incrementJobsCompleted();
 							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {

@@ -345,7 +345,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.updateFile(fileNodeId, name, desc, userId);
+			fileService.updateFile(fileNodeId, name, desc, userId, task -> {
+				logger.info("Update file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {fileNodeId : " + fileNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -389,7 +392,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	
     	DirectoryResource dirResource = null;
     	try {
-    		dirResource = fileService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+    		dirResource = fileService.addDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId, task -> {
+				logger.info("Add directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {dirNodeId (parent) : " + dirNodeId + ", name : " + name + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -433,7 +439,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId);
+			fileService.updateDirectory(dirNodeId, name, desc, readGroup1, writeGroup1, executeGroup1, userId, task -> {
+				logger.info("Update directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {dirNodeId : " + dirNodeId + ", new name : " + name + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -550,7 +559,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		try {
 			fileService.updateStore(storeId, storeName, storeDesc, rootDirName, rootDirDesc, 
-					rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId);
+					rootDirReadGroup1, rootDirWriteGroup1, rootDirExecuteGroup1, userId, task -> {
+						logger.info("Update store progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+								+ " {storeId : " + storeId + ", user : " + userId + " }");
+					});
 		} catch (ServiceException e) {
 			handleError("Error updating store, id=" + storeId + ", " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -581,7 +593,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-    		fileService.removeFile(fileNodeId, userId);
+    		fileService.removeFile(fileNodeId, userId, task -> {
+				logger.info("Remove file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {fileNodeId : " + fileNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -609,7 +624,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.removeDirectory(dirNodeId, userId);
+			fileService.removeDirectory(dirNodeId, userId, task -> {
+				logger.info("Remove directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {dirNodeId : " + dirNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -647,7 +665,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.copyFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				logger.info("Copy file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {fileNodeId : " + fileNodeId + ", dirNodeId : " + dirNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -682,7 +703,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.copyDirectory(copyDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				logger.info("Copy directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {copyDirNodeId : " + copyDirNodeId + ", destDirNodeId : " + destDirNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -720,7 +744,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.moveFile(fileNodeId, dirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				logger.info("Move file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {fileNodeId : " + fileNodeId + ", dirNodeId : " + dirNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}
@@ -755,7 +782,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}
     	
     	try {
-			fileService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId);
+			fileService.moveDirectory(moveDirNodeId, destDirNodeId, replaceExisting.booleanValue(), userId, task -> {
+				logger.info("Move directory progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+						+ " {moveDirNodeId : " + moveDirNodeId + ", destDirNodeId : " + destDirNodeId + ", user : " + userId + " }");
+			});
 		} catch (ServiceException e) {
 			handleError(e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
 		}

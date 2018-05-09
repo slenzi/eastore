@@ -32,8 +32,6 @@ public class TaskManagerProvider {
 	@Bean
 	public QueuedTaskManager createQueuedTaskManager(){
 		
-		//logger.info("Creating new " + QueuedTaskManager.class.getName());
-		
 		QueuedTaskManager manager = new QueuedTaskManager();
 		
 		// for some reason our BeanPostProcessor is not running, so we manually wire the logger dependency.
@@ -52,8 +50,6 @@ public class TaskManagerProvider {
 	 */
 	@Bean
 	public QueuedTaskManager createQueuedTaskManager(long consumeFrequency){
-		
-		//logger.info("Creating new " + QueuedTaskManager.class.getName());
 		
 		QueuedTaskManager manager = new QueuedTaskManager(consumeFrequency);
 		

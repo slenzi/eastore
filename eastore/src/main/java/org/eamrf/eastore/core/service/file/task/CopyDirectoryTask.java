@@ -141,7 +141,9 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			// TODO - we perform a case insensitive match. If the directory names differ in case, do we want
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
-			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToCopy, toDir, userId);
+			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToCopy, toDir, userId, task -> {
+				incrementJobsCompleted();
+			});
 			
 			// copy over children of the directory (files and sub-directories)
 			if(pathResourceNode.hasChildren()){
@@ -152,10 +154,9 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			
 		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
 			
-			fileService.copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId);
-			
-			//CopyFileTask copyTask = new CopyFileTask(
-			//		(FileMetaResource)resourceToCopy, toDir, replaceExisting, userId, fileService, errorHandler);
+			fileService.copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId, task -> {
+				incrementJobsCompleted();
+			});
 			
 		}
 		

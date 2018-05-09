@@ -36,7 +36,9 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 1;
+	// 1 = update file
+	// 2 = update lucene
+	private int jobCount = 2;
 	
 	public static class Builder {
 	
@@ -157,10 +159,9 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 			fileSystemRepository.updateFile(file, newName, newDesc);
 		} catch (Exception e) {
 			throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
-		}			
+		}
 		
-		// broadcast resource change message
-		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());
+		incrementJobsCompleted();
 		
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
@@ -169,8 +170,14 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 				.withHaveExisting(true)
 				.withTaskName("Index Writer Task [" + file.toString() + "]")
 				.build();
+		indexTask.registerProgressListener(task -> {
+			incrementJobsCompleted();
+		});
 		
-		indexWriterTaskManager.addTask(indexTask);				
+		indexWriterTaskManager.addTask(indexTask);
+		
+		// broadcast resource change message
+		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());		
 		
 		return null;		
 		

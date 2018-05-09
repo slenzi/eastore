@@ -63,7 +63,9 @@ public class CopyFileTask extends FileServiceTask<Void> {
 					+ "fileNodeId => " + fileToCopy.getNodeId() + ", dirNodeId => " + toDir.getNodeId());
 		}
 		
-		fileService.addFile(toDir, sourceFilePath, replaceExisting, userId);
+		fileService.addFile(toDir, sourceFilePath, replaceExisting, userId, task -> {
+			incrementJobsCompleted();
+		});
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
 		// If the path resource is locked then no update operations (delete, move, update, copy, etc) can be performed.

@@ -273,7 +273,7 @@ public final class Trees {
 	/**
 	 * Counts the number of nodes in the tree.
 	 * 
-	 * @param tree - the tree
+	 * @param tree - the tree to traverse
 	 * @return
 	 * @throws TreeNodeVisitException 
 	 */
@@ -282,9 +282,21 @@ public final class Trees {
 	}
 	
 	/**
-	 * Counts the number of nodes in the tree.
+	 * Counts the number of nodes in the tree of the specified type
 	 * 
-	 * @param node - the root node of the tree.
+	 * @param tree - the tree to traverse
+	 * @param clazz - the type of nodes to count
+	 * @return
+	 * @throws TreeNodeVisitException
+	 */
+	public static <N> Integer nodeCount(Tree<N> tree, Class<?> clazz) throws TreeNodeVisitException {
+		return Trees.nodeCount(tree.getRootNode());
+	}	
+	
+	/**
+	 * Counts the number of nodes in the tree
+	 * 
+	 * @param node - the root node of the tree
 	 * @return
 	 * @throws TreeNodeVisitException
 	 */
@@ -293,6 +305,24 @@ public final class Trees {
 		Trees.walkTree(node, (treeNode) -> {
 			//N n = treeNode.getData();
 			nodeCount.addAndGet(1);
+		}, WalkOption.PRE_ORDER_TRAVERSAL);
+		return nodeCount.get();
+	}
+	
+	/**
+	 * Counts the number of nodes in the tree of the specified type
+	 * 
+	 * @param node - the root node of the tree
+	 * @param clazz - the type of nodes to count
+	 * @return
+	 * @throws TreeNodeVisitException
+	 */
+	public static <N> Integer nodeCount(TreeNode<N> node, Class<?> clazz) throws TreeNodeVisitException {
+		AtomicInteger nodeCount = new AtomicInteger();
+		Trees.walkTree(node, (treeNode) -> {
+			if(clazz.isInstance(treeNode.getData())) {
+				nodeCount.addAndGet(1);
+			}
 		}, WalkOption.PRE_ORDER_TRAVERSAL);
 		return nodeCount.get();
 	}	

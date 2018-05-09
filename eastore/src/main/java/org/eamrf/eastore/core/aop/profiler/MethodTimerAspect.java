@@ -60,7 +60,7 @@ public class MethodTimerAspect {
     	// stop stopwatch
     	timer.stop();
     	
-    	logger.info(">> Profiler: " + packageName + " " + methodName + " completed in " + timer.getElapsedTime());
+    	logger.debug(">> Profiler: " + packageName + " " + methodName + " completed in " + timer.getElapsedTime());
         
     	return retVal;
         

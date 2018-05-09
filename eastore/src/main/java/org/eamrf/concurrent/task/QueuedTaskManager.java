@@ -89,7 +89,7 @@ public class QueuedTaskManager implements TaskManager {
 		
 		this.executorService = executorService;
 		
-		logger.info("Submitting queued task manager '" + managerName + "' to executor service.");
+		logger.debug("Submitting queued task manager '" + managerName + "' to executor service.");
 		
 		//this.executorService.submit(this);
 		this.executorService.execute(this);
@@ -111,27 +111,27 @@ public class QueuedTaskManager implements TaskManager {
 	@Override
 	public void stopTaskManager() {
 		
-		logger.info("Stop '" + managerName + "' task manager called");
+		logger.debug("Stop '" + managerName + "' task manager called");
 
 		queue.clear();
 
-		logger.info("Shuttin down executor service for '" + managerName + "' task manager...");
+		logger.debug("Shuttin down executor service for '" + managerName + "' task manager...");
 
 		executorService.shutdown(); // Disable new tasks from being submitted to executorService
 
-		logger.info("Call to executor shutdown complete...");
+		logger.debug("Call to executor shutdown complete...");
 
 		try {
 
-			logger.info("Awaiting termination for 10 seconds...");
+			logger.debug("Awaiting termination for 10 seconds...");
 
 			if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
 
-				logger.info("Calling shutdownNow() on executor service...");
+				logger.debug("Calling shutdownNow() on executor service...");
 
 				executorService.shutdownNow();
 
-				logger.info("Awaiting termination for additional 10 seconds...");
+				logger.debug("Awaiting termination for additional 10 seconds...");
 
 				if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
 					logger.error("Executor service did not terminate");
@@ -145,7 +145,7 @@ public class QueuedTaskManager implements TaskManager {
 			Thread.currentThread().interrupt();   
 		}
 
-		logger.info("Stop '" + managerName + "' task manager call complete");
+		logger.debug("Stop '" + managerName + "' task manager call complete");
 		
 	}
 	
@@ -175,7 +175,7 @@ public class QueuedTaskManager implements TaskManager {
 	 * @return
 	 */
 	public boolean contains(QueuedTask<?> task) {
-		logger.info("Checking if queue contains existing task. Current queue size = " + queue.size());
+		logger.debug("Checking if queue contains existing task. Current queue size = " + queue.size());
 		return queue.contains(task);
 	}
 	
@@ -187,7 +187,7 @@ public class QueuedTaskManager implements TaskManager {
 		
 		isRunning = true;
 		
-		logger.info(QueuedTaskManager.class.getName() + " running!");
+		logger.debug(QueuedTaskManager.class.getName() + " running!");
 		
 		while(true){
 			
@@ -215,7 +215,7 @@ public class QueuedTaskManager implements TaskManager {
 	
 		isRunning = false;
 		
-		logger.info(QueuedTaskManager.class.getName() + " run has ended for '" + managerName + "'!");
+		logger.debug(QueuedTaskManager.class.getName() + " run has ended for '" + managerName + "'!");
 		
 	}
 
@@ -234,7 +234,7 @@ public class QueuedTaskManager implements TaskManager {
 			
 			queue.put(task);
 
-			logger.info("Task was queued [id => " + task.getTaskId() + ", name => " + task.getName() + 
+			logger.debug("Task was queued [id => " + task.getTaskId() + ", name => " + task.getName() + 
 					", time => " + DateUtil.defaultFormat(task.getQueuedTime()) + ", size => " + queue.size() + "]");
 			
 		} catch (InterruptedException e) {
@@ -256,7 +256,7 @@ public class QueuedTaskManager implements TaskManager {
 		
 		if(task != null){
 			
-			logger.info("Task consumed (for run), [id => " + task.getTaskId() + ", name => " + task.getName() + 
+			logger.debug("Task consumed (for run), [id => " + task.getTaskId() + ", name => " + task.getName() + 
 					", time => " + DateUtil.defaultFormat(task.getQueuedTime()) + ", size => " + queue.size() + "]");			
 			
 			task.run();

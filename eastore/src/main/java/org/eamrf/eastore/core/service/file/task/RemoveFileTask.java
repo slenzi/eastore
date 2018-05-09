@@ -66,6 +66,8 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error removing file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
+		incrementJobsCompleted();
+		
 		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());
 		
 		// TODO - remove from lucene index!

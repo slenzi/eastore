@@ -211,7 +211,7 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 		timer = new CodeTimer();	
 		timer.start();
 		
-		getLogger().info("Task is running, [id => " + getTaskId() + ", name => " + getClass().getName() + 
+		getLogger().debug("Task is running, [id => " + getTaskId() + ", name => " + getClass().getName() + 
 				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()) + "]");
 		
 		T value = null;
@@ -232,7 +232,7 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 		
 		runEndTime = DateUtil.getCurrentTime();
 		
-		getLogger().info("Task completed run in " + timer.getElapsedTime() + ", id => " + getTaskId() + ", name => " + this.getName() + 
+		getLogger().debug("Task completed run in " + timer.getElapsedTime() + ", id => " + getTaskId() + ", name => " + this.getName() + 
 				", queued at => " + DateUtil.defaultFormat(this.getQueuedTime()) + "]");
 		
 		// at this point, any potential client thread that's blocking on CompletableFuture.get() will wake up and receive the value

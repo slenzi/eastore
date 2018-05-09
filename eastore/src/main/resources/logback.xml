@@ -29,6 +29,7 @@ Configure logback logging
 	</appender>	
 
 	<root level="@log.level@">
+		<appender-ref ref="CONSOLE" />
 		<appender-ref ref="FILE" />
 		<!--
 		<appender-ref ref="STDOUT" />
