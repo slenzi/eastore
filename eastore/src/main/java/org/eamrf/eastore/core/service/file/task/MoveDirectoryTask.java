@@ -216,4 +216,9 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		return "Move directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

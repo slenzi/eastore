@@ -73,6 +73,7 @@ public class FileServiceTaskMessageService {
 			mesg.setJobCompletedCount(task.getCompletedJobCount());
 			mesg.setProgress(String.valueOf(Math.round(task.getProgress())));
 			mesg.setMessage(task.getStatusMessage());
+			mesg.setUserId(task.getUserId());
 			
 			template.convertAndSend(messageDestination, mesg);
 			
@@ -117,6 +118,11 @@ public class FileServiceTaskMessageService {
 				}
 			}
 			return false;
+		}
+
+		@Override
+		public String getUserId() {
+			return task.getUserId();
 		}
 	
 	};    

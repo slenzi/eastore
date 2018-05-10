@@ -113,10 +113,11 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		incrementJobsCompleted();
 		
 		// broadcast directory contents changed event
-		resChangeService.directoryContentsChanged(toDir.getNodeId());
+		resChangeService.directoryContentsChanged(toDir.getNodeId(), userId);
 
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
+				.withUserId(userId)
 				.withResource(newOrUpdatedFileResource)
 				.withIndexer(indexerService)
 				.withHaveExisting(haveExisting)
@@ -130,7 +131,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		
 		// Child task refreshes the binary data in the database.
 		RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(
-				newOrUpdatedFileResource.getNodeId(), fileSystemRepository);
+				newOrUpdatedFileResource.getNodeId(), userId, fileSystemRepository);
 		refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
 		refreshTask.registerProgressListener(listener -> {
 			// job 3 of 3 complete
@@ -156,5 +157,10 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 	public String getStatusMessage() {
 		return "Add file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}
+	
+	@Override
+	public String getUserId() {
+		return userId;
+	}	
 
 }

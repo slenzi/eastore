@@ -23,6 +23,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	private FileMetaResource documentToIndex = null;
 	private StoreIndexerService indexerService = null;
 	private boolean haveExisting = false;
+	private String userId = null;
 	
 	private int jobCount = 1;
 	
@@ -32,6 +33,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		private StoreIndexerService indexerService = null;
 		private boolean haveExisting = false;
 		private String taskName = null;
+		private String userId = null;
 		
 		public Builder() {
 			
@@ -57,6 +59,11 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 			return this;
 		}
 		
+		public Builder withUserId(String userId) {
+			this.userId = userId;
+			return this;
+		}
+		
 		public AddFileToSearchIndexTask build() {
 			return new AddFileToSearchIndexTask(this);
 		}
@@ -68,6 +75,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		this.documentToIndex = builder.documentToIndex;
 		this.indexerService = builder.indexerService;
 		this.haveExisting = builder.haveExisting;
+		this.userId = builder.userId;
 		
 		super.setName(builder.taskName);
 	}
@@ -107,5 +115,10 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	public String getStatusMessage() {
 		return "Add file to lucene index task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}
+	
+	@Override
+	public String getUserId() {
+		return userId;
+	}	
 
 }

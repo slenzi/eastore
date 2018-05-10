@@ -18,6 +18,7 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	private Logger logger = LoggerFactory.getLogger(RefreshFileBinaryTask.class);
 	
 	private Long fileNodeId;
+	private String userId;
 	private FileSystemRepository fileSystemRepository;
 	
 	private int jobCount = 1;
@@ -25,8 +26,9 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	/**
 	 * 
 	 */
-	public RefreshFileBinaryTask(Long fileNodeId, FileSystemRepository fileSystemRepository) {
+	public RefreshFileBinaryTask(Long fileNodeId, String userId, FileSystemRepository fileSystemRepository) {
 		this.fileNodeId = fileNodeId;
+		this.userId = userId;
 		this.fileSystemRepository = fileSystemRepository;
 	}
 
@@ -63,4 +65,9 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 		return "Refresh file binary task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

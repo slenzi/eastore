@@ -41,9 +41,7 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 * observers that the state of the task has changed. 
 	 */
 	protected void incrementJobsCompleted() {
-		
 		incrementJobsCompleted(1);
-		
 	}
 	
 	/**
@@ -53,29 +51,20 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 * @param increment
 	 */
 	protected void incrementJobsCompleted(int increment) {
-		
 		jobCompletedCount += increment;
-		
 		updateProgress();
-		
-		//setChanged();
-		//notifyObservers();
-		
 		notifyProgressListeners();
-		
 	}	
 	
 	/**
 	 * Recalculate the progress based on the number of jobs completed
 	 */
 	protected void updateProgress() {
-		
 		if(getJobCount() > 0 && jobCompletedCount > 0) {
 			setProgress( (Double.valueOf(jobCompletedCount) / Double.valueOf(getJobCount())) * 100.0);
 		}else {
 			setProgress(0.0);
 		}
-		
 	}
 	
 	/**
@@ -85,7 +74,20 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 */
 	public abstract int getJobCount();
 	
+	/**
+	 * Get the status message for the task. e.g. a short string with the task id, name, progress, user id, etc,
+	 * suitable for displaying to end users.
+	 * 
+	 * @return
+	 */
 	public abstract String getStatusMessage();
+	
+	/**
+	 * Get the user id of the user that initiated the task.
+	 * 
+	 * @return
+	 */
+	public abstract String getUserId();
 	
 	/**
 	 * Get the number of completed jobs for the task.

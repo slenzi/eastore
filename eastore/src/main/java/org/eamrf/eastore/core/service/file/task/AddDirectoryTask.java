@@ -84,7 +84,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		incrementJobsCompleted();
 		
 		// broadcast resource change message
-		resChangeService.directoryContentsChanged(parentDir.getNodeId());
+		resChangeService.directoryContentsChanged(parentDir.getNodeId(), userId);
 		
 		return evaluatedDir;		
 		
@@ -103,6 +103,11 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 	@Override
 	public String getStatusMessage() {
 		return "Add directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+	}
+
+	@Override
+	public String getUserId() {
+		return userId;
 	}
 
 }

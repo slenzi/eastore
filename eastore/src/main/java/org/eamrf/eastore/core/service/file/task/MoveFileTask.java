@@ -92,8 +92,8 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		// TODO - if you add a child task for updating lucene, don't forget to increment the job count (and for other parent tasks like MoveDirectoryTask)
 		
 		// broadcast resource change message
-		resChangeService.directoryContentsChanged(sourceDir.getNodeId());
-		resChangeService.directoryContentsChanged(destDir.getNodeId());
+		resChangeService.directoryContentsChanged(sourceDir.getNodeId(), userId);
+		resChangeService.directoryContentsChanged(destDir.getNodeId(), userId);
 		
 		return null;		
 		
@@ -117,4 +117,9 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		return "Move file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

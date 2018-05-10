@@ -114,7 +114,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 		
 		// won't have a parent dir if this is a root directory for a store
 		if(parentDir != null) {
-			resChangeService.directoryContentsChanged(parentDir.getNodeId());
+			resChangeService.directoryContentsChanged(parentDir.getNodeId(), userId);
 		}
 		
 		return null;		
@@ -138,5 +138,10 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 	public String getStatusMessage() {
 		return "Update directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
+	
+	@Override
+	public String getUserId() {
+		return userId;
+	}
 	
 }

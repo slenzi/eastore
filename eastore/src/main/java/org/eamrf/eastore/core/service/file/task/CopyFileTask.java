@@ -92,6 +92,11 @@ public class CopyFileTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		return "Copy file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
-	}		
+	}
+	
+	@Override
+	public String getUserId() {
+		return userId;
+	}	
 
 }

@@ -68,7 +68,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		
 		incrementJobsCompleted();
 		
-		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());
+		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId(), userId);
 		
 		// TODO - remove from lucene index!
 		
@@ -90,4 +90,9 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		return "Remove file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

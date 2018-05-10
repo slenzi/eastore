@@ -17,8 +17,9 @@ public class ResourceChangeMessage implements Serializable {
 	private String code = null;
 	private String message = null;
 	private Long nodeId = null;
+	private String userId = null;
 	private LocalDate date = null;
-	private LocalTime time = null;	
+	private LocalTime time = null;
 
 	public ResourceChangeMessage() {
 
@@ -64,13 +65,28 @@ public class ResourceChangeMessage implements Serializable {
 		this.time = time;
 	}
 
+	/**
+	 * @return the userId
+	 */
+	public String getUserId() {
+		return userId;
+	}
+
+	/**
+	 * @param userId the userId to set
+	 */
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return "ResourceChangeMessage [code=" + code + ", message=" + message + ", nodeId=" + nodeId + ", date=" + date
-				+ ", time=" + time + "]";
+		return "ResourceChangeMessage [code=" + code + ", message=" + message + ", nodeId=" + nodeId + ", userId="
+				+ userId + ", date=" + date + ", time=" + time + "]";
 	}
+
 	
 }

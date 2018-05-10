@@ -18,6 +18,7 @@ public class FileServiceTaskStatus implements Serializable {
 	private static final long serialVersionUID = -7245524797729683558L;
 
 	private String id = null;
+	private String userId = null;
 	private String progress = null;
 	private Integer jobCount = 0;
 	private Integer jobCompletedCount = 0;
@@ -42,6 +43,20 @@ public class FileServiceTaskStatus implements Serializable {
 	 */
 	public void setId(String id) {
 		this.id = id;
+	}
+
+	/**
+	 * @return the userId
+	 */
+	public String getUserId() {
+		return userId;
+	}
+
+	/**
+	 * @param userId the userId to set
+	 */
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 
 	/**
@@ -105,10 +120,8 @@ public class FileServiceTaskStatus implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return FileServiceTaskStatus.class.getName() + " [id=" + id + ", progress=" + progress + ", jobCount=" + jobCount
-				+ ", jobCompletedCount=" + jobCompletedCount + ", message=" + message + "]";
-	}
-
-	
+		return "FileServiceTaskStatus [id=" + id + ", userId=" + userId + ", progress=" + progress + ", jobCount="
+				+ jobCount + ", jobCompletedCount=" + jobCompletedCount + ", message=" + message + "]";
+	}	
 	
 }

@@ -102,7 +102,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							if(treeNode.hasParent()) {
 								DirectoryResource pdir = (DirectoryResource)treeNode.getParent().getData();
 								if(pdir != null) {
-									resChangeService.directoryContentsChanged(pdir.getNodeId());
+									resChangeService.directoryContentsChanged(pdir.getNodeId(), userId);
 								}
 							}
 							
@@ -121,7 +121,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							if(treeNode.hasParent()) {
 								DirectoryResource pdir = (DirectoryResource)treeNode.getParent().getData();
 								if(pdir != null) {
-									resChangeService.directoryContentsChanged(pdir.getNodeId());
+									resChangeService.directoryContentsChanged(pdir.getNodeId(), userId);
 								}
 							}									
 							
@@ -139,7 +139,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 				},
 				WalkOption.POST_ORDER_TRAVERSAL);
 			
-			resChangeService.directoryContentsChanged(parentDir.getNodeId());
+			resChangeService.directoryContentsChanged(parentDir.getNodeId(), userId);
 		
 		}catch(TreeNodeVisitException e){
 			throw new ServiceException("Encountered error when deleting directory with node id => " + 
@@ -165,4 +165,9 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		return "Remove directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}	
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

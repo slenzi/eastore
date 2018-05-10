@@ -165,6 +165,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
+				.withUserId(userId)
 				.withResource(file)
 				.withIndexer(indexerService)
 				.withHaveExisting(true)
@@ -177,7 +178,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		indexWriterTaskManager.addTask(indexTask);
 		
 		// broadcast resource change message
-		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId());		
+		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId(), userId);		
 		
 		return null;		
 		
@@ -198,4 +199,9 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		return "Update file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
 	}		
 
+	@Override
+	public String getUserId() {
+		return userId;
+	}
+	
 }

@@ -64,16 +64,19 @@ public class ResourceChangeService {
 
 		private Long nodeId = null;
 		private EventCode event = null;
+		private String userId = null;
 		
 		/**
 		 * Create a task for broadcasting the change event
 		 * 
 		 * @param event - The type of event we're broadcasting
 		 * @param nodeId - The resource node ID that has changed
+		 * @param userId - Id of the user that changed the resource
 		 */
-		public ResourceChangeTask(EventCode event, Long nodeId) {
+		public ResourceChangeTask(EventCode event, Long nodeId, String userId) {
 			this.event = event;
 			this.nodeId = nodeId;
+			this.userId = userId;
 		}
 		
 		@Override
@@ -85,6 +88,7 @@ public class ResourceChangeService {
 			mesg.setNodeId(nodeId);
 			mesg.setDate(LocalDate.now());
 			mesg.setTime(LocalTime.now());
+			mesg.setUserId(userId);
 			
 			// broadcast the actual message to the clients
 			logger.info("Broadcasting directory change event for nodeId = " + nodeId);
@@ -140,6 +144,11 @@ public class ResourceChangeService {
 		public String getStatusMessage() {
 			return "Broadcasting resource change message for nodeId " + nodeId;
 		}
+
+		@Override
+		public String getUserId() {
+			return userId;
+		}
 		
 	};    
 	
@@ -187,12 +196,13 @@ public class ResourceChangeService {
 	 * When clients receive this message, they can issue a REST call to the server to get
 	 * the latest data (if they wish.)
 	 * 
-	 * @param dirNodeId - the id of the directory path resource
+	 * @param dirNodeId - id of the directory path resource that changed
+	 * @param userId - id of the user that changed the directory
 	 */
 	@MethodTimer
-	public void directoryContentsChanged(Long dirNodeId){
+	public void directoryContentsChanged(Long dirNodeId, String userId){
 		
-		ResourceChangeTask task = createResourceChangeTask(EventCode.DIRECTORY_CONTENTS_CHANGED, dirNodeId);
+		ResourceChangeTask task = createResourceChangeTask(EventCode.DIRECTORY_CONTENTS_CHANGED, dirNodeId, userId);
 		
 		// Don't want to flood the clients with messages, so only add the task if the task
 		// manager doesn't already have a similar task.
@@ -205,17 +215,15 @@ public class ResourceChangeService {
 	/**
 	 * Create a new resource change task
 	 * 
-	 * @param event
-	 * @param nodeId
+	 * @param event - 
+	 * @param dirNodeId - id of the directory path resource that changed
+	 * @param userId - id of the user that changed the directory
 	 * @return
 	 */
-	private ResourceChangeTask createResourceChangeTask(EventCode event, Long nodeId) {
-		
-		ResourceChangeTask task = new ResourceChangeTask(event, nodeId);
-		task.setName("Broadcast event: " + event.toString() + " [nodeId=" + nodeId + "]");
-		
+	private ResourceChangeTask createResourceChangeTask(EventCode event, Long nodeId, String userId) {
+		ResourceChangeTask task = new ResourceChangeTask(event, nodeId, userId);
+		task.setName("Broadcast event: " + event.toString() + " [nodeId=" + nodeId + ", userId=" + userId + "]");
 		return task;
-		
 	}
 
 }
