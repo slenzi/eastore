@@ -2,7 +2,6 @@ package org.eamrf.eastore.core.service.file.task;
 
 import java.nio.file.Path;
 
-import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.ErrorHandler;
 import org.eamrf.eastore.core.service.file.FileService;
@@ -30,7 +29,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	public CopyFileTask(
 			FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId,
@@ -43,11 +42,23 @@ public class CopyFileTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		
+		notifyProgressChange();
+		
 	}
 
 	@Override
 	public Void doWork() throws ServiceException {
 
+		calculateJobCount();
+		
 		// user must have read on parent directory
 		// file resource inherits permission from parent directory, so this works.
 		if(!fileToCopy.getCanRead()) {
@@ -64,7 +75,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 		}
 		
 		fileService.addFile(toDir, sourceFilePath, replaceExisting, userId, task -> {
-			incrementJobsCompleted();
+			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 		});
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
@@ -91,7 +102,13 @@ public class CopyFileTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Copy file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Copy file task pending...";
+		}else{
+			return "Copy file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}
+		
 	}
 	
 	@Override

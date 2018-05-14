@@ -40,10 +40,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	// 1 = add the file
-	// 2 = update lucene
-	// 3 = update binary data
-	private int jobCount = 3;
+	private int jobCount = -1;
 	
 	public AddFileTask(
 			Path filePath,
@@ -70,11 +67,28 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		// 1 = add the file
+		// 2 = update lucene
+		// 3 = update binary data
+		jobCount = 3;
+	
+		notifyProgressChange();
+		
 	}
 	
 	@Override
 	public FileMetaResource doWork() throws ServiceException {
 
+		calculateJobCount();
+		
+		logger.info("HERE 01 => " + this.getCompletedJobCount());
+		
 		// user must have write permission on destination directory
 		if(!toDir.getCanWrite()){
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, toDir, userId);
@@ -105,15 +119,21 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 			}					
 		}
 		
+		logger.info("HERE 02 => " + this.getCompletedJobCount());
+		
 		// set the directory so we can store that information in the lucene index
 		newOrUpdatedFileResource.setDirectory(toDir);
 		newOrUpdatedFileResource.setStore(toDir.getStore());
 		
 		// job 1 of 3 complete
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
+		
+		logger.info("HERE 03 => " + this.getCompletedJobCount());
 		
 		// broadcast directory contents changed event
 		resChangeService.directoryContentsChanged(toDir.getNodeId(), userId);
+		
+		logger.info("HERE 04 => " + this.getCompletedJobCount());
 
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
@@ -123,9 +143,10 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 				.withHaveExisting(haveExisting)
 				.withTaskName("Index Writer Task [" + newOrUpdatedFileResource.toString() + "]")
 				.build();
-		indexTask.registerProgressListener(listener -> {
+		indexTask.registerProgressListener(task -> {
 			// job 2 of 3 complete
-			incrementJobsCompleted();
+			logger.info("HERE 05 => " + this.getCompletedJobCount());
+			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 		});
 		indexWriterTaskManager.addTask(indexTask);
 		
@@ -133,11 +154,14 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		RefreshFileBinaryTask refreshTask = new RefreshFileBinaryTask(
 				newOrUpdatedFileResource.getNodeId(), userId, fileSystemRepository);
 		refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
-		refreshTask.registerProgressListener(listener -> {
+		refreshTask.registerProgressListener(task -> {
 			// job 3 of 3 complete
-			incrementJobsCompleted();
+			logger.info("HERE 06 => " + this.getCompletedJobCount());
+			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 		});		
 		binaryTaskManager.addTask(refreshTask);		
+		
+		logger.info("HERE 07 => " + this.getCompletedJobCount());
 		
 		return newOrUpdatedFileResource;		
 		
@@ -155,7 +179,13 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 
 	@Override
 	public String getStatusMessage() {
-		return "Add file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+
+		if(getJobCount() < 0) {
+			return "Add file task pending...";
+		}else{
+			return "Add file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}
+		
 	}
 	
 	@Override

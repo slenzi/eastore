@@ -34,7 +34,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	public AddDirectoryTask(
 			DirectoryResource parentDir, 
@@ -61,11 +61,23 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		
+		notifyProgressChange();
+		
 	}
 	
 	@Override
 	public DirectoryResource doWork() throws ServiceException {
 
+		calculateJobCount();
+		
 		// user must have write permission on parent directory
 		if(!parentDir.getCanWrite()) {
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, parentDir, userId);
@@ -81,7 +93,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
 		DirectoryResource evaluatedDir = fileService.getDirectory(dirResource.getNodeId(), userId);
 		
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		
 		// broadcast resource change message
 		resChangeService.directoryContentsChanged(parentDir.getNodeId(), userId);
@@ -102,7 +114,13 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 
 	@Override
 	public String getStatusMessage() {
-		return "Add directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Add directory task pending...";
+		}else{
+			return "Add directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}
+		
 	}
 
 	@Override

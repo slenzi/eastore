@@ -36,9 +36,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	// 1 = update file
-	// 2 = update lucene
-	private int jobCount = 2;
+	private int jobCount = -1;
 	
 	public static class Builder {
 	
@@ -111,6 +109,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 	}
 	
 	private UpdateFileMetaTask(Builder builder) {
+		
 		this.file = builder.file;
 		this.newName = builder.newName;
 		this.newDesc = builder.newDesc;
@@ -121,11 +120,26 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		this.indexWriterTaskManager = builder.indexWriterTaskManager;
 		this.fileService = builder.fileService;
 		this.errorHandler = builder.errorHandler;
+		
+		notifyProgressChange();
+		
 	}
+	
+	private void calculateJobCount() {
+		
+		// 1 = update file
+		// 2 = update lucene		
+		jobCount = 2;
+		
+		notifyProgressChange();
+		
+	}	
 
 	@Override
 	public Void doWork() throws ServiceException {
 
+		calculateJobCount();
+		
 		// need execute & write permission on file
 		if(!file.getCanExecute()) {
 			logger.info("No execute permission");
@@ -161,7 +175,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
@@ -172,7 +186,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 				.withTaskName("Index Writer Task [" + file.toString() + "]")
 				.build();
 		indexTask.registerProgressListener(task -> {
-			incrementJobsCompleted();
+			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 		});
 		
 		indexWriterTaskManager.addTask(indexTask);
@@ -196,7 +210,13 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Update file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Update file task pending...";
+		}else{
+			return "Update file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+
 	}		
 
 	@Override

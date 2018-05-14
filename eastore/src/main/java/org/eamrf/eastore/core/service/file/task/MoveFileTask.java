@@ -32,7 +32,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	
 	private FileService fileService;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	/**
 	 * 
@@ -56,6 +56,16 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		this.errorHandler = errorHandler;
 		this.fileService = fileService;
 		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		
+		notifyProgressChange();
+		
 	}
 
 	/* (non-Javadoc)
@@ -64,6 +74,8 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	@Override
 	public Void doWork() throws ServiceException {
 
+		calculateJobCount();
+		
 		// user must have write access on destination directory
 		if(!destDir.getCanWrite()){
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, destDir, userId);
@@ -76,7 +88,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		}
 		if(!sourceDir.getCanWrite()) {
 			errorHandler.handlePermissionDenied(PermissionError.WRITE, sourceDir, userId);
-		}		
+		}
 		
 		try {
 			fileSystemRepository.moveFile(fileToMove, destDir, replaceExisting);
@@ -85,7 +97,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 					destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 		}
 		
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		
 		// TODO - do we need to update the lucene search index?
 		
@@ -114,7 +126,13 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Move file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Move file task pending...";
+		}else{
+			return "Move file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+	
 	}	
 
 	@Override

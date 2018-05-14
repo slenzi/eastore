@@ -35,7 +35,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 	private ResourceChangeService resChangeService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 0;
+	private int jobCount = -1;
 	
 	public RemoveDirectoryTask(
 			DirectoryResource dirToDelete,
@@ -53,6 +53,21 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		this.fileSystemRepository = fileSystemRepository;
 		this.resChangeService = resChangeService;
 		this.errorHandler = errorHandler;
+		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount(Tree<PathResource> tree) throws ServiceException {
+		
+		// calculate number of nodes to delete.
+		try {
+			jobCount = Trees.nodeCount(tree);
+		} catch (TreeNodeVisitException e) {
+			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
+		}
+		
+		notifyProgressChange();
 		
 	}
 
@@ -73,12 +88,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		
 		//pathResTreeLogger.logTree(tree);
 		
-		// calculate number of nodes to delete.
-		try {
-			jobCount = Trees.nodeCount(tree);
-		} catch (TreeNodeVisitException e) {
-			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
-		}		
+		calculateJobCount(tree);
 		
 		try {
 			
@@ -162,7 +172,13 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Remove directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Remove directory task pending...";
+		}else{
+			return "Remove directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}
+		
 	}	
 
 	@Override

@@ -39,7 +39,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 0;
+	private int jobCount = -1;
 	
 	/**
 	 * 
@@ -57,6 +57,9 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		this.fileSystemRepository = fileSystemRepository;
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
+		
+		notifyProgressChange();
+		
 	}
 
 	/* (non-Javadoc)
@@ -110,7 +113,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		
 		// remove from dir and all child directories
 		fileService.removeDirectory(dirToMove.getNodeId(), userId, task -> {
-			incrementJobsCompleted();
+			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 		});
 		
 		return null;
@@ -160,7 +163,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
 			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToMove, toDir, userId, task -> {
-				incrementJobsCompleted();
+				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 			});
 			
 			// move children of the directory (files and sub-directories)
@@ -173,7 +176,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		}else if(resourceToMove.getResourceType() == ResourceType.FILE){
 			
 			fileService.moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting, userId, task -> {
-				incrementJobsCompleted();
+				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 			});
 			
 		}
@@ -196,6 +199,8 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 				(numDirToCopy * 2) + // x2, once for copying them all and once for deleting the sources
 				numFileToCopy; // only 1 job per move file task
 		
+		notifyProgressChange();
+		
 	}	
 
 	/* (non-Javadoc)
@@ -213,7 +218,13 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Move directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Move directory task pending...";
+		}else{
+			return "Move directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}
+		
 	}	
 
 	@Override

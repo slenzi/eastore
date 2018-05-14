@@ -59,13 +59,26 @@ public class FileServiceTaskMessageService {
 	private class FileServiceTaskBroadcaster extends FileServiceTask<Void> {
 
 		private FileServiceTask<?> task = null;
+		
+		private int jobCount = -1;
 
 		public FileServiceTaskBroadcaster(FileServiceTask<?> task) {
 			this.task = task;
+			notifyProgressChange();
 		}
+		
+		private void calculateJobCount() {
+			
+			jobCount = 1;
+			
+			notifyProgressChange();
+			
+		}		
 		
 		@Override
 		public Void doWork() throws ServiceException {
+			
+			calculateJobCount();
 			
 			FileServiceTaskStatus mesg = new FileServiceTaskStatus();
 			mesg.setId(String.valueOf(task.getTaskId()));
@@ -77,7 +90,7 @@ public class FileServiceTaskMessageService {
 			
 			template.convertAndSend(messageDestination, mesg);
 			
-			incrementJobsCompleted();
+			setCompletedJobCount(1);
 			
 			return null;
 				
@@ -97,12 +110,16 @@ public class FileServiceTaskMessageService {
 
 		@Override
 		public int getJobCount() {
-			return 1;
+			return jobCount;
 		}
 
 		@Override
 		public String getStatusMessage() {
-			return "Broadcasting file service task status for task " + task.getTaskId();
+			if(getJobCount() < 0) {
+				return "Broadcasting file service task status for task " + task.getTaskId() + " is pending...";
+			}else {
+				return "Broadcasting file service task status for task " + task.getTaskId();
+			}
 		}
 
 		/* (non-Javadoc)

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -298,7 +299,21 @@ public class FileSystemActionResource extends BaseResourceHandler {
     		}
         	
         	try {
-    			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true, userId);
+    			uploadPipeline.processUpload(longDirId, fileName, dataHandler, true, userId, task -> {
+					
+					Long taskId = task.getTaskId();
+					int jobCount = task.getJobCount();
+					int jobCompletedCount = task.getCompletedJobCount();
+					Long percentComplete = Math.round(task.getProgress());
+					String taskName = task.getName();
+					Date queuedTime = task.getQueuedTime();
+					
+					fileServiceTaskMessageService.broadcast(task);
+		
+					logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+							+ " {dirId : " + dirId + ", user : " + userId + " }");
+					
+				});
     		} catch (ServiceException e) {
     			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
     		}        	
@@ -307,7 +322,21 @@ public class FileSystemActionResource extends BaseResourceHandler {
     	}else if(!StringUtil.isNullEmpty(storeName) && !StringUtil.isNullEmpty(dirRelPath)){
     		
         	try {
-    			uploadPipeline.processUpload(storeName, dirRelPath, fileName, dataHandler, true, userId);
+    			uploadPipeline.processUpload(storeName, dirRelPath, fileName, dataHandler, true, userId, task -> {
+					
+					Long taskId = task.getTaskId();
+					int jobCount = task.getJobCount();
+					int jobCompletedCount = task.getCompletedJobCount();
+					Long percentComplete = Math.round(task.getProgress());
+					String taskName = task.getName();
+					Date queuedTime = task.getQueuedTime();
+					
+					fileServiceTaskMessageService.broadcast(task);
+					
+					logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
+							+ " {dirId : " + dirId + ", user : " + userId + " }");
+					
+				});
     		} catch (ServiceException e) {
     			handleError("Upload pipeline error", WebExceptionType.CODE_IO_ERROR, e);
     		}    		

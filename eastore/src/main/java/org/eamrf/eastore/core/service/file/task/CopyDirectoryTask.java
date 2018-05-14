@@ -39,7 +39,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	
 	private Tree<PathResource> fromTree;
 	
-	private int jobCount = 0;
+	private int jobCount = -1;
 	
 	/**
 	 * 
@@ -55,6 +55,8 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		this.secureTreeService = secureTreeService;
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
+		
+		notifyProgressChange();
 		
 	}
 
@@ -130,7 +132,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
 			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToCopy, toDir, userId, task -> {
-				incrementJobsCompleted();
+				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 			});
 			
 			// copy over children of the directory (files and sub-directories)
@@ -143,7 +145,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
 			
 			fileService.copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId, task -> {
-				incrementJobsCompleted();
+				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
 			});
 			
 		}
@@ -164,6 +166,8 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	
 		jobCount = numDirToCopy + (numFileToCopy * 3); // 3 operations for every file
 		
+		notifyProgressChange();
+		
 	}	
 
 	/* (non-Javadoc)
@@ -181,7 +185,13 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Copy directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Copy directory task pending...";
+		}else{
+			return "Copy directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+
 	}
 	
 	@Override

@@ -66,6 +66,8 @@ public class ResourceChangeService {
 		private EventCode event = null;
 		private String userId = null;
 		
+		private int jobCount = -1;
+		
 		/**
 		 * Create a task for broadcasting the change event
 		 * 
@@ -77,10 +79,21 @@ public class ResourceChangeService {
 			this.event = event;
 			this.nodeId = nodeId;
 			this.userId = userId;
+			notifyProgressChange();
 		}
+		
+		private void calculateJobCount() {
+			
+			jobCount = 1;
+			
+			notifyProgressChange();
+			
+		}		
 		
 		@Override
 		public Void doWork() throws ServiceException {
+			
+			calculateJobCount();
 			
 			ResourceChangeMessage mesg = new ResourceChangeMessage();
 			mesg.setCode(event.getCodeString());
@@ -95,7 +108,7 @@ public class ResourceChangeService {
 			
 			template.convertAndSend(messageDestination, mesg);
 			
-			incrementJobsCompleted();
+			setCompletedJobCount(1);
 			
 			return null;
 				
@@ -137,12 +150,16 @@ public class ResourceChangeService {
 
 		@Override
 		public int getJobCount() {
-			return 1;
+			return jobCount;
 		}
 
 		@Override
 		public String getStatusMessage() {
-			return "Broadcasting resource change message for nodeId " + nodeId;
+			if(getJobCount() < 0) {
+				return "Broadcasting resource change message for nodeId " + nodeId + " is pending...";
+			}else {
+				return "Broadcasting resource change message for nodeId " + nodeId;
+			}
 		}
 
 		@Override

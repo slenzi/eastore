@@ -25,7 +25,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	private boolean haveExisting = false;
 	private String userId = null;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	public static class Builder {
 	
@@ -35,9 +35,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		private String taskName = null;
 		private String userId = null;
 		
-		public Builder() {
-			
-		}
+		public Builder() { }
 		
 		public Builder withResource(FileMetaResource documentToIndex) {
 			this.documentToIndex = documentToIndex;
@@ -78,6 +76,16 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		this.userId = builder.userId;
 		
 		super.setName(builder.taskName);
+		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		notifyProgressChange();		
+		
 	}
 
 	/* (non-Javadoc)
@@ -85,17 +93,21 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	 */
 	@Override
 	public Void doWork() throws ServiceException {
+		
+		calculateJobCount();
+		
 		try {
 			if(haveExisting) {
 				indexerService.getIndexerForStore(documentToIndex.getStore()).update(documentToIndex);
 			}else {
 				indexerService.getIndexerForStore(documentToIndex.getStore()).add(documentToIndex);
 			}
-			incrementJobsCompleted();
+			setCompletedJobCount(1);
 		} catch (IOException e) {
 			logger.error("Error adding/updating document in search index, " + e.getMessage());
 		}
 		return null;
+		
 	}
 
 	/* (non-Javadoc)
@@ -113,7 +125,13 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 
 	@Override
 	public String getStatusMessage() {
-		return "Add file to lucene index task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Add file to lucene index task pending...";
+		}else{
+			return "Add file to lucene index task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+
 	}
 	
 	@Override

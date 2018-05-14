@@ -21,29 +21,42 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	private String userId;
 	private FileSystemRepository fileSystemRepository;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	/**
 	 * 
 	 */
 	public RefreshFileBinaryTask(Long fileNodeId, String userId, FileSystemRepository fileSystemRepository) {
+		
 		this.fileNodeId = fileNodeId;
 		this.userId = userId;
 		this.fileSystemRepository = fileSystemRepository;
+		
+		notifyProgressChange();
+		
 	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = -1;
+		
+		notifyProgressChange();
+		
+	}	
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.AbstractQueuedTask#doWork()
 	 */
 	@Override
 	public Void doWork() throws ServiceException {
+		calculateJobCount();
 		try {
 			fileSystemRepository.refreshBinaryDataInDatabase(fileNodeId);
 		} catch (Exception e) {
 			throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 					+ "for file resource node => " + fileNodeId, e);
 		}
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		return null;
 	}
 
@@ -62,7 +75,13 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Refresh file binary task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Refresh file binary task pending...";
+		}else{
+			return "Refresh file binary task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}			
+	
 	}	
 
 	@Override

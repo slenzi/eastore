@@ -20,6 +20,7 @@ import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.file.FileService;
+import org.eamrf.eastore.core.service.file.task.FileServiceTaskListener;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -63,11 +64,12 @@ public class UploadPipeline {
 			String fileName,
 			DataHandler dataHandler, 
 			boolean replaceExisting,
-			String userId) throws ServiceException {
+			String userId,
+			FileServiceTaskListener listener) throws ServiceException {
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
-		fileService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId);
+		fileService.processToDirectory(dirNodeId, tempDir, replaceExisting, userId, listener);
 		
 	}
 	
@@ -90,11 +92,12 @@ public class UploadPipeline {
 			String fileName, 
 			DataHandler dataHandler, 
 			boolean replaceExisting,
-			String userId) throws ServiceException {	
+			String userId,
+			FileServiceTaskListener listener) throws ServiceException {	
 		
 		Path tempDir = saveIncomingDataToTempDir(fileName, dataHandler, true);
 		
-		fileService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId);
+		fileService.processToDirectory(storeName, dirRelPath, tempDir, replaceExisting, userId, listener);
 		
 	}
 	

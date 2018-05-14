@@ -41,20 +41,32 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 * observers that the state of the task has changed. 
 	 */
 	protected void incrementJobsCompleted() {
-		incrementJobsCompleted(1);
+		jobCompletedCount++;
+		updateProgress();
+		notifyProgressChange();		
 	}
 	
-	/**
-	 * Increment the jobs completed counter, by the amount specified, and notify all
-	 * observers that the state of the task has changed. 
-	 * 
-	 * @param increment
-	 */
-	protected void incrementJobsCompleted(int increment) {
-		jobCompletedCount += increment;
+	//protected void addToCompletedJobCount(int additional) {
+	//	jobCompletedCount += additional;
+	//	updateProgress();
+	//	notifyProgressChange();			
+	//}
+	
+	//protected void setJobsCompleted(int completed) {
+	//	jobCompletedCount = completed;
+	//	updateProgress();
+	//	notifyProgressChange();		
+	//}
+	
+	protected void setCompletedJobCount(int count) {
+		jobCompletedCount = count;
 		updateProgress();
+		notifyProgressChange();
+	}
+	
+	protected void notifyProgressChange() {
 		notifyProgressListeners();
-	}	
+	}
 	
 	/**
 	 * Recalculate the progress based on the number of jobs completed
@@ -103,7 +115,6 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 */
 	@Override
 	public void setProgress(Double progress) {
-		//getLogger().info("Set progress to " + progress);
 		this.progress = progress;
 	}
 

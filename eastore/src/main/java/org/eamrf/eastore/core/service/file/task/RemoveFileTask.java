@@ -28,7 +28,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	public RemoveFileTask(
 			FileMetaResource file,
@@ -45,10 +45,22 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
+		notifyProgressChange();
+		
+	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		
+		notifyProgressChange();
+		
 	}
 
 	@Override
 	public Void doWork() throws ServiceException {
+		
+		calculateJobCount();
 		
 		DirectoryResource parentDir = fileService.getParentDirectory(file.getNodeId(), userId);
 		file.setDirectory(parentDir);
@@ -66,7 +78,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error removing file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		
 		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId(), userId);
 		
@@ -87,7 +99,13 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 	
 	@Override
 	public String getStatusMessage() {
-		return "Remove file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Remove file task pending...";
+		}else{
+			return "Remove file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+
 	}	
 
 	@Override

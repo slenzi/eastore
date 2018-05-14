@@ -35,7 +35,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = 1;
+	private int jobCount = -1;
 	
 	/**
 	 * 
@@ -65,7 +65,17 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
+		notifyProgressChange();
+		
 	}
+	
+	private void calculateJobCount() {
+		
+		jobCount = 1;
+		
+		notifyProgressChange();
+		
+	}	
 
 	/* (non-Javadoc)
 	 * @see org.eamrf.concurrent.task.AbstractQueuedTask#doWork()
@@ -73,6 +83,8 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 	@Override
 	public Void doWork() throws ServiceException {
 
+		calculateJobCount();
+		
 		// need execute & write permission on directory
 		if(!dir.getCanExecute()) {
 			logger.info("No execute permission on directory");
@@ -110,7 +122,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error updating directory with node id => " + dir.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		incrementJobsCompleted();
+		setCompletedJobCount(1);
 		
 		// won't have a parent dir if this is a root directory for a store
 		if(parentDir != null) {
@@ -136,7 +148,13 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 
 	@Override
 	public String getStatusMessage() {
-		return "Update directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		
+		if(getJobCount() < 0) {
+			return "Update directory task pending...";
+		}else{
+			return "Update directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
+		}		
+
 	}	
 	
 	@Override
