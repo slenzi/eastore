@@ -56,7 +56,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		this.resChangeService = resChangeService;
 		this.errorHandler = errorHandler;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	

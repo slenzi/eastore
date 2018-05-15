@@ -32,7 +32,7 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 		this.userId = userId;
 		this.fileSystemRepository = fileSystemRepository;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	

@@ -67,7 +67,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	
@@ -87,7 +87,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 
 		calculateJobCount();
 		
-		logger.info("HERE 01 => " + this.getCompletedJobCount());
+		//logger.info("HERE 01 => " + this.getCompletedJobCount());
 		
 		// user must have write permission on destination directory
 		if(!toDir.getCanWrite()){
@@ -119,7 +119,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 			}					
 		}
 		
-		logger.info("HERE 02 => " + this.getCompletedJobCount());
+		//logger.info("HERE 02 => " + this.getCompletedJobCount());
 		
 		// set the directory so we can store that information in the lucene index
 		newOrUpdatedFileResource.setDirectory(toDir);
@@ -128,12 +128,12 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		// job 1 of 3 complete
 		setCompletedJobCount(getTaskId(), 1);
 		
-		logger.info("HERE 03 => " + this.getCompletedJobCount());
+		//logger.info("HERE 03 => " + getCompletedJobCount());
 		
 		// broadcast directory contents changed event
 		resChangeService.directoryContentsChanged(toDir.getNodeId(), userId);
 		
-		logger.info("HERE 04 => " + this.getCompletedJobCount());
+		logger.info("HERE 04 => " + getCompletedJobCount());
 
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
@@ -145,7 +145,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 				.build();
 		indexTask.registerProgressListener(task -> {
 			// job 2 of 3 complete
-			logger.info("HERE 05 => " + this.getCompletedJobCount());
+			logger.info("HERE 05 => " + getCompletedJobCount());
 			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});
 		indexWriterTaskManager.addTask(indexTask);
@@ -156,12 +156,12 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
 		refreshTask.registerProgressListener(task -> {
 			// job 3 of 3 complete
-			logger.info("HERE 06 => " + this.getCompletedJobCount());
+			logger.info("HERE 06 => " + getCompletedJobCount());
 			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});		
 		binaryTaskManager.addTask(refreshTask);		
 		
-		logger.info("HERE 07 => " + this.getCompletedJobCount());
+		logger.info("HERE 07 => " + getCompletedJobCount());
 		
 		return newOrUpdatedFileResource;		
 		

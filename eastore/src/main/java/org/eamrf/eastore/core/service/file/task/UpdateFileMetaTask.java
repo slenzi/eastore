@@ -121,7 +121,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		this.fileService = builder.fileService;
 		this.errorHandler = builder.errorHandler;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	

@@ -64,7 +64,7 @@ public class FileServiceTaskMessageService {
 
 		public FileServiceTaskBroadcaster(FileServiceTask<?> task) {
 			this.task = task;
-			notifyChange();
+			//notifyChange();
 		}
 		
 		private void calculateJobCount() {

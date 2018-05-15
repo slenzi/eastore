@@ -56,7 +56,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		this.errorHandler = errorHandler;
 		this.fileService = fileService;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	

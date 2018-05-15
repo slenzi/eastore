@@ -31,8 +31,6 @@ public class QueuedTaskManager implements TaskManager {
 	
 	private ExecutorService executorService = null;
 	
-	private long taskId = 0L;
-	
 	private String managerName = QueuedTaskManager.class.getName();
 	
 	// amount of time to wait in milliseconds before consuming next item in queue
@@ -244,7 +242,9 @@ public class QueuedTaskManager implements TaskManager {
 	}
 	
 	private synchronized long getNextTaskId(){
-		return ++taskId;
+		
+		return TaskIdGenerator.getNextTaskId();
+		
 	}
 	
 	/**

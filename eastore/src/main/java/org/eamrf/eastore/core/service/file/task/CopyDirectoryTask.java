@@ -56,7 +56,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 

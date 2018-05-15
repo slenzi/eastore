@@ -79,7 +79,7 @@ public class ResourceChangeService {
 			this.event = event;
 			this.nodeId = nodeId;
 			this.userId = userId;
-			notifyChange();
+			//notifyChange();
 		}
 		
 		private void calculateJobCount() {

@@ -1,7 +1,6 @@
 package org.eamrf.concurrent.task;
 
 import java.util.Date;
-import java.util.Observable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 

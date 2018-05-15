@@ -50,7 +50,7 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		listeners.forEach(listener -> listener.onProgressChange(this) );
 	}
 	
-	protected void setCompletedJobCount(long taskId, int count) {
+	protected void setCompletedJobCount(Long taskId, int count) {
 		taskCompletedJobMap.put(taskId, count);
 		logCompletedMap();
 		updateProgress();
@@ -59,8 +59,9 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	
 	private void logCompletedMap(){
 		Set<Long> keys = taskCompletedJobMap.keySet();
-		for(Long l : keys){
-			logger.info("Task " + l + " = " + taskCompletedJobMap.get(l) + " compled jobs");
+		logger.info("Jobs completed for task " + getTaskId() + ", " + getName() + ":");
+		for(Long id : keys){
+			logger.info("Task " + id + " = " + taskCompletedJobMap.get(id) + " completed jobs");
 		}
 	} 
 	

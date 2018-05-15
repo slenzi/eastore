@@ -77,7 +77,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		
 		super.setName(builder.taskName);
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	

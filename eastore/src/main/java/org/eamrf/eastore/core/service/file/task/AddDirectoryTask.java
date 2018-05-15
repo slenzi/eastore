@@ -61,7 +61,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyChange();
+		//notifyChange();
 		
 	}
 	
