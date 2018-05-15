@@ -45,7 +45,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -53,7 +53,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 		
 		jobCount = 1;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 
@@ -78,7 +78,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error removing file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId(), userId);
 		

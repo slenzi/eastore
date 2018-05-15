@@ -64,14 +64,14 @@ public class FileServiceTaskMessageService {
 
 		public FileServiceTaskBroadcaster(FileServiceTask<?> task) {
 			this.task = task;
-			notifyProgressChange();
+			notifyChange();
 		}
 		
 		private void calculateJobCount() {
 			
 			jobCount = 1;
 			
-			notifyProgressChange();
+			notifyChange();
 			
 		}		
 		
@@ -90,7 +90,7 @@ public class FileServiceTaskMessageService {
 			
 			template.convertAndSend(messageDestination, mesg);
 			
-			setCompletedJobCount(1);
+			setCompletedJobCount(getTaskId(), 1);
 			
 			return null;
 				

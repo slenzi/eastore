@@ -65,7 +65,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -73,7 +73,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 		
 		jobCount = 1;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}	
 
@@ -122,7 +122,7 @@ public class UpdateDirectoryTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error updating directory with node id => " + dir.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		// won't have a parent dir if this is a root directory for a store
 		if(parentDir != null) {

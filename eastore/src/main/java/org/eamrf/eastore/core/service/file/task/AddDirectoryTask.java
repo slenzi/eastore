@@ -61,7 +61,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -69,7 +69,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		
 		jobCount = 1;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -93,7 +93,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 		// after we create the directory we need to fetch it in order to have the permissions (read, write, & execute bits) properly evaluated.
 		DirectoryResource evaluatedDir = fileService.getDirectory(dirResource.getNodeId(), userId);
 		
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		// broadcast resource change message
 		resChangeService.directoryContentsChanged(parentDir.getNodeId(), userId);

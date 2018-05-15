@@ -67,7 +67,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -78,7 +78,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		// 3 = update binary data
 		jobCount = 3;
 	
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -126,7 +126,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		newOrUpdatedFileResource.setStore(toDir.getStore());
 		
 		// job 1 of 3 complete
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		logger.info("HERE 03 => " + this.getCompletedJobCount());
 		
@@ -146,7 +146,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		indexTask.registerProgressListener(task -> {
 			// job 2 of 3 complete
 			logger.info("HERE 05 => " + this.getCompletedJobCount());
-			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});
 		indexWriterTaskManager.addTask(indexTask);
 		
@@ -157,7 +157,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		refreshTask.registerProgressListener(task -> {
 			// job 3 of 3 complete
 			logger.info("HERE 06 => " + this.getCompletedJobCount());
-			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});		
 		binaryTaskManager.addTask(refreshTask);		
 		

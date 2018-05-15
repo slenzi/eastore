@@ -56,7 +56,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 
@@ -132,7 +132,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
 			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToCopy, toDir, userId, task -> {
-				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+				setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 			});
 			
 			// copy over children of the directory (files and sub-directories)
@@ -145,7 +145,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 		}else if(resourceToCopy.getResourceType() == ResourceType.FILE){
 			
 			fileService.copyFile( (FileMetaResource)resourceToCopy, toDir, replaceExisting, userId, task -> {
-				setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+				setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 			});
 			
 		}
@@ -166,7 +166,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	
 		jobCount = numDirToCopy + (numFileToCopy * 3); // 3 operations for every file
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}	
 

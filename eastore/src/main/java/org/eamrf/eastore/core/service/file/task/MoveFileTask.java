@@ -56,7 +56,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		this.errorHandler = errorHandler;
 		this.fileService = fileService;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -64,7 +64,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 		
 		jobCount = 1;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 
@@ -97,7 +97,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 					destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		// TODO - do we need to update the lucene search index?
 		

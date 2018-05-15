@@ -1,5 +1,7 @@
 package org.eamrf.eastore.core.service.file.task;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.ErrorHandler;
 import org.eamrf.eastore.core.service.file.PermissionError;
@@ -54,7 +56,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		this.resChangeService = resChangeService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -67,7 +69,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 			throw new ServiceException("Failed to get resource count for source directory, " + e.getMessage(), e);
 		}
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 
@@ -90,6 +92,9 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 		
 		calculateJobCount(tree);
 		
+		
+		AtomicInteger completedJobCount = new AtomicInteger(0);
+		
 		try {
 			
 			// walk tree, bottom-up, from leafs to root node.
@@ -106,7 +111,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							}
 							fileSystemRepository.removeFile(fileToDelete);
 							
-							incrementJobsCompleted();
+							setCompletedJobCount(getTaskId(), completedJobCount.incrementAndGet());
 							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {
@@ -125,7 +130,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							}									
 							fileSystemRepository.removeDirectory(nextDirToDelete);
 							
-							incrementJobsCompleted();
+							setCompletedJobCount(getTaskId(), completedJobCount.incrementAndGet());
 							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {

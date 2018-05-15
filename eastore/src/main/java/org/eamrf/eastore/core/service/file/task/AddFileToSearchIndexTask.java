@@ -77,14 +77,14 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 		
 		super.setName(builder.taskName);
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
 	private void calculateJobCount() {
 		
 		jobCount = 1;
-		notifyProgressChange();		
+		notifyChange();		
 		
 	}
 
@@ -102,7 +102,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 			}else {
 				indexerService.getIndexerForStore(documentToIndex.getStore()).add(documentToIndex);
 			}
-			setCompletedJobCount(1);
+			setCompletedJobCount(getTaskId(), 1);
 		} catch (IOException e) {
 			logger.error("Error adding/updating document in search index, " + e.getMessage());
 		}

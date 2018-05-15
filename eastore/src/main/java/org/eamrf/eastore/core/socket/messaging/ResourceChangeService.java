@@ -79,14 +79,14 @@ public class ResourceChangeService {
 			this.event = event;
 			this.nodeId = nodeId;
 			this.userId = userId;
-			notifyProgressChange();
+			notifyChange();
 		}
 		
 		private void calculateJobCount() {
 			
 			jobCount = 1;
 			
-			notifyProgressChange();
+			notifyChange();
 			
 		}		
 		
@@ -108,7 +108,7 @@ public class ResourceChangeService {
 			
 			template.convertAndSend(messageDestination, mesg);
 			
-			setCompletedJobCount(1);
+			setCompletedJobCount(getTaskId(), 1);
 			
 			return null;
 				

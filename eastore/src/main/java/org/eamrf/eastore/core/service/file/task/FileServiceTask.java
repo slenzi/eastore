@@ -4,9 +4,16 @@
 package org.eamrf.eastore.core.service.file.task;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.eamrf.concurrent.task.AbstractQueuedTask;
+import org.eamrf.core.util.CollectionUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base task class for all file service tasks
@@ -15,8 +22,15 @@ import org.eamrf.concurrent.task.AbstractQueuedTask;
  */
 public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 
-	private int jobCompletedCount = 0;
+	Logger logger = LoggerFactory.getLogger(FileServiceTask.class.getName());
+	
+	//private int jobCompletedCount = 0;
 	private Double progress = 0.0;
+	
+	// track the number of completed jobs for the task, and all child tasks
+	// key = task id
+	// value = completed job count for task
+	private Map<Long,Integer> taskCompletedJobMap = new HashMap<Long,Integer>();
 	
 	private List<FileServiceTaskListener> listeners = new ArrayList<FileServiceTaskListener>();
 	
@@ -36,35 +50,21 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		listeners.forEach(listener -> listener.onProgressChange(this) );
 	}
 	
-	/**
-	 * Increment the jobs completed counter, by 1, and notify all
-	 * observers that the state of the task has changed. 
-	 */
-	protected void incrementJobsCompleted() {
-		jobCompletedCount++;
+	protected void setCompletedJobCount(long taskId, int count) {
+		taskCompletedJobMap.put(taskId, count);
+		logCompletedMap();
 		updateProgress();
-		notifyProgressChange();		
+		notifyChange();
 	}
 	
-	//protected void addToCompletedJobCount(int additional) {
-	//	jobCompletedCount += additional;
-	//	updateProgress();
-	//	notifyProgressChange();			
-	//}
+	private void logCompletedMap(){
+		Set<Long> keys = taskCompletedJobMap.keySet();
+		for(Long l : keys){
+			logger.info("Task " + l + " = " + taskCompletedJobMap.get(l) + " compled jobs");
+		}
+	} 
 	
-	//protected void setJobsCompleted(int completed) {
-	//	jobCompletedCount = completed;
-	//	updateProgress();
-	//	notifyProgressChange();		
-	//}
-	
-	protected void setCompletedJobCount(int count) {
-		jobCompletedCount = count;
-		updateProgress();
-		notifyProgressChange();
-	}
-	
-	protected void notifyProgressChange() {
+	protected void notifyChange() {
 		notifyProgressListeners();
 	}
 	
@@ -72,11 +72,15 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 * Recalculate the progress based on the number of jobs completed
 	 */
 	protected void updateProgress() {
-		if(getJobCount() > 0 && jobCompletedCount > 0) {
-			setProgress( (Double.valueOf(jobCompletedCount) / Double.valueOf(getJobCount())) * 100.0);
+		
+		int completedJobCount = getCompletedJobCount();
+		
+		if(getJobCount() > 0 && completedJobCount > 0) {
+			setProgress( (Double.valueOf(completedJobCount) / Double.valueOf(getJobCount())) * 100.0);
 		}else {
 			setProgress(0.0);
 		}
+		
 	}
 	
 	/**
@@ -107,7 +111,11 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 * @return
 	 */
 	public int getCompletedJobCount() {
-		return jobCompletedCount;
+		int completedJobCount = 0;
+		for(Integer jobCount : CollectionUtil.emptyIfNull(taskCompletedJobMap.values())){
+			completedJobCount += jobCount;
+		}
+		return completedJobCount;
 	}
 
 	/* (non-Javadoc)

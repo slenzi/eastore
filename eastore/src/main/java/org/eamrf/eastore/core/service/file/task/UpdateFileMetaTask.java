@@ -121,7 +121,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		this.fileService = builder.fileService;
 		this.errorHandler = builder.errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
@@ -131,7 +131,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		// 2 = update lucene		
 		jobCount = 2;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}	
 
@@ -175,7 +175,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error updating file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(1);
+		setCompletedJobCount(getTaskId(), 1);
 		
 		// Child task for adding file to lucene index
 		AddFileToSearchIndexTask indexTask = new AddFileToSearchIndexTask.Builder()
@@ -186,7 +186,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 				.withTaskName("Index Writer Task [" + file.toString() + "]")
 				.build();
 		indexTask.registerProgressListener(task -> {
-			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});
 		
 		indexWriterTaskManager.addTask(indexTask);

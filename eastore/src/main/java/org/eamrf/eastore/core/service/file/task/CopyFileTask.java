@@ -42,15 +42,15 @@ public class CopyFileTask extends FileServiceTask<Void> {
 		this.fileService = fileService;
 		this.errorHandler = errorHandler;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 	
 	private void calculateJobCount() {
 		
-		jobCount = 1;
+		jobCount = 3;
 		
-		notifyProgressChange();
+		notifyChange();
 		
 	}
 
@@ -75,7 +75,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 		}
 		
 		fileService.addFile(toDir, sourceFilePath, replaceExisting, userId, task -> {
-			setCompletedJobCount(getCompletedJobCount() + task.getCompletedJobCount());
+			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
 		});
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.
