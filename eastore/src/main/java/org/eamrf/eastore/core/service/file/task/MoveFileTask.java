@@ -32,7 +32,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	
 	private FileService fileService;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	/**
 	 * 
@@ -127,7 +127,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Move file task pending...";
 		}else{
 			return "Move file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

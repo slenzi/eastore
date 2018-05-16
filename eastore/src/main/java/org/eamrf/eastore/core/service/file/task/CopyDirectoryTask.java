@@ -37,9 +37,9 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private Tree<PathResource> fromTree;
+	//private Tree<PathResource> fromTree;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	/**
 	 * 
@@ -186,7 +186,7 @@ public class CopyDirectoryTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Copy directory task pending...";
 		}else{
 			return "Copy directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

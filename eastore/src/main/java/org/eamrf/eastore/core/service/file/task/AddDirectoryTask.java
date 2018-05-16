@@ -34,7 +34,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	public AddDirectoryTask(
 			DirectoryResource parentDir, 
@@ -115,7 +115,7 @@ public class AddDirectoryTask extends FileServiceTask<DirectoryResource> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Add directory task pending...";
 		}else{
 			return "Add directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

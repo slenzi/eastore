@@ -60,7 +60,7 @@ public class FileServiceTaskMessageService {
 
 		private FileServiceTask<?> task = null;
 		
-		private int jobCount = -1;
+		private int jobCount = 0;
 
 		public FileServiceTaskBroadcaster(FileServiceTask<?> task) {
 			this.task = task;
@@ -115,7 +115,7 @@ public class FileServiceTaskMessageService {
 
 		@Override
 		public String getStatusMessage() {
-			if(getJobCount() < 0) {
+			if(getJobCount() <= 0) {
 				return "Broadcasting file service task status for task " + task.getTaskId() + " is pending...";
 			}else {
 				return "Broadcasting file service task status for task " + task.getTaskId();

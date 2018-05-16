@@ -25,7 +25,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	private boolean haveExisting = false;
 	private String userId = null;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	public static class Builder {
 	
@@ -126,7 +126,7 @@ public class AddFileToSearchIndexTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Add file to lucene index task pending...";
 		}else{
 			return "Add file to lucene index task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

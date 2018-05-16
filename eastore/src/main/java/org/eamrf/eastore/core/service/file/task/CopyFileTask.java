@@ -29,7 +29,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 	private FileService fileService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	public CopyFileTask(
 			FileMetaResource fileToCopy, DirectoryResource toDir, boolean replaceExisting, String userId,
@@ -103,7 +103,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Copy file task pending...";
 		}else{
 			return "Copy file task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

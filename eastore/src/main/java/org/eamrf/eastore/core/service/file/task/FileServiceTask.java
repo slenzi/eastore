@@ -4,11 +4,10 @@
 package org.eamrf.eastore.core.service.file.task;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.eamrf.concurrent.task.AbstractQueuedTask;
 import org.eamrf.core.util.CollectionUtil;
@@ -30,7 +29,8 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	// track the number of completed jobs for the task, and all child tasks
 	// key = task id
 	// value = completed job count for task
-	private Map<Long,Integer> taskCompletedJobMap = new HashMap<Long,Integer>();
+	//private Map<Long,Integer> taskCompletedJobMap = new HashMap<Long,Integer>();
+	private TreeMap<Long,Integer> taskCompletedJobMap = new TreeMap<Long,Integer>();
 	
 	private List<FileServiceTaskListener> listeners = new ArrayList<FileServiceTaskListener>();
 	
@@ -51,6 +51,10 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	}
 	
 	protected void setCompletedJobCount(Long taskId, int count) {
+		if(taskId <= 0) {
+			logger.warn("Cannot track completed job count for task ID " + taskId + ". ID must be >= 1.");
+			return;
+		}
 		taskCompletedJobMap.put(taskId, count);
 		logCompletedMap();
 		updateProgress();
@@ -58,8 +62,10 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	}
 	
 	private void logCompletedMap(){
-		Set<Long> keys = taskCompletedJobMap.keySet();
+		//Set<Long> keys = taskCompletedJobMap.keySet();
+		SortedSet<Long> keys = new TreeSet<>(taskCompletedJobMap.keySet());
 		logger.info("Jobs completed for task " + getTaskId() + ", " + getName() + ":");
+	
 		for(Long id : keys){
 			logger.info("Task " + id + " = " + taskCompletedJobMap.get(id) + " completed jobs");
 		}

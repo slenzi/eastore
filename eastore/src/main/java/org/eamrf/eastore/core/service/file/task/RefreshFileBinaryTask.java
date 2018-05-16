@@ -21,7 +21,7 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	private String userId;
 	private FileSystemRepository fileSystemRepository;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	/**
 	 * 
@@ -76,7 +76,7 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Refresh file binary task pending...";
 		}else{
 			return "Refresh file binary task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";

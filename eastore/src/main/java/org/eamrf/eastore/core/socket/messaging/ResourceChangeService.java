@@ -66,7 +66,7 @@ public class ResourceChangeService {
 		private EventCode event = null;
 		private String userId = null;
 		
-		private int jobCount = -1;
+		private int jobCount = 0;
 		
 		/**
 		 * Create a task for broadcasting the change event
@@ -155,7 +155,7 @@ public class ResourceChangeService {
 
 		@Override
 		public String getStatusMessage() {
-			if(getJobCount() < 0) {
+			if(getJobCount() <= 0) {
 				return "Broadcasting resource change message for nodeId " + nodeId + " is pending...";
 			}else {
 				return "Broadcasting resource change message for nodeId " + nodeId;

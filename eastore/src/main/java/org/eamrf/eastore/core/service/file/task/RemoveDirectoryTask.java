@@ -37,7 +37,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 	private ResourceChangeService resChangeService;
 	private ErrorHandler errorHandler;
 	
-	private int jobCount = -1;
+	private int jobCount = 0;
 	
 	public RemoveDirectoryTask(
 			DirectoryResource dirToDelete,
@@ -178,7 +178,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 	@Override
 	public String getStatusMessage() {
 		
-		if(getJobCount() < 0) {
+		if(getJobCount() <= 0) {
 			return "Remove directory task pending...";
 		}else{
 			return "Remove directory task is " + Math.round(getProgress()) + "% complete (job " + this.getCompletedJobCount() + " of " + this.getJobCount() + " processed)";
