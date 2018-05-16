@@ -122,7 +122,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		newOrUpdatedFileResource.setStore(toDir.getStore());
 		
 		// job 1 of 3 complete
-		setCompletedJobCount(getTaskId(), 1);
+		setCompletedJobCount(this, 1);
 		
 		// broadcast directory contents changed event
 		resChangeService.directoryContentsChanged(toDir.getNodeId(), userId);
@@ -137,7 +137,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 				.build();
 		indexTask.registerProgressListener(task -> {
 			// job 2 of 3 complete
-			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+			setCompletedJobCount(task, task.getCompletedJobCount());
 		});
 		indexWriterTaskManager.addTask(indexTask);
 		
@@ -147,7 +147,7 @@ public class AddFileTask extends FileServiceTask<FileMetaResource> {
 		refreshTask.setName("Refresh binary data in DB [" + newOrUpdatedFileResource.toString() + "]");
 		refreshTask.registerProgressListener(task -> {
 			// job 3 of 3 complete
-			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+			setCompletedJobCount(task, task.getCompletedJobCount());
 		});		
 		binaryTaskManager.addTask(refreshTask);
 		

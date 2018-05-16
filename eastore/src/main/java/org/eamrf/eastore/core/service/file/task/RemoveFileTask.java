@@ -78,7 +78,7 @@ public class RemoveFileTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error removing file with node id => " + file.getNodeId() + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(getTaskId(), 1);
+		setCompletedJobCount(this, 1);
 		
 		resChangeService.directoryContentsChanged(file.getDirectory().getNodeId(), userId);
 		

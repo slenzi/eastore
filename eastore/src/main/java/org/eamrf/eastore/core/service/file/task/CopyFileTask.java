@@ -75,7 +75,7 @@ public class CopyFileTask extends FileServiceTask<Void> {
 		}
 		
 		fileService.addFile(toDir, sourceFilePath, replaceExisting, userId, task -> {
-			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+			setCompletedJobCount(task, task.getCompletedJobCount());
 		});
 		
 		// TODO - consider the idea of adding a new field to eas_path_resource called "is_locked" which can be set to Y/N.

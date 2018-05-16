@@ -111,7 +111,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							}
 							fileSystemRepository.removeFile(fileToDelete);
 							
-							setCompletedJobCount(getTaskId(), completedJobCount.incrementAndGet());
+							setCompletedJobCount(this, completedJobCount.incrementAndGet());
 							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {
@@ -130,7 +130,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 							}									
 							fileSystemRepository.removeDirectory(nextDirToDelete);
 							
-							setCompletedJobCount(getTaskId(), completedJobCount.incrementAndGet());
+							setCompletedJobCount(this, completedJobCount.incrementAndGet());
 							
 							// broadcast resource change message
 							if(treeNode.hasParent()) {

@@ -17,7 +17,7 @@ import org.slf4j.Logger;
  *
  * @param <T>
  */
-public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable<QueuedTask<T>> {
+public abstract class AbstractQueuedTask<T> implements QueuedTask<T> /*, Comparable<QueuedTask<T>>*/ {
 
 	private long taskId = 0L;
 	
@@ -244,4 +244,26 @@ public abstract class AbstractQueuedTask<T> implements QueuedTask<T>, Comparable
 
 	public abstract Logger getLogger();
 
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+
+		if(obj == null) {
+			return false;
+		}
+		if (!AbstractQueuedTask.class.isAssignableFrom(obj.getClass())) {
+	        return false;
+	    }
+		final AbstractQueuedTask<T> other = (AbstractQueuedTask<T>) obj;
+		if(this.getTaskId() != other.getTaskId()) {
+			return false;
+		}
+		return true;
+		
+	}
+	
+
+	
 }

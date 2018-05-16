@@ -108,7 +108,7 @@ public class ResourceChangeService {
 			
 			template.convertAndSend(messageDestination, mesg);
 			
-			setCompletedJobCount(getTaskId(), 1);
+			setCompletedJobCount(this, 1);
 			
 			return null;
 				

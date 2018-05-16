@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +18,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.eamrf.concurrent.task.QueuedTaskManager;
+import org.eamrf.concurrent.task.TaskIdGenerator;
 import org.eamrf.concurrent.task.TaskManagerProvider;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.CollectionUtil;
@@ -1415,7 +1415,9 @@ public class FileService {
 		final DirectoryResource fromDir = getDirectory(copyDirNodeId, userId);
 		final DirectoryResource toDir = getDirectory(destDirNodeId, userId);	
 		
-		CopyDirectoryTask task = new CopyDirectoryTask(fromDir, toDir, replaceExisting, userId, secureTreeService, this, errorHandler);
+		CopyDirectoryTask task = new CopyDirectoryTask(
+				fromDir, toDir, replaceExisting, userId, secureTreeService, this, errorHandler);
+		task.setTaskId(TaskIdGenerator.getNextTaskId());
 		if(listener != null) {
 			task.registerProgressListener(listener);
 		}
@@ -1425,10 +1427,7 @@ public class FileService {
 		// CopyDirectoryTask contains child tasks which block. Since our task manager is a queue and
 		// only runs one task a a time, the child tasks will never run because the parent task is waiting
 		// for the child tasks to finish. Solution is to execute the parent task immediately in
-		Executors.newSingleThreadExecutor().execute(task);
-		
-		//final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(fromDir, userId));	
-		//taskManager.addTask(task);		
+		Executors.newSingleThreadExecutor().execute(task);		
 		
 	}
 	
@@ -1502,7 +1501,9 @@ public class FileService {
 		DirectoryResource dirToMove = getDirectory(moveDirId, userId);
 		DirectoryResource destDir = getDirectory(destDirId, userId);
 			
-		MoveDirectoryTask task = new MoveDirectoryTask(dirToMove, destDir, replaceExisting, userId, secureTreeService, fileSystemRepository, this, errorHandler);
+		MoveDirectoryTask task = new MoveDirectoryTask(
+				dirToMove, destDir, replaceExisting, userId, secureTreeService, fileSystemRepository, this, errorHandler);
+		task.setTaskId(TaskIdGenerator.getNextTaskId());
 		if(listener != null) {
 			task.registerProgressListener(listener);
 		}
@@ -1512,9 +1513,6 @@ public class FileService {
 		// only runs one task a a time, the child tasks will never run because the parent task is waiting
 		// for the child tasks to finish. Solution is to execute the parent task immediately in
 		Executors.newSingleThreadExecutor().execute(task);		
-		
-		//final QueuedTaskManager taskManager = getGeneralTaskManagerForStore(getStore(dirToMove, userId));
-		//taskManager.addTask(task);		
 		
 	}
 	

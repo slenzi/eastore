@@ -113,7 +113,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		
 		// remove from dir and all child directories
 		fileService.removeDirectory(dirToMove.getNodeId(), userId, task -> {
-			setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+			setCompletedJobCount(task, task.getCompletedJobCount());
 		});
 		
 		return null;
@@ -163,7 +163,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 			// to keep the directory that already exists (which we do now) or rename it to match exactly of
 			// the one we are copying?
 			DirectoryResource newToDir = fileService.createCopyOfDirectory(dirToMove, toDir, userId, task -> {
-				setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+				setCompletedJobCount(task, task.getCompletedJobCount());
 			});
 			
 			// move children of the directory (files and sub-directories)
@@ -176,7 +176,7 @@ public class MoveDirectoryTask extends FileServiceTask<Void> {
 		}else if(resourceToMove.getResourceType() == ResourceType.FILE){
 			
 			fileService.moveFile( (FileMetaResource)resourceToMove, toDir, replaceExisting, userId, task -> {
-				setCompletedJobCount(task.getTaskId(), task.getCompletedJobCount());
+				setCompletedJobCount(task, task.getCompletedJobCount());
 			});
 			
 		}

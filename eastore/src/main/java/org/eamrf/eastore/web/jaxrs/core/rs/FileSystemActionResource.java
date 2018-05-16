@@ -308,6 +308,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
 					String taskName = task.getName();
 					Date queuedTime = task.getQueuedTime();
 					
+					// TODO - consider removing broadcast, but leave for now...
+					// if you broadcast this task, it will show an angularjs growl notification for each file uploaded (since we treat each file
+					// as a separate upload and process them individually.) If a user uploads 20+ files that means 20+ growl notifications cluttering
+					// up the eastore-ui layer.
 					fileServiceTaskMessageService.broadcast(task);
 		
 					logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"
@@ -331,6 +335,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
 					String taskName = task.getName();
 					Date queuedTime = task.getQueuedTime();
 					
+					// TODO - consider removing broadcast, but leave for now...
+					// if you broadcast this task, it will show an angularjs growl notification for each file uploaded (since we treat each file
+					// as a separate upload and process them individually.) If a user uploads 20+ files that means 20+ growl notifications cluttering
+					// up the eastore-ui layer.			
 					fileServiceTaskMessageService.broadcast(task);
 					
 					logger.info("Add file progress at " + Math.round(task.getProgress()) + "%, job " + task.getCompletedJobCount() + " of " + task.getJobCount() + " completed"

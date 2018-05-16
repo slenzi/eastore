@@ -56,7 +56,7 @@ public class RefreshFileBinaryTask extends FileServiceTask<Void> {
 			throw new ServiceException("Error refreshing (or adding) binary data in database (eas_binary_resource) "
 					+ "for file resource node => " + fileNodeId, e);
 		}
-		setCompletedJobCount(getTaskId(), 1);
+		setCompletedJobCount(this, 1);
 		return null;
 	}
 

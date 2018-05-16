@@ -97,7 +97,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 					destDir.getNodeId() + ", replaceExisting = " + replaceExisting + ". " + e.getMessage(), e);
 		}
 		
-		setCompletedJobCount(getTaskId(), 1);
+		setCompletedJobCount(this, 1);
 		
 		// TODO - do we need to update the lucene search index?
 		

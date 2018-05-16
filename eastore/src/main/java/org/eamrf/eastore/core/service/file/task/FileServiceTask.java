@@ -27,10 +27,29 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	private Double progress = 0.0;
 	
 	// track the number of completed jobs for the task, and all child tasks
-	// key = task id
-	// value = completed job count for task
-	//private Map<Long,Integer> taskCompletedJobMap = new HashMap<Long,Integer>();
-	private TreeMap<Long,Integer> taskCompletedJobMap = new TreeMap<Long,Integer>();
+	// keys = task ids, values = completed job count for task
+	private TreeMap<Long,TaskCompleted> taskCompletedJobMap = new TreeMap<Long,TaskCompleted>();
+	
+	// helper class which maps a task to its number of completed jobs
+	private class TaskCompleted {
+		
+		private FileServiceTask<?> task;
+		private int completedJobs = 0;
+		
+		public TaskCompleted(FileServiceTask<?> task, int completedJobs) {
+			this.task = task;
+			this.completedJobs = completedJobs;
+		}
+
+		public FileServiceTask<?> getTask() {
+			return task;
+		}
+
+		public int getCompletedJobs() {
+			return completedJobs;
+		}
+
+	}
 	
 	private List<FileServiceTaskListener> listeners = new ArrayList<FileServiceTaskListener>();
 	
@@ -50,25 +69,28 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 		listeners.forEach(listener -> listener.onProgressChange(this) );
 	}
 	
-	protected void setCompletedJobCount(Long taskId, int count) {
-		if(taskId <= 0) {
-			logger.warn("Cannot track completed job count for task ID " + taskId + ". ID must be >= 1.");
+	protected void setCompletedJobCount(FileServiceTask<?> task, int count) {
+		if(task.getTaskId() <= 0) {
+			logger.warn("Cannot track completed job count for task, ID must be >= 1 [id=" + task.getTaskId() + ", name=" + task.getName() + "].");
 			return;
 		}
-		taskCompletedJobMap.put(taskId, count);
-		logCompletedMap();
+		taskCompletedJobMap.put(task.getTaskId(), new TaskCompleted(task, count));
+		//logCompletedMap();
 		updateProgress();
 		notifyChange();
 	}
 	
-	private void logCompletedMap(){
-		//Set<Long> keys = taskCompletedJobMap.keySet();
+	// debug method which can be deleted later...
+	protected void logCompletedMap(){
+		
 		SortedSet<Long> keys = new TreeSet<>(taskCompletedJobMap.keySet());
-		logger.info("Jobs completed for task " + getTaskId() + ", " + getName() + ":");
-	
+		StringBuffer buf = new StringBuffer();
 		for(Long id : keys){
-			logger.info("Task " + id + " = " + taskCompletedJobMap.get(id) + " completed jobs");
-		}
+			buf.append("\t[id=" + id + ", completedJobs=" + taskCompletedJobMap.get(id).getCompletedJobs() + 
+					", totalJobs=" + this.getJobCount() + ", name=" + taskCompletedJobMap.get(id).getTask().getName() + "]\n");
+		}		
+		logger.info("Jobs completed for task [id=" + getTaskId() + ", name=" + getName() + ", jobCount=" + getJobCount() + "]\n" + buf.toString());
+	
 	} 
 	
 	protected void notifyChange() {
@@ -119,8 +141,8 @@ public abstract class FileServiceTask<T> extends AbstractQueuedTask<T> {
 	 */
 	public int getCompletedJobCount() {
 		int completedJobCount = 0;
-		for(Integer jobCount : CollectionUtil.emptyIfNull(taskCompletedJobMap.values())){
-			completedJobCount += jobCount;
+		for(TaskCompleted tk : CollectionUtil.emptyIfNull(taskCompletedJobMap.values())){
+			completedJobCount += tk.getCompletedJobs();
 		}
 		return completedJobCount;
 	}
