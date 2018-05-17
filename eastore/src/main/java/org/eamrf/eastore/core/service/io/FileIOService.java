@@ -1,6 +1,7 @@
 package org.eamrf.eastore.core.service.io;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.CopyOption;
 import java.nio.file.Path;
 
@@ -48,6 +49,30 @@ public class FileIOService {
 	public String getMimeType(Path pathToFile) throws IOException {
 		return FileUtil.detectMimeType(pathToFile);
 	}
+	
+	/**
+	 * Get MIME type of file
+	 * 
+	 * @param fileBytes - byte array, contents of file
+	 * @return
+	 * @throws IOException
+	 */
+	@MethodTimer
+	public String getMimeType(final byte[] fileBytes) throws IOException {
+		return FileUtil.detectMimeType(fileBytes);
+	}
+	
+	/**
+	 * Get MIME type of file
+	 * 
+	 * @param input - input stream for the file contents
+	 * @return
+	 * @throws IOException
+	 */
+	@MethodTimer
+	public String getMimeType(InputStream input) throws IOException {
+		return FileUtil.detectMimeType(input);
+	}	
 	
 	/**
 	 * Create a directory

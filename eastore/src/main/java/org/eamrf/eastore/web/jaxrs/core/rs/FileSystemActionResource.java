@@ -38,6 +38,7 @@ import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.FileService;
+import org.eamrf.eastore.core.service.io.FileIOService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.core.socket.messaging.FileServiceTaskMessageService;
@@ -72,7 +73,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
     private UploadPipeline uploadPipeline;
     
     @Autowired
-    private FileService fileService;  
+    private FileService fileService;
+    
+    @Autowired
+    private FileIOService fileIOService;    
     
     @Autowired
     private FileServiceTaskMessageService fileServiceTaskMessageService;
@@ -999,6 +1003,19 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		//	    .fileName("filename.csv").creationDate(new Date()).build();
 		//ContentDisposition contentDisposition = new ContentDisposition("attachment; filename=image.jpg");
 		
+		String fileName = fileMeta.getPathName();
+		String contentType = fileMeta.getMimeType();
+		if(StringUtil.isNullEmpty(contentType)) {
+			try {
+				contentType = fileIOService.getMimeType(bis);
+			} catch (IOException e) {
+				logger.warn("Error using Apache Tika to determin file content type when writing file to response, " + e.getMessage(), e);
+			}
+		}
+		if(StringUtil.isNullEmpty(contentType)) {
+			contentType = "application/octet-stream";
+		}
+		
 		return Response.ok(
 			new StreamingOutput() {
 				@Override
@@ -1013,7 +1030,10 @@ public class FileSystemActionResource extends BaseResourceHandler {
 					bis.close();
 				}
 			}
-		).header("Content-Disposition", "attachment; filename=" + fileMeta.getPathName()).build();		
+		)
+		.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+		.header("Content-Type", contentType)
+		.build();		
 		
 	}    
 

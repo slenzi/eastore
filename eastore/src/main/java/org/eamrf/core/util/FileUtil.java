@@ -1,6 +1,7 @@
 package org.eamrf.core.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
@@ -102,6 +103,35 @@ public abstract class FileUtil {
 	    TikaInputStream tikaIS = null;
 	    try {
 	        tikaIS = TikaInputStream.get(fileBytes);
+	        /*
+	         * You might not want to provide the file's name. If you provide an Excel
+	         * document with a .xls extension, it will get it correct right away; but
+	         * if you provide an Excel document with .doc extension, it will guess it
+	         * to be a Word document
+	         */
+	        final Metadata metadata = new Metadata();
+	        // metadata.set(Metadata.RESOURCE_NAME_KEY, file.getName());
+
+	        return DETECTOR.detect(tikaIS, metadata).toString();
+	        
+	    } finally {
+	        if (tikaIS != null) {
+	            tikaIS.close();
+	        }
+	    }
+	}
+	
+	/**
+	 * Get file mime type
+	 * 
+	 * @param fileBytes
+	 * @return
+	 * @throws IOException
+	 */
+	public static String detectMimeType(InputStream input) throws IOException {
+	    TikaInputStream tikaIS = null;
+	    try {
+	        tikaIS = TikaInputStream.get(input);
 	        /*
 	         * You might not want to provide the file's name. If you provide an Excel
 	         * document with a .xls extension, it will get it correct right away; but
