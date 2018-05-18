@@ -904,6 +904,7 @@ public class FileService {
 		final QueuedTaskManager generalTaskManager = getGeneralTaskManagerForStore(getStore(file, userId));
 		final QueuedTaskManager indexWriterTaskManager = getIndexWriterTaskManagerForStore(getStore(file, userId));
 		
+		/*
 		UpdateFileMetaTask updateTask = new UpdateFileMetaTask.Builder(file)
 				.withNewName(newName)
 				.withNewDesc(newDesc)
@@ -914,6 +915,11 @@ public class FileService {
 				.withFileService(this)
 				.withErrorHandler(errorHandler)
 				.build();
+				*/
+		
+		UpdateFileMetaTask updateTask = new UpdateFileMetaTask(
+				file, newName, newDesc, userId, fileSystemRepository, indexerService,
+				resChangeService, indexWriterTaskManager, this, errorHandler);
 		
 		if(listener != null) {
 			updateTask.registerProgressListener(listener);

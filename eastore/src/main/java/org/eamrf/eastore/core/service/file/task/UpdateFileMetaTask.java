@@ -38,6 +38,7 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 	
 	private int jobCount = 0;
 	
+	/*
 	public static class Builder {
 	
 		private FileMetaResource file;
@@ -107,7 +108,9 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 			return new UpdateFileMetaTask(this);
 		}
 	}
+	*/
 	
+	/*
 	private UpdateFileMetaTask(Builder builder) {
 		
 		this.file = builder.file;
@@ -121,7 +124,25 @@ public class UpdateFileMetaTask extends FileServiceTask<Void> {
 		this.fileService = builder.fileService;
 		this.errorHandler = builder.errorHandler;
 		
-		//notifyChange();
+	}
+	*/
+	
+	public UpdateFileMetaTask(
+			FileMetaResource file, String newName, String newDesc, String userId,
+			FileSystemRepository fileSystemRepository, StoreIndexerService indexerService,
+			ResourceChangeService resChangeService, QueuedTaskManager indexWriterTaskManager,
+			FileService fileService, ErrorHandler errorHandler) {
+		
+		this.file = file;
+		this.newName = newName;
+		this.newDesc = newDesc;
+		this.userId = userId;
+		this.fileSystemRepository = fileSystemRepository;
+		this.indexerService = indexerService;
+		this.resChangeService = resChangeService;
+		this.indexWriterTaskManager = indexWriterTaskManager;
+		this.fileService = fileService;
+		this.errorHandler = errorHandler;	
 		
 	}
 	
