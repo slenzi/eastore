@@ -910,6 +910,9 @@ public class FileService {
 				.withFileRepository(fileSystemRepository)
 				.withIndexer(indexerService)
 				.withIndexWriterTaskManager(indexWriterTaskManager)
+				.withResourceChangeService(resChangeService)
+				.withFileService(this)
+				.withErrorHandler(errorHandler)
 				.build();
 		
 		if(listener != null) {
