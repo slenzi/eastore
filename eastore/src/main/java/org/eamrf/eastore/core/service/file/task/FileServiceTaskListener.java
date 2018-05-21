@@ -10,6 +10,6 @@ package org.eamrf.eastore.core.service.file.task;
 @FunctionalInterface
 public interface FileServiceTaskListener {
 
-	public void onProgressChange(FileServiceTask task);
+	public void onProgressChange(FileServiceTask<?> task);
 	
 }

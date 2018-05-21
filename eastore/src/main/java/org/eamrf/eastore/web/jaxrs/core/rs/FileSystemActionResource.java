@@ -183,6 +183,39 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	}
 	
 	/**
+	 * Trigger zip download process. This is an asynchronous task, and clients should subscribe to
+	 * the eastore websocket stomp endpoints to receive notifications.
+	 * 
+	 * @param resourceIds
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/download/zip/userId/{userId}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response triggerZipDownload(
+			@QueryParam("resourceId") List<Long> resourceIds, @PathParam("userId") String userId) throws WebServiceException {
+		
+		if(CollectionUtil.isEmpty(resourceIds)) {
+			handleError("Error triggering zip download process, list of resource IDs is null or empty", WebExceptionType.CODE_IO_ERROR);			
+		}
+		
+		try {
+			downloadService.triggerZipDownload(resourceIds, userId, downloadId -> {
+				
+				// TODO - consider a new type of websocket message for relaying zip completion events back to clients.
+				
+			});
+		} catch (ServiceException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return Response.ok("Zip download process triggered").build(); 
+		
+	}
+	
+	/**
 	 * Uses request dispatcher to 'load' the resource
 	 * 
 	 * @param storeName

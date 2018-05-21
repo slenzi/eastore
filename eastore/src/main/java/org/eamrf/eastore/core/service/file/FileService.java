@@ -635,6 +635,41 @@ public class FileService {
 		
 		return store;
 	
+	}
+	
+	/**
+	 * Fetch a a path resource by id
+	 * 
+	 * @param nodeId - id of the resource
+	 * @param userId - id of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public PathResource getPathResource(Long nodeId, String userId) throws ServiceException {
+		
+		PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		
+		return resource;
+		
+	}
+	
+	/**
+	 * Fetch a a path resource by store name and relative path of resource
+	 * 
+	 * @param storeName - the unique store name
+	 * @param relativePath - path of resource ralative to store 
+	 * @param userId - id of user completing the action
+	 * @return
+	 * @throws ServiceException
+	 */
+	@MethodTimer
+	public PathResource getPathResource(String storeName, String relativePath, String userId) throws ServiceException {
+		
+		PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		
+		return resource;
+		
 	}	
 	
 	/**
@@ -680,7 +715,8 @@ public class FileService {
 	@MethodTimer
 	public FileMetaResource getFileMetaResource(Long nodeId, String userId, boolean includeBinary) throws ServiceException {
 		
-		PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		//PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		PathResource resource = getPathResource(nodeId, userId);
 		if(resource == null){
 			throw new ServiceException("Failed to get file meta resource by node id, returned object was null. "
 					+ "nodeId=" + nodeId + ", includeBinary=" + includeBinary);
@@ -714,7 +750,8 @@ public class FileService {
 	@MethodTimer
 	public FileMetaResource getFileMetaResource(String storeName, String relativePath, String userId, boolean includeBinary) throws ServiceException {
 		
-		PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		//PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		PathResource resource = getPathResource(storeName, relativePath, userId);
 		if(resource == null){
 			throw new ServiceException("Failed to get file meta resource by store name and resource relative path, returned object was null. "
 					+ "storeName=" + storeName + ", relativePath=" + relativePath + ", includeBinary=" + includeBinary);
@@ -1114,7 +1151,8 @@ public class FileService {
 	@MethodTimer
 	public DirectoryResource getDirectory(Long nodeId, String userId) throws ServiceException {
 		
-		PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		//PathResource resource = secureTreeService.getPathResource(nodeId, userId);
+		PathResource resource = getPathResource(nodeId, userId);
 		
 		if(resource == null){
 			throw new ServiceException("Failed to get directory by id, no path resource for nodeId=" + nodeId + ". Returned object was null.");
@@ -1142,7 +1180,8 @@ public class FileService {
 	@MethodTimer
 	public DirectoryResource getDirectory(String storeName, String relativePath, String userId) throws ServiceException {
 		
-		PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		//PathResource resource = secureTreeService.getPathResource(storeName, relativePath, userId);
+		PathResource resource = getPathResource(storeName, relativePath, userId);
 		
 		if(resource == null){
 			throw new ServiceException("Failed to get directory by store name and resource relative path, "

@@ -4,10 +4,18 @@
 package org.eamrf.eastore.core.service.file;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Timestamp;
+import java.util.List;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
+import org.eamrf.core.util.DateUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.file.task.TaskCompletionListener;
+import org.eamrf.eastore.core.service.file.task.ZipTask;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
+import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
+import org.eamrf.eastore.core.socket.messaging.FileServiceTaskMessageService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.DownloadLogRepository;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.slf4j.Logger;
@@ -26,10 +34,16 @@ public class DownloadService {
     private Logger logger;		
 	
     @Autowired
-    private FileService fileService;	
+    private FileService fileService;
+    
+	@Autowired
+	private SecurePathResourceTreeService secureTreeService;    
 	
     @Autowired
-    private DownloadLogRepository downloadLogRepository;	
+    private DownloadLogRepository downloadLogRepository;
+    
+    @Autowired
+    private FileServiceTaskMessageService fileServiceTaskMessageService;    
 	
 	/**
 	 * 
@@ -56,16 +70,11 @@ public class DownloadService {
 					", userId=" + userId + ", " + e.getMessage(), e);
 		}
 		
-		try {
-			downloadLogRepository.logDownload(fileMeta, userId);
-		} catch (Exception e) {
-			Path fullPath = PathResourceUtil.buildPath(fileMeta.getStore(), fileMeta);
-			logger.warn("Faield to log download for userId=" + userId + ", file=" + fullPath.toString());
-		}
+		logDownload(fileMeta, userId);
 		
 		return fileMeta;
 		
-	}	
+	}
 	
 	/**
 	 * Download the file for eastore
@@ -78,7 +87,6 @@ public class DownloadService {
 	 */
 	public FileMetaResource downloadFile(String storeName, String relPath, String userId) throws ServiceException {
 		
-		// fetch the file, with binary data
 		FileMetaResource fileMeta = null;
 		try {
 			fileMeta = fileService.getFileMetaResource(storeName, relPath, userId, true);
@@ -87,16 +95,83 @@ public class DownloadService {
 					", userId=" + userId + ", " + e.getMessage(), e);
 		}
 		
-		// log the download
-		try {
-			downloadLogRepository.logDownload(fileMeta, userId);
-		} catch (Exception e) {
-			Path fullPath = PathResourceUtil.buildPath(fileMeta.getStore(), fileMeta);
-			logger.warn("Faield to log download for userId=" + userId + ", file=" + fullPath.toString());
-		}
+		logDownload(fileMeta, userId);
 		
 		return fileMeta;
 		
 	}
+	
+	/**
+	 * Trigger zip download event.
+	 * 
+	 * @param resourceIdList - ID of all path resources to zip for download
+	 * @param userId - ID of user completing the action
+	 * @param completionListener - listener to be notified when zip process has completed. Listener will provide access to the download ID
+	 * 	which can be used to fetch the zip file.
+	 * @throws ServiceException
+	 */
+	public void triggerZipDownload(List<Long> resourceIdList, String userId, TaskCompletionListener<Long> completionListener) throws ServiceException {
+		
+		final Timestamp dtNow = DateUtil.getCurrentTime();
+		final String zipFileName = "ecog-acrin_file_manager_download_" + DateUtil.defaultFormat(dtNow) + ".zip";
+		final Path outZipPath = Paths.get(zipFileName);
+				
+		ZipTask zipTask = new ZipTask(resourceIdList, userId, outZipPath, secureTreeService, fileService);
+		
+		zipTask.registerProgressListener(task -> {
+			
+			// broadcast task so clients can track progress
+			fileServiceTaskMessageService.broadcast(task);
+			
+			// when task completes, notify completion listener
+			Long percentComplete = Math.round(task.getProgress());
+			if(percentComplete.equals(new Long(100))) {
+				
+				// log zip file in download table
+				Long downloadId = this.logDownload(outZipPath, userId);
+				
+				// notify completion listener
+				completionListener.onComplete(downloadId);
+				
+			}
+			
+		});
+		
+	}
+	
+	/**
+	 * Log the download
+	 * 
+	 * @param file
+	 * @param userId
+	 */
+	public Long logDownload(FileMetaResource file, String userId) {
+
+		try {
+			return downloadLogRepository.logDownload(file, userId);
+		} catch (Exception e) {
+			Path fullPath = PathResourceUtil.buildPath(file.getStore(), file);
+			logger.warn("Faield to log download for userId=" + userId + ", fileMetaResource=" + fullPath.toString());
+			return -1L;
+		}		
+		
+	}
+	
+	/**
+	 * Log the download
+	 * 
+	 * @param file
+	 * @param userId
+	 */
+	public Long logDownload(Path pathToFile, String userId) {
+
+		try {
+			return downloadLogRepository.logDownload(pathToFile, userId);
+		} catch (Exception e) {
+			logger.warn("Faield to log download for userId=" + userId + ", pathToFile=" + pathToFile.toString());
+			return -1L;
+		}		
+		
+	}	
 
 }

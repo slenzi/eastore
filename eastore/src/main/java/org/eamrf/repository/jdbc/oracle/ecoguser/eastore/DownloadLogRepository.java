@@ -41,7 +41,7 @@ public class DownloadLogRepository {
 	}
 	
 	/**
-	 * Log the download in the download log table, and return the unique log id which can
+	 * Log the file in the download log table, and return the unique log id which can
 	 * be used to locate the log entry.
 	 * 
 	 * @param file - the file that is being downloaded
@@ -51,18 +51,34 @@ public class DownloadLogRepository {
 	 */
 	public Long logDownload(FileMetaResource file, String userId) throws Exception {
 		
+		return logDownload(PathResourceUtil.buildPath(file.getStore(), file), userId);
+		
+	}
+	
+	/**
+	 * Log the file in the download log table, and return the unique log id which can
+	 * be used to locate the log entry.
+	 * 
+	 * @param pathtoResource - path to file
+	 * @param userId - id of the user that is downloading the file
+	 * @return The unique log id for the log entry.
+	 * @return
+	 * @throws Exception
+	 */
+	public Long logDownload(Path pathtoResource, String userId) throws Exception {
+		
 		Long downloadId = getNextDownloadId();
 		Timestamp dtNow = DateUtil.getCurrentTime();
-		Path filePath = PathResourceUtil.buildPath(file.getStore(), file);
+		//Path filePath = PathResourceUtil.buildPath(file.getStore(), file);
 		
 		jdbcTemplate.update(
 				"insert into eas_download (down_id, file_path, user_id, down_date) values (?, ?, ?, ?)",
-				downloadId, filePath.toString(), userId, dtNow
+				downloadId, pathtoResource.toString(), userId, dtNow
 				);
 		
 		return downloadId;
 		
-	}
+	}	
 	
 	/**
 	 * Get next id from eas_download_id_sequence
