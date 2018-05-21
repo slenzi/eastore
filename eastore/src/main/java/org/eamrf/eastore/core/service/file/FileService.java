@@ -50,6 +50,7 @@ import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
 import org.eamrf.eastore.core.tree.Trees.WalkOption;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.DownloadLogRepository;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.BinaryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;

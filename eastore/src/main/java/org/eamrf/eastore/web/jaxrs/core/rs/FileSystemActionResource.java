@@ -37,6 +37,7 @@ import org.eamrf.core.util.CollectionUtil;
 import org.eamrf.core.util.StringUtil;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.service.file.DownloadService;
 import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.io.FileIOService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
@@ -74,6 +75,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     
     @Autowired
     private FileService fileService;
+    
+    @Autowired
+    private DownloadService downloadService;
     
     @Autowired
     private FileIOService fileIOService;    
@@ -121,7 +125,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = fileService.getFileMetaResource(fileId, userId, true);
+			fileMeta = downloadService.downloadFile(fileId, userId);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);
@@ -163,7 +167,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		
 		FileMetaResource fileMeta = null;
 		try {
-			fileMeta = fileService.getFileMetaResource(storeName, relPath, userId, true);
+			fileMeta = downloadService.downloadFile(storeName, relPath, userId);
 		} catch (ServiceException e) {
 			handleError("Error downloading file, failed to get file resource with binary data, " + 
 					e.getMessage(), WebExceptionType.CODE_IO_ERROR, e);

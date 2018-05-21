@@ -26,7 +26,7 @@ import com.zaxxer.hikari.HikariDataSource;
  * @author slenzi
  */
 @Repository
-@Transactional(propagation=Propagation.REQUIRED)
+@Transactional(propagation=Propagation.REQUIRED, rollbackFor=Exception.class)
 public class ClosureRepository {
 
     @InjectLogger
