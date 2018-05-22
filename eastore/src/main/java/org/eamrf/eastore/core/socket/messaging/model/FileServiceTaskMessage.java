@@ -7,36 +7,16 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Message object used to notify clients about that status of ongoing file service tasks
+ * Message object used to notify clients about the status of ongoing file service tasks
  * 
  * @author slenzi
  */
-public class FileServiceTaskStatus implements Serializable {
+public class FileServiceTaskMessage implements Serializable {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -7245524797729683558L;
-	
-	public enum FileServiceTaskType {
-		
-		ZIP("ZIP");
-		
-		private final String type;
-		
-		FileServiceTaskType(final String type){
-			this.type = type;
-		}
-
-		/* (non-Javadoc)
-		 * @see java.lang.Enum#toString()
-		 */
-		@Override
-		public String toString() {
-			return type;
-		}
-	
-	}
 
 	private String id = null;
 	private String userId = null;
@@ -45,29 +25,11 @@ public class FileServiceTaskStatus implements Serializable {
 	private Integer jobCompletedCount = 0;
 	private String message = null;
 	
-	private Map<String, String> attributes;
-	
-	private FileServiceTaskType taskType;
-	
 	/**
 	 * 
 	 */
-	public FileServiceTaskStatus() {
+	public FileServiceTaskMessage() {
 		
-	}
-
-	/**
-	 * @return the taskType
-	 */
-	public FileServiceTaskType getTaskType() {
-		return taskType;
-	}
-
-	/**
-	 * @param taskType the taskType to set
-	 */
-	public void setTaskType(FileServiceTaskType taskType) {
-		this.taskType = taskType;
 	}
 
 	/**
@@ -154,28 +116,13 @@ public class FileServiceTaskStatus implements Serializable {
 		this.message = message;
 	}
 
-	/**
-	 * @return the attributes
-	 */
-	public Map<String, String> getAttributes() {
-		return attributes;
-	}
-
-	/**
-	 * @param attributes the attributes to set
-	 */
-	public void setAttributes(Map<String, String> attributes) {
-		this.attributes = attributes;
-	}
-
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return FileServiceTaskStatus.class.getName() + " [id=" + id + ", userId=" + userId + ", progress=" + progress + ", jobCount="
-				+ jobCount + ", jobCompletedCount=" + jobCompletedCount + ", message=" + message + ", attributes="
-				+ attributes + ", taskType=" + taskType + "]";
+		return FileServiceTaskMessage.class.getName() + " [id=" + id + ", userId=" + userId + ", progress=" + progress + ", jobCount="
+				+ jobCount + ", jobCompletedCount=" + jobCompletedCount + ", message=" + message + "]";
 	}
 
 	

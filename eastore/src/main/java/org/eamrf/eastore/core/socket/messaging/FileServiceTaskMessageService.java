@@ -15,7 +15,7 @@ import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.eastore.core.aop.profiler.MethodTimer;
 import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.task.FileServiceTask;
-import org.eamrf.eastore.core.socket.messaging.model.FileServiceTaskStatus;
+import org.eamrf.eastore.core.socket.messaging.model.FileServiceTaskMessage;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -80,7 +80,7 @@ public class FileServiceTaskMessageService {
 			
 			calculateJobCount();
 			
-			FileServiceTaskStatus mesg = new FileServiceTaskStatus();
+			FileServiceTaskMessage mesg = new FileServiceTaskMessage();
 			mesg.setId(String.valueOf(task.getTaskId()));
 			mesg.setJobCount(task.getJobCount());
 			mesg.setJobCompletedCount(task.getCompletedJobCount());
@@ -197,9 +197,9 @@ public class FileServiceTaskMessageService {
 		
 		// Don't want to flood the clients with messages, so only add the task if the task
 		// manager doesn't already have a similar task.
-		if(!taskManager.contains(broadcastTask)) {
+		//if(!taskManager.contains(broadcastTask)) {
 			taskManager.addTask(broadcastTask);
-		}
+		//}
 		
 	}
 	

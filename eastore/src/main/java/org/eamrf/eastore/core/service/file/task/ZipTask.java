@@ -105,7 +105,7 @@ public class ZipTask extends FileServiceTask<Void> {
 	}
 	
 	/**
-	 * Fetch all files to zip, and also calculate the job count (simply the number of files to count)
+	 * Fetch all files to zip, and also calculate the job count (simply the number of files to zip)
 	 * 
 	 * @throws ServiceException
 	 */

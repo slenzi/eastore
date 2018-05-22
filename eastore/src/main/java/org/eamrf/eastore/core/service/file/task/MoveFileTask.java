@@ -7,7 +7,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.ErrorHandler;
 import org.eamrf.eastore.core.service.file.FileService;
 import org.eamrf.eastore.core.service.file.PermissionError;
-import org.eamrf.eastore.core.socket.messaging.ResourceChangeService;
+import org.eamrf.eastore.core.socket.messaging.ResourceChangeMessageService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.FileSystemRepository;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
@@ -27,7 +27,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 	private DirectoryResource destDir;
 	private boolean replaceExisting;
 	private FileSystemRepository fileSystemRepository;
-	private ResourceChangeService resChangeService;
+	private ResourceChangeMessageService resChangeService;
 	private ErrorHandler errorHandler;
 	
 	private FileService fileService;
@@ -43,7 +43,7 @@ public class MoveFileTask extends FileServiceTask<Void> {
 			DirectoryResource destDir,
 			boolean replaceExisting,
 			FileSystemRepository fileSystemRepository,
-			ResourceChangeService resChangeService,
+			ResourceChangeMessageService resChangeService,
 			ErrorHandler errorHandler,
 			FileService fileService) {
 		

@@ -29,6 +29,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
 import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
@@ -43,12 +44,16 @@ import org.eamrf.eastore.core.service.io.FileIOService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.upload.UploadPipeline;
 import org.eamrf.eastore.core.socket.messaging.FileServiceTaskMessageService;
+import org.eamrf.eastore.core.socket.messaging.UserActionMessageService;
+import org.eamrf.eastore.core.socket.messaging.model.UserActionStatusMessage;
+import org.eamrf.eastore.core.socket.messaging.model.UserActionStatusMessage.UserAction;
 import org.eamrf.eastore.web.dto.map.DirectoryResourceMapper;
 import org.eamrf.eastore.web.dto.map.StoreMapper;
 import org.eamrf.eastore.web.dto.model.DirectoryResourceDto;
 import org.eamrf.eastore.web.dto.model.StoreDto;
 import org.eamrf.eastore.web.jaxrs.BaseResourceHandler;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DirectoryResource;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DownloadLogEntry;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.Store.AccessRule;
@@ -84,6 +89,9 @@ public class FileSystemActionResource extends BaseResourceHandler {
     
     @Autowired
     private FileServiceTaskMessageService fileServiceTaskMessageService;
+    
+    @Autowired
+    private UserActionMessageService userActionMessageService;
     
     @Autowired
     private HttpSession session;
@@ -184,14 +192,15 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	
 	/**
 	 * Trigger zip download process. This is an asynchronous task, and clients should subscribe to
-	 * the eastore websocket stomp endpoints to receive notifications.
+	 * the eastore websocket stomp endpoints to be notified when the zip file has been created and is
+	 * ready for download.
 	 * 
 	 * @param resourceIds
 	 * @return
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/download/zip/userId/{userId}")
+	@Path("/action/zip/userId/{userId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response triggerZipDownload(
 			@QueryParam("resourceId") List<Long> resourceIds, @PathParam("userId") String userId) throws WebServiceException {
@@ -203,18 +212,70 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		try {
 			downloadService.triggerZipDownload(resourceIds, userId, downloadId -> {
 				
-				// TODO - consider a new type of websocket message for relaying zip completion events back to clients.
+				// notify client that the zip file has been created and is ready for download
+				
+				UserActionStatusMessage message = new UserActionStatusMessage();
+				message.setUserId(userId);
+				message.setTaskType(UserAction.ZIP);
+				message.setAttribute("downloadId", String.valueOf(downloadId));
+				
+				userActionMessageService.broadcast(message);
 				
 			});
 		} catch (ServiceException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			handleError("Error trigger zip-download process (userId=" + userId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
 		}
 		
 		return Response.ok("Zip download process triggered").build(); 
 		
 	}
 	
+	/**
+	 * Download resource logged in download table
+	 * 
+	 * Currently used for download zip files after they have been created
+	 * 
+	 * @param userId - id of user completing the action
+	 * @param downloadId - unique download id
+	 * @return
+	 * @throws WebServiceException
+	 */
+	@GET
+	@Path("/download/userId/{userId}/downloadId/{downloadId}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response triggerZipDownload(
+			@PathParam("userId") String userId, @PathParam("downloadId") String downloadId) throws WebServiceException {
+	
+		if(StringUtil.isAnyNullEmpty(userId, downloadId)) {
+			handleError("Error downloading file from download log, missing required param (userId, and/or downloadId)", WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		Long lDownId = null;
+		try {
+			lDownId = Long.parseLong(downloadId);
+		}catch(NumberFormatException e) {
+			handleError("Error downloading file from download log, failed to parse download Id to Long (downloadId=" + downloadId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		DownloadLogEntry downloadEntry = null;
+		try {
+			downloadEntry = downloadService.getByDownloadId(lDownId);
+		} catch (ServiceException e) {
+			handleError("Error downloading file from download log, failed to fetch download entry by download id (downloadId=" + downloadId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		java.nio.file.Path filePath = downloadEntry.getFilePath();
+		
+		try {
+			return writeFileToResponse(filePath);
+		} catch (IOException e) {
+			handleError("Error writing binary data to response for download log entry (downloadId=" + downloadId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
+		}
+		
+		return null;
+		
+	}
+
 	/**
 	 * Uses request dispatcher to 'load' the resource
 	 * 
@@ -1031,9 +1092,6 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	 */
 	private Response writeFileToResponse(FileMetaResource fileMeta) {
 		
-		//
-		// Write data to output/response
-		//
 		ByteArrayInputStream bis = new ByteArrayInputStream(fileMeta.getBinaryResource().getFileData());
 		
 		//ContentDisposition contentDisposition = ContentDisposition.type("attachment")
@@ -1072,6 +1130,45 @@ public class FileSystemActionResource extends BaseResourceHandler {
 		.header("Content-Type", contentType)
 		.build();		
 		
-	}    
+	}
+	
+	/**
+	 * Writes the file binary data to the response
+	 * 
+	 * @param filePath
+	 * @return
+	 * @throws IOException
+	 */
+	private Response writeFileToResponse(java.nio.file.Path filePath) throws IOException {
+
+		byte[] bytes = FileUtils.readFileToByteArray(filePath.toFile());
+		String fileName = filePath.getFileName().toString();
+		ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+		String contentType = fileIOService.getMimeType(bis);
+		
+		if(StringUtil.isNullEmpty(contentType)) {
+			contentType = "application/octet-stream";
+		}
+		
+		return Response.ok(
+				new StreamingOutput() {
+					@Override
+					public void write(OutputStream out) throws IOException, WebApplicationException {
+						byte[] buffer = new byte[4 * 1024];
+						int bytesRead;
+						while ((bytesRead = bis.read(buffer)) != -1) {
+							out.write(buffer, 0, bytesRead);
+						}
+						out.flush();
+						out.close();
+						bis.close();
+					}
+				}
+			)
+			.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+			.header("Content-Type", contentType)
+			.build();		
+		
+	}	
 
 }

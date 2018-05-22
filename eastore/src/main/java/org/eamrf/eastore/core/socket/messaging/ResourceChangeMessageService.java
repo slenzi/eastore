@@ -38,7 +38,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * @author slenzi
  */
 @Service
-public class ResourceChangeService {
+public class ResourceChangeMessageService {
 
 	@InjectLogger
 	private Logger logger;	
@@ -169,7 +169,7 @@ public class ResourceChangeService {
 		
 	};    
 	
-	public ResourceChangeService() { }
+	public ResourceChangeMessageService() { }
     
 	@PostConstruct
 	public void init(){

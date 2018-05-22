@@ -6,7 +6,7 @@ import org.eamrf.eastore.core.exception.ServiceException;
 import org.eamrf.eastore.core.service.file.ErrorHandler;
 import org.eamrf.eastore.core.service.file.PermissionError;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
-import org.eamrf.eastore.core.socket.messaging.ResourceChangeService;
+import org.eamrf.eastore.core.socket.messaging.ResourceChangeMessageService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
 import org.eamrf.eastore.core.tree.Trees;
@@ -34,7 +34,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 	private String userId;
 	private SecurePathResourceTreeService secureTreeService;
 	private FileSystemRepository fileSystemRepository;
-	private ResourceChangeService resChangeService;
+	private ResourceChangeMessageService resChangeService;
 	private ErrorHandler errorHandler;
 	
 	private int jobCount = 0;
@@ -45,7 +45,7 @@ public class RemoveDirectoryTask extends FileServiceTask<Void> {
 			String userId,
 			SecurePathResourceTreeService secureTreeService,
 			FileSystemRepository fileSystemRepository,
-			ResourceChangeService resChangeService,
+			ResourceChangeMessageService resChangeService,
 			ErrorHandler errorHandler) {
 
 		this.dirToDelete = dirToDelete;

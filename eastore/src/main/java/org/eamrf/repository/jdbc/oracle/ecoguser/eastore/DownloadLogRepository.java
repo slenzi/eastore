@@ -4,15 +4,20 @@
 package org.eamrf.repository.jdbc.oracle.ecoguser.eastore;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
+import org.eamrf.repository.jdbc.SpringJdbcUtil;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DownloadLogEntry;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +38,37 @@ public class DownloadLogRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;    
 	
+    private final RowMapper<DownloadLogEntry> downloadLogRowMapper = (rs, rowNUm) -> {
+    	DownloadLogEntry d = new DownloadLogEntry();
+    	d.setDownloadId(rs.getLong("down_id"));
+    	d.setUserId(rs.getString("user_id"));
+    	d.setFilePath(Paths.get(rs.getString("file_path")));
+    	d.setDownloadDate(rs.getTimestamp("down_date"));
+    	return d;
+    };
+    
 	/**
 	 * 
 	 */
 	public DownloadLogRepository() {
 	
+	}
+	
+	/**
+	 * Fetch download log entry by unique download id
+	 * 
+	 * @param downloadId - the unique download id
+	 * @return
+	 * @throws Exception
+	 */
+	public DownloadLogEntry getById(Long downloadId) throws Exception {
+		
+		final String sql = "select d.down_id, d.user_id, d.file_path, d.down_date from eas_download d where d.downloadId = ?";
+		
+		final ResultSetExtractor<DownloadLogEntry> downloadResultExtractor = SpringJdbcUtil.getSingletonExtractor(downloadLogRowMapper);
+		
+		return jdbcTemplate.query(sql, downloadResultExtractor, new Object[] { downloadId });			
+		
 	}
 	
 	/**

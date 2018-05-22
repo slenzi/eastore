@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
@@ -17,6 +18,7 @@ import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
 import org.eamrf.eastore.core.socket.messaging.FileServiceTaskMessageService;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.DownloadLogRepository;
+import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.DownloadLogEntry;
 import org.eamrf.repository.jdbc.oracle.ecoguser.eastore.model.impl.FileMetaResource;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,26 @@ public class DownloadService {
 	 */
 	public DownloadService() {
 
+	}
+	
+	/**
+	 * Fetch download log entry by id
+	 * 
+	 * @param downloadId - the unique download id
+	 * @return
+	 * @throws ServiceException
+	 */
+	public DownloadLogEntry getByDownloadId(Long downloadId) throws ServiceException {
+		
+		DownloadLogEntry entry = null;
+		try {
+			entry = downloadLogRepository.getById(downloadId);
+		} catch (Exception e) {
+			throw new ServiceException("Error fetching download log entry by id, downloadId=" + downloadId + 
+					", " + e.getMessage(), e);
+		}
+		return entry;
+		
 	}
 	
 	/**
@@ -136,6 +158,8 @@ public class DownloadService {
 			}
 			
 		});
+		
+		Executors.newSingleThreadExecutor().execute(zipTask);
 		
 	}
 	

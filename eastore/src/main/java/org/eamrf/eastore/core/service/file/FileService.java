@@ -44,7 +44,7 @@ import org.eamrf.eastore.core.service.file.task.UpdateFileMetaTask;
 import org.eamrf.eastore.core.service.security.GatekeeperService;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
 import org.eamrf.eastore.core.service.tree.file.secure.SecurePathResourceTreeService;
-import org.eamrf.eastore.core.socket.messaging.ResourceChangeService;
+import org.eamrf.eastore.core.socket.messaging.ResourceChangeMessageService;
 import org.eamrf.eastore.core.tree.Tree;
 import org.eamrf.eastore.core.tree.TreeNode;
 import org.eamrf.eastore.core.tree.TreeNodeVisitException;
@@ -99,7 +99,7 @@ public class FileService {
     private StoreIndexerService indexerService;
     
     @Autowired
-    private ResourceChangeService resChangeService;
+    private ResourceChangeMessageService resChangeService;
     
     @Autowired
     private ErrorHandler errorHandler;
