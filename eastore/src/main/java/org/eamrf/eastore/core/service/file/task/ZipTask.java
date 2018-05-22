@@ -152,6 +152,10 @@ public class ZipTask extends FileServiceTask<Void> {
 		
 		fetchFiles();
 		
+		//
+		// TODO - user needs read permission to download all files. Consider zipping only the files they have read access to.
+		//
+		
 		// open zip output stream
         FileOutputStream fos;
 		try {

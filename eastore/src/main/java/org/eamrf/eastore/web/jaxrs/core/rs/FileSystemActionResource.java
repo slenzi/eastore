@@ -195,15 +195,20 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	 * the eastore websocket stomp endpoints to be notified when the zip file has been created and is
 	 * ready for download.
 	 * 
-	 * @param resourceIds
+	 * @param resourceIds - IDs of all resources (file meta and directory) to zip for download
 	 * @return
 	 * @throws WebServiceException
 	 */
-	@GET
-	@Path("/action/zip/userId/{userId}")
+	@POST
+	@Path("/trigger/zip/userId/{userId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response triggerZipDownload(
 			@QueryParam("resourceId") List<Long> resourceIds, @PathParam("userId") String userId) throws WebServiceException {
+		
+		//
+		// TODO - should pass list of resourceIds in body of POST, not in the URL.
+		// expecially because the list of resource IDs might be too long
+		//
 		
 		if(CollectionUtil.isEmpty(resourceIds)) {
 			handleError("Error triggering zip download process, list of resource IDs is null or empty", WebExceptionType.CODE_IO_ERROR);			
@@ -213,6 +218,7 @@ public class FileSystemActionResource extends BaseResourceHandler {
 			downloadService.triggerZipDownload(resourceIds, userId, downloadId -> {
 				
 				// notify client that the zip file has been created and is ready for download
+				logger.info("Zip-download finished, downloadId = " + downloadId + ", userId = " + userId);
 				
 				UserActionStatusMessage message = new UserActionStatusMessage();
 				message.setUserId(userId);
@@ -237,29 +243,31 @@ public class FileSystemActionResource extends BaseResourceHandler {
 	 * 
 	 * @param userId - id of user completing the action
 	 * @param downloadId - unique download id
-	 * @return
+	 * @return File binary data is written to response
 	 * @throws WebServiceException
 	 */
 	@GET
-	@Path("/download/userId/{userId}/downloadId/{downloadId}")
+	@Path("/download/downloadId/{downloadId}/userId/{userId}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response triggerZipDownload(
-			@PathParam("userId") String userId, @PathParam("downloadId") String downloadId) throws WebServiceException {
+	public Response getDownload(
+			@PathParam("userId") String userId, @PathParam("downloadId") Long downloadId) throws WebServiceException {
 	
-		if(StringUtil.isAnyNullEmpty(userId, downloadId)) {
-			handleError("Error downloading file from download log, missing required param (userId, and/or downloadId)", WebExceptionType.CODE_IO_ERROR);
+		if(StringUtil.isAnyNullEmpty(userId)) {
+			handleError("Error downloading file from download log, missing required param (userId)", WebExceptionType.CODE_IO_ERROR);
 		}
 		
+		/*
 		Long lDownId = null;
 		try {
 			lDownId = Long.parseLong(downloadId);
 		}catch(NumberFormatException e) {
 			handleError("Error downloading file from download log, failed to parse download Id to Long (downloadId=" + downloadId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
 		}
+		*/
 		
 		DownloadLogEntry downloadEntry = null;
 		try {
-			downloadEntry = downloadService.getByDownloadId(lDownId);
+			downloadEntry = downloadService.getByDownloadId(downloadId);
 		} catch (ServiceException e) {
 			handleError("Error downloading file from download log, failed to fetch download entry by download id (downloadId=" + downloadId + "), " + e.getMessage(), WebExceptionType.CODE_IO_ERROR);
 		}

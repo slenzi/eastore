@@ -9,9 +9,12 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.concurrent.Executors;
 
+import org.eamrf.concurrent.task.TaskIdGenerator;
 import org.eamrf.core.logging.stereotype.InjectLogger;
 import org.eamrf.core.util.DateUtil;
+import org.eamrf.core.util.FileUtil;
 import org.eamrf.eastore.core.exception.ServiceException;
+import org.eamrf.eastore.core.properties.ManagedProperties;
 import org.eamrf.eastore.core.service.file.task.TaskCompletionListener;
 import org.eamrf.eastore.core.service.file.task.ZipTask;
 import org.eamrf.eastore.core.service.tree.file.PathResourceUtil;
@@ -33,7 +36,10 @@ import org.springframework.stereotype.Service;
 public class DownloadService {
 
     @InjectLogger
-    private Logger logger;		
+    private Logger logger;
+    
+    @Autowired
+    private ManagedProperties appProps;    
 	
     @Autowired
     private FileService fileService;
@@ -135,12 +141,24 @@ public class DownloadService {
 	public void triggerZipDownload(List<Long> resourceIdList, String userId, TaskCompletionListener<Long> completionListener) throws ServiceException {
 		
 		final Timestamp dtNow = DateUtil.getCurrentTime();
-		final String zipFileName = "ecog-acrin_file_manager_download_" + DateUtil.defaultFormat(dtNow) + ".zip";
-		final Path outZipPath = Paths.get(zipFileName);
+		final String dateToken = DateUtil.formatDate(dtNow, "yyyy.MM.dd.HH.mm.ss.SSS").toLowerCase();
+		final String miscDir = appProps.getProperty("temp.misc.directory");
+		final String tempDir = dateToken + "_" + userId;
+		final Path outputDir = Paths.get(miscDir, tempDir);
+		try {
+			FileUtil.createDirectory(outputDir, true);
+		} catch (Exception e) {
+			throw new ServiceException("Could not create temp directory for zip file at, " + outputDir.toString());
+		}
+		final String zipFileName = "ecog-acrin_file_manager_download_" + userId + "_" + dateToken + ".zip";
+		final Path outZipPath = Paths.get(outputDir.toString(), zipFileName);
 				
 		ZipTask zipTask = new ZipTask(resourceIdList, userId, outZipPath, secureTreeService, fileService);
+		zipTask.setTaskId(TaskIdGenerator.getNextTaskId());
 		
 		zipTask.registerProgressListener(task -> {
+			
+			logger.info(task.getStatusMessage());
 			
 			// broadcast task so clients can track progress
 			fileServiceTaskMessageService.broadcast(task);

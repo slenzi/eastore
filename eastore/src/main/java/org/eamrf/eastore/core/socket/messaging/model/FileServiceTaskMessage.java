@@ -4,7 +4,6 @@
 package org.eamrf.eastore.core.socket.messaging.model;
 
 import java.io.Serializable;
-import java.util.Map;
 
 /**
  * Message object used to notify clients about the status of ongoing file service tasks
