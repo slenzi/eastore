@@ -197,10 +197,10 @@ public class FileServiceTaskMessageService {
 		
 		// Don't want to flood the clients with messages, so only add the task if the task
 		// manager doesn't already have a similar task.
-		//if(!taskManager.contains(broadcastTask)) {
-		logger.info("Adding task for broadcast => " + task.getStatusMessage());
-		taskManager.addTask(broadcastTask);
-		//}
+		if(!taskManager.contains(broadcastTask)) {
+			logger.info("Adding task for broadcast => " + task.getStatusMessage());
+			taskManager.addTask(broadcastTask);
+		}
 		
 	}
 	
