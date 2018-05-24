@@ -63,7 +63,7 @@ public class DownloadLogRepository {
 	 */
 	public DownloadLogEntry getById(Long downloadId) throws Exception {
 		
-		final String sql = "select d.down_id, d.user_id, d.file_path, d.down_date from eas_download d where d.downloadId = ?";
+		final String sql = "select d.down_id, d.user_id, d.file_path, d.down_date from eas_download d where d.down_id = ?";
 		
 		final ResultSetExtractor<DownloadLogEntry> downloadResultExtractor = SpringJdbcUtil.getSingletonExtractor(downloadLogRowMapper);
 		
